@@ -1339,6 +1339,14 @@
           </div>
         </div>
       </div>
+
+      <!-- Runner Stats -->
+      <div class="exit-card" style="margin-top:12px">
+        <div class="chart-title">Runner Stats</div>
+        <div class="exit-rows" id="runnerRows">
+          <div class="exit-empty">Sin datos de runner aún</div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -1401,6 +1409,7 @@
           <div class="info-pill"><div class="info-pill-label">Inicio</div><div class="info-pill-val" id="modalInicio">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Final</div><div class="info-pill-val" id="modalFinal">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Mejor Cierre</div><div class="info-pill-val" id="modalMejorCierre">—</div></div>
+          <div class="info-pill"><div class="info-pill-label">Runner</div><div class="info-pill-val" id="modalRunner">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Insiders</div><div class="info-pill-val" id="modalInsiders">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Inst. Own</div><div class="info-pill-val" id="modalInstOwn">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Dilución</div><div class="info-pill-val" id="modalDilucion">—</div></div>
@@ -1706,6 +1715,16 @@
               <option>JLINES</option>
               <option>MINIMO DEL PREMARKET</option>
               <option>BASE ANTERIOR</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Runner</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="ff_runner">
+              <option value="">— Seleccionar —</option>
+              <option>25% RUNNER</option>
+              <option>NO RUNNER</option>
             </select>
           </div>
         </div>
@@ -2072,6 +2091,7 @@ function render() {
   renderSetupBars('countryBars', closedTrades, closedTrades.length, 'pais');
   // Exit Strategy card
   renderExitCard(closedTrades);
+  renderRunnerCard(closedTrades);
 
   // Top setups
   const setupPNL = groupBy(closedTrades, 'setup');
@@ -2213,6 +2233,56 @@ function renderExitCard(closedTrades) {
   });
 }
 
+function renderRunnerCard(closedTrades) {
+  const el = document.getElementById('runnerRows');
+  if (!el) return;
+  const groups = {};
+  closedTrades.forEach(t => {
+    const k = (t.runner || '').trim();
+    if (!k) return;
+    if (!groups[k]) groups[k] = { pnl: 0, wins: 0, total: 0 };
+    groups[k].pnl   += t.pnl;
+    groups[k].total += 1;
+    if (t.pnl > 0) groups[k].wins += 1;
+  });
+  const entries = Object.entries(groups).sort((a,b) => b[1].pnl - a[1].pnl);
+  if (!entries.length) {
+    el.innerHTML = '<div class="exit-empty">Añade trades con<br>Runner para ver stats</div>';
+    return;
+  }
+  const totalTagged = entries.reduce((s,[,v]) => s + v.total, 0);
+  const maxAbs = Math.max(...entries.map(([,v]) => Math.abs(v.pnl)), 1);
+  el.innerHTML = entries.map(([name, s], i) => {
+    const wr       = s.total ? Math.round(s.wins / s.total * 100) : 0;
+    const sharePct = totalTagged ? Math.round(s.total / totalTagged * 100) : 0;
+    const pnlPos   = s.pnl >= 0;
+    const pnlCol   = pnlPos ? 'var(--green)' : 'var(--red)';
+    const fillCol  = pnlPos ? (i===0?'var(--green)':i===1?'var(--blue)':'var(--yellow)') : 'var(--red)';
+    const fillPct  = Math.round(Math.abs(s.pnl) / maxAbs * 100);
+    const rankCls  = s.pnl < 0 ? 'rank-neg' : i===0 ? 'rank-1' : i===1 ? 'rank-2' : 'rank-3';
+    const wrBg     = wr>=60?'#00e67618':wr>=40?'#ffd60018':'#ff3d5718';
+    const wrCol    = wr>=60?'var(--green)':wr>=40?'var(--yellow)':'var(--red)';
+    return `<div class="exit-row ${rankCls}">
+      <div class="exit-row-left">
+        <span class="exit-name">${name}</span>
+        <div class="exit-track"><div class="exit-fill" data-w="${fillPct}" style="width:0%;background:${fillCol}"></div></div>
+      </div>
+      <div class="exit-row-right">
+        <span class="exit-pnl" style="color:${pnlCol}">${pnlPos?'+':''}${fmtPlain(s.pnl)}</span>
+        <div class="exit-meta">
+          <span class="exit-wr" style="background:${wrBg};color:${wrCol}">${wr}% WR</span>
+          <span class="exit-count">${sharePct}% · ${s.total}T</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  requestAnimationFrame(() => {
+    el.querySelectorAll('.exit-fill[data-w]').forEach(b => {
+      setTimeout(() => { b.style.width = b.dataset.w + '%'; }, 80);
+    });
+  });
+}
+
 // ── Upload events ─────────────────────────────────────────────────────────────
 const zone = document.getElementById('uploadZone');
 const fileInput = document.getElementById('fileInput');
@@ -2319,6 +2389,7 @@ function openModal(t) {
   document.getElementById('modalInicio').textContent      = t.inicio        || '—';
   document.getElementById('modalMejorCierre').textContent = t.mejorCierre   || '—';
   document.getElementById('modalFinal').textContent = t.final || '—';
+  document.getElementById('modalRunner').textContent = t.runner || '—';
   document.getElementById('modalInsiders').textContent = t.insiders || '—';
   document.getElementById('modalInstOwn').textContent = t.instOwn || '—';
   document.getElementById('modalDilucion').textContent = t.dilucion || '—';
@@ -2447,7 +2518,7 @@ function openAddTradeModal() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  ['ff_setup','ff_play','ff_noticia','ff_pais','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_dilucion','ff_inicio','ff_final','ff_mejorCierre'].forEach(id => {
+  ['ff_setup','ff_play','ff_noticia','ff_pais','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_dilucion','ff_inicio','ff_final','ff_mejorCierre','ff_runner'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.selectedIndex = 0;
   });
@@ -2517,7 +2588,7 @@ function openEditTradeModal(t) {
   setSel('ff_setup', t.setup, 'ff_setup_custom', 'ff_setup_custom_wrap');
   setSel('ff_play',  t.play,  'ff_play_custom',  'ff_play_custom_wrap');
   setSel('ff_pais',  t.pais,  'ff_pais_custom',  'ff_pais_custom_wrap');
-  ['ff_noticia','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_dilucion','ff_inicio','ff_final','ff_mejorCierre'].forEach(id => {
+  ['ff_noticia','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_dilucion','ff_inicio','ff_final','ff_mejorCierre','ff_runner'].forEach(id => {
     const key = id.replace('ff_','');
     setSel(id, t[key]);
   });
@@ -2571,6 +2642,7 @@ document.getElementById('addTradeSubmitBtn').addEventListener('click', () => {
     inicio:  document.getElementById('ff_inicio').value,
     final:   document.getElementById('ff_final').value,
     mejorCierre: document.getElementById('ff_mejorCierre').value,
+    runner:  document.getElementById('ff_runner').value,
     targets: [
       { pnl: document.getElementById('ff_t1_pnl').value !== '' ? parseFloat(document.getElementById('ff_t1_pnl').value) : null,
         pct: document.getElementById('ff_t1_pct').value !== '' ? parseFloat(document.getElementById('ff_t1_pct').value) : null },
