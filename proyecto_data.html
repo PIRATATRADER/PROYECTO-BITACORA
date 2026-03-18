@@ -1109,19 +1109,9 @@
   /* bar-row sub-label for setup % */
   .bar-sub { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted2); letter-spacing: 0.5px; text-align: right; margin-top: 1px; }
   /* Mejor Cierre form styles */
-  .target-rows { display: flex; flex-direction: column; gap: 8px; }
-  .target-row { display: grid; grid-template-columns: 64px 1fr 1fr; gap: 10px; align-items: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
-  .target-row-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--muted2); font-weight: 500; }
   /* Edit button */
   .modal-edit-btn { background: #448aff22; border: 1px solid var(--blue); border-radius: 8px; color: var(--blue); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; padding: 7px 14px; cursor: pointer; letter-spacing: 0.3px; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
   .modal-edit-btn:hover { background: var(--blue); color: #000; }
-  /* Targets display in detail modal */
-  .targets-display { display: flex; flex-direction: column; gap: 7px; }
-  .target-display-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
-  .target-display-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--muted2); text-transform: uppercase; }
-  .target-display-vals { display: flex; align-items: center; gap: 10px; }
-  .target-display-pnl { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
-  .target-display-pct { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted2); background: var(--bg2); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; }
   .form-label-opt { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
   /* status toggle */
   .status-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -1414,12 +1404,6 @@
           <div class="info-pill"><div class="info-pill-label">Inst. Own</div><div class="info-pill-val" id="modalInstOwn">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Dilución</div><div class="info-pill-val" id="modalDilucion">—</div></div>
         </div>
-      </div>
-
-      <!-- Targets -->
-      <div id="modalTargetsSection" style="display:none">
-        <div class="section-title">Targets</div>
-        <div class="targets-display" id="modalTargetsDisplay"></div>
       </div>
 
       <!-- Observaciones -->
@@ -1725,28 +1709,6 @@
               <option>NO RUNNER</option>
             </select>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sección: Targets -->
-    <div class="form-section">
-      <div class="form-section-title">Targets <span class="form-label-opt" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-left:6px">— opcional</span></div>
-      <div class="target-rows">
-        <div class="target-row">
-          <span class="target-row-label">TARGET 1</span>
-          <div class="form-field" style="margin:0"><label class="form-label">PNL ($)</label><input class="form-input" type="number" id="ff_t1_pnl" placeholder="350.00" step="0.01"></div>
-          <div class="form-field" style="margin:0"><label class="form-label">% posición</label><input class="form-input" type="number" id="ff_t1_pct" placeholder="56" step="0.1" min="0" max="100"></div>
-        </div>
-        <div class="target-row">
-          <span class="target-row-label">TARGET 2</span>
-          <div class="form-field" style="margin:0"><label class="form-label">PNL ($)</label><input class="form-input" type="number" id="ff_t2_pnl" placeholder="120.00" step="0.01"></div>
-          <div class="form-field" style="margin:0"><label class="form-label">% posición</label><input class="form-input" type="number" id="ff_t2_pct" placeholder="30" step="0.1" min="0" max="100"></div>
-        </div>
-        <div class="target-row">
-          <span class="target-row-label">TARGET 3</span>
-          <div class="form-field" style="margin:0"><label class="form-label">PNL ($)</label><input class="form-input" type="number" id="ff_t3_pnl" placeholder="60.00" step="0.01"></div>
-          <div class="form-field" style="margin:0"><label class="form-label">% posición</label><input class="form-input" type="number" id="ff_t3_pct" placeholder="14" step="0.1" min="0" max="100"></div>
         </div>
       </div>
     </div>
@@ -2109,8 +2071,6 @@ function render() {
   window._recentTrades = recent;
   body.innerHTML = recent.map((t, i) => {
     const hasImg = chartImages[tradeKey(t)] ? '📷 ' : '';
-    const hasTargets = t.targets && t.targets.length > 0;
-    const targetDot = hasTargets ? '<span style="color:var(--yellow);margin-left:4px">◎</span>' : '';
     let res, pnlDisplay, pnlColor;
     if (t.pnl == null) {
       res = '<span class="badge" style="background:#448aff22;color:var(--blue);border:1px solid #448aff55">OPEN</span>';
@@ -2124,7 +2084,7 @@ function render() {
     }
     return `<tr onclick="openModal(window._recentTrades[${i}])" title="Click para ver detalle">
       <td class="td-mono">${t.fecha}</td>
-      <td><strong>${hasImg}${t.stock}</strong>${targetDot}</td>
+      <td><strong>${hasImg}${t.stock}</strong></td>
       <td><span class="badge badge-blue">${t.setup || '-'}</span></td>
       <td>${t.pais || '-'}</td>
       <td class="td-mono" style="color:${pnlColor}">${pnlDisplay}</td>
@@ -2392,31 +2352,6 @@ function openModal(t) {
   document.getElementById('modalInstOwn').textContent = t.instOwn || '—';
   document.getElementById('modalDilucion').textContent = t.dilucion || '—';
 
-  // Targets
-  const targSec = document.getElementById('modalTargetsSection');
-  const targDisp = document.getElementById('modalTargetsDisplay');
-  const tgs = t.targets || [];
-  if (tgs.length && targSec && targDisp) {
-    targSec.style.display = 'block';
-    const sum = tgs.reduce((s,tg) => s + (tg.pnl != null ? tg.pnl : 0), 0);
-    targDisp.innerHTML = tgs.map((tg,i) => {
-      const hasPnl = tg.pnl != null; const hasPct = tg.pct != null;
-      const col = hasPnl ? (tg.pnl>=0?'var(--green)':'var(--red)') : 'var(--muted2)';
-      return `<div class="target-display-row">
-        <span class="target-display-label">Target ${i+1}</span>
-        <div class="target-display-vals">
-          ${hasPct ? `<span class="target-display-pct">${tg.pct}%</span>` : ''}
-          <span class="target-display-pnl" style="color:${col}">${hasPnl?(tg.pnl>=0?'+':'')+fmtPlain(tg.pnl):'—'}</span>
-        </div>
-      </div>`;
-    }).join('');
-    if (t.pnl == null && tgs.every(tg => tg.pnl != null))
-      targDisp.innerHTML += `<div class="target-display-row" style="border-top:1px solid var(--border);margin-top:4px">
-        <span class="target-display-label" style="color:var(--text)">Total</span>
-        <span class="target-display-pnl" style="color:${sum>=0?'var(--green)':'var(--red)'};font-size:15px">${sum>=0?'+':''}${fmtPlain(sum)}</span>
-      </div>`;
-  } else if (targSec) { targSec.style.display = 'none'; }
-
   // Observaciones — load from localStorage
   const obsEl = document.getElementById('modalObservaciones');
   obsEl.value = notesCache[currentTradeKey] || '';
@@ -2512,7 +2447,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { /* handled
 // ── Add Trade Form ────────────────────────────────────────────────────────────
 function openAddTradeModal() {
   // Reset form
-  ['ff_fecha','ff_stock','ff_pnl','ff_pct','ff_realR','ff_setup_custom','ff_play_custom','ff_pais_custom','ff_t1_pnl','ff_t1_pct','ff_t2_pnl','ff_t2_pct','ff_t3_pnl','ff_t3_pct','ff_observaciones'].forEach(id => {
+  ['ff_fecha','ff_stock','ff_pnl','ff_pct','ff_realR','ff_setup_custom','ff_play_custom','ff_pais_custom','ff_observaciones'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -2590,9 +2525,6 @@ function openEditTradeModal(t) {
     const key = id.replace('ff_','');
     setSel(id, t[key]);
   });
-  const tgs = t.targets || [];
-  ['t1','t2','t3'].forEach((tl,i) => { setVal('ff_'+tl+'_pnl', tgs[i]?.pnl); setVal('ff_'+tl+'_pct', tgs[i]?.pct); });
-
   // Cargar observaciones existentes del trade al editar
   const tKey = tradeKey(t);
   document.getElementById('ff_observaciones').value = notesCache[tKey] || '';
@@ -2641,14 +2573,6 @@ document.getElementById('addTradeSubmitBtn').addEventListener('click', () => {
     final:   document.getElementById('ff_final').value,
     mejorCierre: document.getElementById('ff_mejorCierre').value,
     runner:  document.getElementById('ff_runner').value,
-    targets: [
-      { pnl: document.getElementById('ff_t1_pnl').value !== '' ? parseFloat(document.getElementById('ff_t1_pnl').value) : null,
-        pct: document.getElementById('ff_t1_pct').value !== '' ? parseFloat(document.getElementById('ff_t1_pct').value) : null },
-      { pnl: document.getElementById('ff_t2_pnl').value !== '' ? parseFloat(document.getElementById('ff_t2_pnl').value) : null,
-        pct: document.getElementById('ff_t2_pct').value !== '' ? parseFloat(document.getElementById('ff_t2_pct').value) : null },
-      { pnl: document.getElementById('ff_t3_pnl').value !== '' ? parseFloat(document.getElementById('ff_t3_pnl').value) : null,
-        pct: document.getElementById('ff_t3_pct').value !== '' ? parseFloat(document.getElementById('ff_t3_pct').value) : null },
-    ].filter(tg => tg.pnl != null || tg.pct != null),
   };
 
   if (editingTradeKey) {
