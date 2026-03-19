@@ -103,6 +103,36 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .op{color:var(--muted2);}
 .tr-ini td{color:var(--gold)!important;font-weight:600;border-bottom:2px solid var(--border)!important;font-size:12px;}
 
+
+/* Stats Screen */
+#statsScreen{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;}
+.stats-wrap{max-width:1200px;margin:0 auto;padding:24px 20px;}
+.stats-header{display:flex;align-items:center;gap:14px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+.stats-back{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;transition:all .15s;}
+.stats-back:hover{color:var(--text);border-color:var(--muted2);background:var(--bg3);}
+.stats-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;}
+.stats-title span{color:var(--gold);}
+.stats-month-sel{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 13px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);color:var(--muted2);cursor:pointer;}
+.stats-month-sel.on{background:#f5a62315;border-color:var(--gold);color:var(--gold);}
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+@media(max-width:768px){.stats-grid{grid-template-columns:1fr;}}
+.stats-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;}
+.stats-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--gold));}
+.stats-card-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--muted2);margin-bottom:14px;}
+.stats-rows{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
+.stats-rows::-webkit-scrollbar{width:3px;}
+.stats-rows::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.sr2{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg3);border-radius:6px;font-size:12px;}
+.sr2-l{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);}
+.sr2-v{font-family:'DM Mono',monospace;font-weight:500;}
+.stats-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.stat-box{background:var(--bg3);border-radius:8px;padding:12px;text-align:center;}
+.stat-box-l{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;color:var(--muted2);text-transform:uppercase;margin-bottom:6px;}
+.stat-box-v{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;}
+.prog-bar-wrap{margin-top:8px;}
+.prog-label{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;}
+.prog-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:10px;}
+.prog-fill{height:100%;border-radius:4px;transition:width .8s ease;}
 /* Bottom */
 .bot{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
 .bc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;overflow:hidden;}
@@ -176,7 +206,16 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
   <div class="kpi" style="--ac:var(--red)"><div class="kpi-l">Loss Days</div><div class="kpi-v kr" id="kLoss">0</div></div>
 </div>
 
-<div class="tabs" id="tabs"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+  <div class="tabs" id="tabs" style="margin-bottom:0;flex:1;"></div>
+  <button id="btnStats" onclick="showStats()" style="
+    font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    padding:6px 16px;border-radius:7px;border:1px solid var(--gold);background:#f5a62315;
+    color:var(--gold);cursor:pointer;transition:all .15s;margin-left:10px;flex-shrink:0;
+    display:inline-flex;align-items:center;gap:6px;">
+    📊 Estadísticas
+  </button>
+</div>
 
 <div class="trow">
   <!-- Main table -->
@@ -240,6 +279,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
   <div class="bc"><div class="bc-t">Peores días del mes</div><div class="srows" id="wDays"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
 </div>
 
+<!-- ══ PANTALLA ESTADÍSTICAS ══ -->
 </div>
 <div class="toast" id="toast"></div>
 
@@ -682,6 +722,147 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),1800);
 }
 
+
+// ── STATISTICS SCREEN ────────────────────────────────────────────────────────
+let statsMonth = null;
+
+function showStats() {
+  statsMonth = month;
+  document.getElementById('statsScreen').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  renderStatsTabs();
+  renderStats();
+}
+
+function hideStats() {
+  document.getElementById('statsScreen').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function renderStatsTabs() {
+  const el = document.getElementById('statsTabs');
+  el.innerHTML = MONTHS.map((m, i) => {
+    const hasData = m.days.some(d => {
+      const row = D[dk(d)] || {};
+      return pd(row.pnlDay) !== null;
+    });
+    const dot = hasData ? '<span class="dot"></span>' : '';
+    return `<button class="tab ${i === statsMonth ? 'on' : ''}" onclick="statsMonth=${i};renderStatsTabs();renderStats()">${m.name}${dot}</button>`;
+  }).join('');
+}
+
+function renderStats() {
+  const m = MONTHS[statsMonth];
+  const rows = m.days.map(d => {
+    const row = D[dk(d)] || {};
+    return { d, p: pd(row.pnlDay), sod: pd(row.startOfDay) };
+  }).filter(x => x.p !== null);
+
+  // ── Tarjeta 1: Estadísticas ──
+  const wins = rows.filter(x => x.p > 0).length;
+  const losses = rows.filter(x => x.p < 0).length;
+  const tot = rows.length;
+  const wr = tot ? Math.round(wins / tot * 100) : 0;
+  const pnlTotal = rows.reduce((s, x) => s + x.p, 0);
+
+  // Promedio win/loss
+  const winVals = rows.filter(x => x.p > 0).map(x => x.p);
+  const lossVals = rows.filter(x => x.p < 0).map(x => x.p);
+  const avgWin = winVals.length ? winVals.reduce((a, b) => a + b, 0) / winVals.length : null;
+  const avgLoss = lossVals.length ? lossVals.reduce((a, b) => a + b, 0) / lossVals.length : null;
+  const rr = avgWin && avgLoss ? (avgWin / Math.abs(avgLoss)).toFixed(2) : null;
+
+  // Expectancy = (WinRate × AvgWin) + (LossRate × AvgLoss)  [avgLoss ya es negativo]
+  const winRate  = tot ? wins  / tot : 0;
+  const lossRate = tot ? losses / tot : 0;
+  let expectancy = null, expectancyLabel = '—', expectancyColor = 'var(--muted2)', expectancyNote = '';
+  if (avgWin !== null && avgLoss !== null && tot > 0) {
+    expectancy = (winRate * avgWin) + (lossRate * avgLoss);
+    const sign = expectancy >= 0 ? '+' : '';
+    expectancyLabel = sign + fd(expectancy) + '/día';
+    if (expectancy > 0) {
+      expectancyColor = 'var(--green)';
+      expectancyNote  = expectancy > Math.abs(avgLoss) * 0.1 ? '✅ Edge sólido' : '⚠️ Edge positivo, pero justo';
+    } else {
+      expectancyColor = 'var(--red)';
+      expectancyNote  = '❌ Sin edge — revisar gestión';
+    }
+  }
+
+  document.getElementById('stGrid').innerHTML = `
+    <div class="stat-box"><div class="stat-box-l">Días operados</div><div class="stat-box-v">${tot}</div></div>
+    <div class="stat-box"><div class="stat-box-l">Win Rate</div><div class="stat-box-v" style="color:var(--${wr>=50?'green':'red'})">${tot ? wr + '%' : '—'}</div></div>
+    <div class="stat-box"><div class="stat-box-l">Win Days</div><div class="stat-box-v" style="color:var(--green)">${wins}</div></div>
+    <div class="stat-box"><div class="stat-box-l">Loss Days</div><div class="stat-box-v" style="color:var(--red)">${losses}</div></div>
+    <div class="stat-box"><div class="stat-box-l">PNL Total</div><div class="stat-box-v" style="color:var(--${pnlTotal>=0?'green':'red'});font-size:18px">${tot ? fd(pnlTotal) : '—'}</div></div>
+    <div class="stat-box"><div class="stat-box-l">Ratio R/R</div><div class="stat-box-v" style="font-size:18px">${rr ? rr + ':1' : '—'}</div></div>
+    <div class="stat-box"><div class="stat-box-l">Avg Win</div><div class="stat-box-v" style="color:var(--green);font-size:16px">${avgWin ? fd(avgWin) : '—'}</div></div>
+    <div class="stat-box"><div class="stat-box-l">Avg Loss</div><div class="stat-box-v" style="color:var(--red);font-size:16px">${avgLoss ? fd(avgLoss) : '—'}</div></div>
+    <div class="stat-box" style="grid-column:1/-1;background:var(--bg2);border:1px solid ${expectancy!==null&&expectancy>=0?'var(--green)':'var(--red)'};border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div class="stat-box-l" style="font-size:10px;letter-spacing:2px;margin-bottom:4px">EXPECTANCY <span style="opacity:.5;font-size:9px">(WR × AvgWin) − (LR × |AvgLoss|)</span></div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;color:${expectancyColor}">${expectancyLabel}</div>
+      </div>
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:${expectancyColor};text-align:right;line-height:1.8">
+        ${expectancy !== null ? `<div style="opacity:.7">WR ${(winRate*100).toFixed(0)}% × ${avgWin?fd(avgWin):'—'}</div><div style="opacity:.7">LR ${(lossRate*100).toFixed(0)}% × ${avgLoss?fd(avgLoss):'—'}</div>` : ''}
+        <div style="margin-top:2px">${expectancyNote}</div>
+      </div>
+    </div>
+  `;
+
+  // ── Tarjeta 2: Progreso objetivos ──
+  let som = null;
+  for (let d of m.days) {
+    const s = pd((D[dk(d)] || {}).startOfDay);
+    if (s) { som = s; break; }
+  }
+
+  if (!som) {
+    document.getElementById('stProg').innerHTML = '<span style="font-size:12px;color:var(--muted2)">Introduce el Start of Day del primer día del mes</span>';
+  } else {
+    const goals = [{ rate: 0.20, label: '+20%', color: 'var(--green)' }, { rate: 0.40, label: '+40%', color: 'var(--gold)' }, { rate: 0.60, label: '+60%', color: 'var(--cyan)' }];
+    let currentCap = som;
+    for (let d of m.days) {
+      const row = D[dk(d)] || {};
+      const s = pd(row.startOfDay);
+      if (s !== null) {
+        const pnl = pd(row.pnlDay) || 0;
+        const htb = pd(row.htb) || 0;
+        currentCap = s + pnl - htb;
+      }
+    }
+    const gain = currentCap - som;
+    document.getElementById('stProg').innerHTML = goals.map(g => {
+      const target = som * (1 + g.rate);
+      const needed = target - currentCap;
+      const pct = Math.min(100, Math.max(0, (gain / (som * g.rate)) * 100));
+      const reached = currentCap >= target;
+      return `
+        <div class="prog-bar-wrap">
+          <div class="prog-label">
+            <span>META ${g.label} <span style="color:var(--text)">${fd(target)}</span></span>
+            <span style="color:${g.color}">${reached ? '✓ Alcanzado' : fd(currentCap)}</span>
+          </div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${g.color}"></div></div>
+          ${!reached ? `<div style="font-size:9px;color:var(--muted2);margin-top:-6px;margin-bottom:8px">Faltan ${fd(needed)}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  // ── Tarjeta 3: Mejores días ──
+  const noDayData = '<span style="font-size:12px;color:var(--muted2)">Sin datos</span>';
+  document.getElementById('stBest').innerHTML = rows.length
+    ? [...rows].sort((a, b) => b.p - a.p).slice(0, 10)
+      .map(x => `<div class="sr2"><span class="sr2-l">${x.d}</span><span class="sr2-v ${x.p >= 0 ? 'cg' : 'cr'}">${fd(x.p)}</span></div>`).join('')
+    : noDayData;
+
+  // ── Tarjeta 4: Peores días ──
+  document.getElementById('stWorst').innerHTML = rows.length
+    ? [...rows].sort((a, b) => a.p - b.p).slice(0, 10)
+      .map(x => `<div class="sr2"><span class="sr2-l">${x.d}</span><span class="sr2-v ${x.p >= 0 ? 'cg' : 'cr'}">${fd(x.p)}</span></div>`).join('')
+    : noDayData;
+}
+
 function renderAll(){ renderMain(); renderObj(); renderYear(); }
 
 // ── INICIALIZACIÓN ───────────────────────────────────────────────────────────
@@ -702,5 +883,41 @@ function renderAll(){ renderMain(); renderObj(); renderYear(); }
   startRealtimeSync();
 })();
 </script>
+
+</div><!-- end .wrap -->
+
+<!-- ═══════ STATISTICS SCREEN ═══════ -->
+<div id="statsScreen">
+  <div class="stats-wrap">
+    <div class="stats-header">
+      <button class="stats-back" onclick="hideStats()">← Volver</button>
+      <div class="stats-title">ESTADÍSTICAS <span>DEL MES</span></div>
+      <div id="statsTabs" style="display:flex;gap:5px;flex-wrap:wrap;flex:1;"></div>
+    </div>
+    <div class="stats-grid">
+      <!-- Tarjeta 1: Estadísticas del mes -->
+      <div class="stats-card" style="--ac:var(--blue)">
+        <div class="stats-card-title">Estadísticas del Mes</div>
+        <div class="stats-stat-grid" id="stGrid"></div>
+      </div>
+      <!-- Tarjeta 2: Progreso objetivos -->
+      <div class="stats-card" style="--ac:var(--gold)">
+        <div class="stats-card-title">Progreso Objetivos Mensuales</div>
+        <div id="stProg"></div>
+      </div>
+      <!-- Tarjeta 3: Mejores días -->
+      <div class="stats-card" style="--ac:var(--green)">
+        <div class="stats-card-title">🏆 Mejores Días del Mes</div>
+        <div class="stats-rows" id="stBest"></div>
+      </div>
+      <!-- Tarjeta 4: Peores días -->
+      <div class="stats-card" style="--ac:var(--red)">
+        <div class="stats-card-title">⚠️ Peores Días del Mes</div>
+        <div class="stats-rows" id="stWorst"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
