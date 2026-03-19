@@ -93,10 +93,10 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 #mt{min-width:1080px;}
 
 /* Obj table */
-.obj-card{width:340px;flex-shrink:0;}
-#ot{min-width:300px;}
-#ot td{padding:7px 10px;}
-#ot td:first-child{padding-left:16px;font-size:10px;}
+.obj-card{width:400px;flex-shrink:0;}
+#ot{min-width:0;width:100%;}
+#ot td{padding:6px 8px;font-size:11px;}
+#ot td:first-child{padding-left:12px;font-size:10px;}
 .oh1{background:#00e67618!important;color:var(--green)!important;font-weight:600;}
 .oh2{background:#ffd60018!important;color:var(--yellow)!important;font-weight:600;}
 .oh3{background:#00b0ff18!important;color:var(--cyan)!important;font-weight:600;}
@@ -104,15 +104,15 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .tr-ini td{color:var(--gold)!important;font-weight:600;border-bottom:2px solid var(--border)!important;font-size:12px;}
 
 /* Bottom */
-.bot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-.bc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}
-.bc-t{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:14px;}
+.bot{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+.bc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;overflow:hidden;}
+.bc-t{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;}
 .srows{display:flex;flex-direction:column;gap:7px;}
 .sr{display:flex;justify-content:space-between;align-items:center;padding-bottom:7px;border-bottom:1px solid var(--border);}
 .sr:last-child{border-bottom:none;padding-bottom:0;}
 .sr-l{font-size:12px;color:var(--muted2);}
 .sr-v{font-family:'DM Mono',monospace;font-size:13px;color:var(--text);}
-.prog-l{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:5px;margin-top:14px;}
+.prog-l{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:5px;margin-top:8px;}
 .prog-t{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;}
 .prog-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold),#ffcc02);transition:width 1s ease;}
 
@@ -237,6 +237,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
   <div class="bc"><div class="bc-t">Estadísticas del mes</div><div class="srows" id="mStats"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
   <div class="bc"><div class="bc-t">Progreso objetivos mensuales</div><div id="yProg"><span class="cm" style="font-size:12px">Introduce el capital inicial</span></div></div>
   <div class="bc"><div class="bc-t">Mejores días del mes</div><div class="srows" id="bDays"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
+  <div class="bc"><div class="bc-t">Peores días del mes</div><div class="srows" id="wDays"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
 </div>
 
 </div>
@@ -503,7 +504,12 @@ function renderMain() {
     <div class="sr"><span class="sr-l">Win rate</span><span class="sr-v">${tot?wr+'%':'—'}</span></div>
     <div class="sr"><span class="sr-l">PNL total</span><span class="sr-v ${(pnlTotal-htbTotal)>=0?'cg':'cr'}">${pnlTotal!==0?fd(pnlTotal-htbTotal):'—'}</span></div>`;
 
-  document.getElementById('bDays').innerHTML=dayVals.length
+  document.getElementById('wDays').innerHTML=dayVals.length
+      ? m.days.map(d=>({d,p:pd((D[dk(d)]||{}).pnlDay)})).filter(x=>x.p!==null)
+          .sort((a,b)=>a.p-b.p).slice(0,5)
+          .map(x=>`<div class="sr"><span class="sr-l">${x.d}</span><span class="sr-v ${x.p>=0?'cg':'cr'}">${fd(x.p)}</span></div>`).join('')
+      : '<span class="cm" style="font-size:12px">Sin datos</span>';
+    document.getElementById('bDays').innerHTML=dayVals.length
     ? m.days.map(d=>({d,p:pd((D[dk(d)]||{}).pnlDay)})).filter(x=>x.p!==null)
         .sort((a,b)=>b.p-a.p).slice(0,5)
         .map(x=>`<div class="sr"><span class="sr-l">${x.d}</span><span class="sr-v ${x.p>=0?'cg':'cr'}">${fd(x.p)}</span></div>`).join('')
@@ -611,38 +617,34 @@ function renderYear() {
   const falta40=goal40?Math.max(goal40-pnlPos,0):null;
   const falta60=goal60?Math.max(goal60-pnlPos,0):null;
   document.getElementById('yProg').innerHTML=`
-    <div class="srows">
-      <div class="sr"><span class="sr-l">PNL acumulado</span><span class="sr-v ${pnlAcumulado>=0?'cg':'cr'}">${fd(pnlAcumulado)||'$0'}</span></div>
-    </div>
-
-    <div style="margin-top:14px;">
-      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:4px;">
+    <div>
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:1px;">
         <span style="color:var(--green);font-weight:600">META +20%</span>
         <span style="color:var(--muted2)">${goal20?fd(goal20):'—'}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:2px;">
         <span>Progreso: <span style="color:var(--green)">${pct20}%</span></span>
-        <span>Falta: <span style="color:var(--text)">${falta20?fd(falta20):'✓ Alcanzado'}</span></span>
+        <span>Falta: <span style="color:var(--text)">${falta20?fd(falta20):'✓'}</span></span>
       </div>
-      <div class="prog-t" style="margin-bottom:12px;"><div class="prog-f" style="width:${pct20}%;background:linear-gradient(90deg,var(--green),#00ff94);"></div></div>
+      <div class="prog-t" style="margin-bottom:8px;"><div class="prog-f" style="width:${pct20}%;background:linear-gradient(90deg,var(--green),#00ff94);"></div></div>
 
-      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:1px;">
         <span style="color:var(--gold);font-weight:600">META +40%</span>
         <span style="color:var(--muted2)">${goal40?fd(goal40):'—'}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:2px;">
         <span>Progreso: <span style="color:var(--gold)">${pct40}%</span></span>
-        <span>Falta: <span style="color:var(--text)">${falta40?fd(falta40):'✓ Alcanzado'}</span></span>
+        <span>Falta: <span style="color:var(--text)">${falta40?fd(falta40):'✓'}</span></span>
       </div>
-      <div class="prog-t" style="margin-bottom:12px;"><div class="prog-f" style="width:${pct40}%;background:linear-gradient(90deg,var(--gold),#ffcc02);"></div></div>
+      <div class="prog-t" style="margin-bottom:8px;"><div class="prog-f" style="width:${pct40}%;background:linear-gradient(90deg,var(--gold),#ffcc02);"></div></div>
 
-      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:1px;">
         <span style="color:var(--cyan);font-weight:600">META +60%</span>
         <span style="color:var(--muted2)">${goal60?fd(goal60):'—'}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:2px;">
         <span>Progreso: <span style="color:var(--cyan)">${pct60}%</span></span>
-        <span>Falta: <span style="color:var(--text)">${falta60?fd(falta60):'✓ Alcanzado'}</span></span>
+        <span>Falta: <span style="color:var(--text)">${falta60?fd(falta60):'✓'}</span></span>
       </div>
       <div class="prog-t"><div class="prog-f" style="width:${pct60}%;background:linear-gradient(90deg,var(--cyan),#00e5ff);"></div></div>
     </div>`;
