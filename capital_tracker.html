@@ -649,13 +649,14 @@ function renderYear() {
   const goal20=firstCap?firstCap*0.20:null;
   const goal40=firstCap?firstCap*0.40:null;
   const goal60=firstCap?firstCap*0.60:null;
-  const pnlPos=pnl>0?pnl:0;
-  const pct20=goal20?Math.min((pnlPos/goal20)*100,100).toFixed(1):0;
-  const pct40=goal40?Math.min((pnlPos/goal40)*100,100).toFixed(1):0;
-  const pct60=goal60?Math.min((pnlPos/goal60)*100,100).toFixed(1):0;
-  const falta20=goal20?Math.max(goal20-pnlPos,0):null;
-  const falta40=goal40?Math.max(goal40-pnlPos,0):null;
-  const falta60=goal60?Math.max(goal60-pnlPos,0):null;
+  const pnlNeto=pnl-htbTotal;
+  const pnlNetoPos=pnlNeto>0?pnlNeto:0;
+  const pct20=goal20?Math.min((pnlNetoPos/goal20)*100,100).toFixed(1):0;
+  const pct40=goal40?Math.min((pnlNetoPos/goal40)*100,100).toFixed(1):0;
+  const pct60=goal60?Math.min((pnlNetoPos/goal60)*100,100).toFixed(1):0;
+  const falta20=goal20?Math.max(goal20-pnlNetoPos,0):null;
+  const falta40=goal40?Math.max(goal40-pnlNetoPos,0):null;
+  const falta60=goal60?Math.max(goal60-pnlNetoPos,0):null;
   document.getElementById('yProg').innerHTML=`
     <div>
       <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;margin-bottom:1px;">
@@ -811,42 +812,67 @@ function renderStats() {
   `;
 
   // ── Tarjeta 2: Progreso objetivos ──
-  let som = null;
-  for (let d of m.days) {
-    const s = pd((D[dk(d)] || {}).startOfDay);
-    if (s) { som = s; break; }
-  }
+  let pnl = 0, htbTotal = 0, firstCap = null;
+  m.days.forEach(d => {
+    const row = D[dk(d)] || {};
+    const sod = pd(row.startOfDay); 
+    if (sod && !firstCap) firstCap = sod;
+    const p = pd(row.pnlDay); 
+    if (p !== null) pnl += p;
+    const h = pd(row.htb) || 0; 
+    htbTotal += h;
+  });
 
-  if (!som) {
+  if (!firstCap) {
     document.getElementById('stProg').innerHTML = '<span style="font-size:12px;color:var(--muted2)">Introduce el Start of Day del primer día del mes</span>';
   } else {
-    const goals = [{ rate: 0.20, label: '+20%', color: 'var(--green)' }, { rate: 0.40, label: '+40%', color: 'var(--gold)' }, { rate: 0.60, label: '+60%', color: 'var(--cyan)' }];
-    let currentCap = som;
-    for (let d of m.days) {
-      const row = D[dk(d)] || {};
-      const s = pd(row.startOfDay);
-      if (s !== null) {
-        const pnl = pd(row.pnlDay) || 0;
-        const htb = pd(row.htb) || 0;
-        currentCap = s + pnl - htb;
-      }
-    }
-    const gain = currentCap - som;
-    document.getElementById('stProg').innerHTML = goals.map(g => {
-      const target = som * (1 + g.rate);
-      const needed = target - currentCap;
-      const pct = Math.min(100, Math.max(0, (gain / (som * g.rate)) * 100));
-      const reached = currentCap >= target;
-      return `
-        <div class="prog-bar-wrap">
-          <div class="prog-label">
-            <span>META ${g.label} <span style="color:var(--text)">${fd(target)}</span></span>
-            <span style="color:${g.color}">${reached ? '✓ Alcanzado' : fd(currentCap)}</span>
-          </div>
-          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${g.color}"></div></div>
-          ${!reached ? `<div style="font-size:9px;color:var(--muted2);margin-top:-6px;margin-bottom:8px">Faltan ${fd(needed)}</div>` : ''}
-        </div>`;
-    }).join('');
+    const goal20 = firstCap * 0.20;
+    const goal40 = firstCap * 0.40;
+    const goal60 = firstCap * 0.60;
+    const pnlNeto = pnl - htbTotal;
+    const pnlNetoPos = pnlNeto > 0 ? pnlNeto : 0;
+    const pct20 = Math.min((pnlNetoPos / goal20) * 100, 100).toFixed(1);
+    const pct40 = Math.min((pnlNetoPos / goal40) * 100, 100).toFixed(1);
+    const pct60 = Math.min((pnlNetoPos / goal60) * 100, 100).toFixed(1);
+    const falta20 = Math.max(goal20 - pnlNetoPos, 0);
+    const falta40 = Math.max(goal40 - pnlNetoPos, 0);
+    const falta60 = Math.max(goal60 - pnlNetoPos, 0);
+    
+    document.getElementById('stProg').innerHTML = `
+      <div class="prog-bar-wrap">
+        <div class="prog-label">
+          <span style="color:var(--green);font-weight:600">META +20%</span>
+          <span style="color:var(--muted2)">${fd(goal20)}</span>
+        </div>
+        <div class="prog-label">
+          <span>Progreso: <span style="color:var(--green)">${pct20}%</span></span>
+          <span>Falta: <span style="color:var(--text)">${falta20 > 0 ? fd(falta20) : '✓'}</span></span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct20}%;background:var(--green)"></div></div>
+      </div>
+      <div class="prog-bar-wrap">
+        <div class="prog-label">
+          <span style="color:var(--gold);font-weight:600">META +40%</span>
+          <span style="color:var(--muted2)">${fd(goal40)}</span>
+        </div>
+        <div class="prog-label">
+          <span>Progreso: <span style="color:var(--gold)">${pct40}%</span></span>
+          <span>Falta: <span style="color:var(--text)">${falta40 > 0 ? fd(falta40) : '✓'}</span></span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct40}%;background:var(--gold)"></div></div>
+      </div>
+      <div class="prog-bar-wrap">
+        <div class="prog-label">
+          <span style="color:var(--cyan);font-weight:600">META +60%</span>
+          <span style="color:var(--muted2)">${fd(goal60)}</span>
+        </div>
+        <div class="prog-label">
+          <span>Progreso: <span style="color:var(--cyan)">${pct60}%</span></span>
+          <span>Falta: <span style="color:var(--text)">${falta60 > 0 ? fd(falta60) : '✓'}</span></span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct60}%;background:var(--cyan)"></div></div>
+      </div>
+    `;
   }
 
   // ── Tarjeta 3: Mejores días ──
