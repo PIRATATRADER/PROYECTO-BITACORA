@@ -212,6 +212,13 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
   <div class="tabs" id="tabs" style="margin-bottom:0;flex:1;"></div>
+  <button id="btnCalendar" onclick="showCalendar()" style="
+    font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    padding:6px 16px;border-radius:7px;border:1px solid var(--green);background:#00e67615;
+    color:var(--green);cursor:pointer;transition:all .15s;margin-left:10px;flex-shrink:0;
+    display:inline-flex;align-items:center;gap:6px;">
+    📅 Mes Calendar
+  </button>
   <button id="btnStats" onclick="showStats()" style="
     font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
     padding:6px 16px;border-radius:7px;border:1px solid var(--gold);background:#f5a62315;
@@ -745,6 +752,145 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),1800);
 }
 
+// ── CALENDAR SCREEN ──────────────────────────────────────────────────────────
+let calendarMonth = null;
+
+function showCalendar() {
+  calendarMonth = month;
+  document.getElementById('calendarScreen').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  renderCalendar();
+}
+
+function hideCalendar() {
+  document.getElementById('calendarScreen').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function renderCalendar() {
+  const m = MONTHS[calendarMonth];
+  document.getElementById('calendarTitle').textContent = m.name + ', 2026';
+  
+  // Calcular PNL total del mes
+  let totalPNL = 0;
+  m.days.forEach(d => {
+    const row = D[dk(d)] || {};
+    const pnl = pd(row.pnlDay);
+    if (pnl !== null) totalPNL += pnl;
+  });
+  
+  const pnlEl = document.getElementById('calendarPNL');
+  pnlEl.textContent = fd(totalPNL);
+  pnlEl.style.color = totalPNL >= 0 ? 'var(--green)' : 'var(--red)';
+  
+  // Crear calendario
+  const firstDay = new Date(2026, m.num - 1, 1).getDay(); // 0=Sunday
+  const daysInMonth = new Date(2026, m.num, 0).getDate();
+  
+  // Calcular totales por semana
+  const weekTotals = {};
+  m.days.forEach(d => {
+    const dayNum = parseInt(d.split('/')[0]);
+    const date = new Date(2026, m.num - 1, dayNum);
+    const weekNum = Math.floor((dayNum + firstDay - 1) / 7);
+    const row = D[dk(d)] || {};
+    const pnl = pd(row.pnlDay);
+    if (!weekTotals[weekNum]) weekTotals[weekNum] = { pnl: 0, trades: 0 };
+    if (pnl !== null) {
+      weekTotals[weekNum].pnl += pnl;
+      weekTotals[weekNum].trades++;
+    }
+  });
+  
+  let grid = `
+    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:12px;">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Sun</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Mon</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Tue</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Wed</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Thu</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Fri</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Sat</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Week</div>
+      </div>
+  `;
+  
+  let currentWeek = 0;
+  let dayIndex = 0;
+  
+  for (let i = 0; i < firstDay; i++) {
+    grid += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;"></div>`;
+    dayIndex++;
+  }
+  
+  for (let day = 1; day <= daysInMonth; day++) {
+    // Formato correcto: DD/MM/YYYY (con ceros a la izquierda)
+    const dayStr = String(day).padStart(2, '0');
+    const monthStr = String(m.num).padStart(2, '0');
+    const dateStr = `${dayStr}/${monthStr}/2026`;
+    const k = dk(dateStr);
+    const row = D[k] || {};
+    const pnl = pd(row.pnlDay);
+    const shares = pd(row.shares);
+    
+    console.log(`Día ${day}: dateStr=${dateStr}, key=${k}, pnl=${pnl}, shares=${shares}`, row);
+    
+    const color = pnl === null ? 'var(--muted)' : pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    const pnlText = pnl !== null ? fd(pnl) : '';
+    
+    // Mostrar shares si existe, sino mostrar si hubo trades
+    let tradesText = '';
+    if (pnl !== null) {
+      if (shares) {
+        tradesText = Math.round(shares).toLocaleString('en-US') + ' shares';
+      } else {
+        tradesText = '1 trade';
+      }
+    }
+    
+    grid += `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--muted2);">${day}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${color};">${pnlText}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:auto;">${tradesText}</div>
+      </div>
+    `;
+    
+    dayIndex++;
+    
+    // Si es sábado, añadir celda de semana
+    if (dayIndex % 7 === 0 || day === daysInMonth) {
+      const weekData = weekTotals[currentWeek] || { pnl: 0, trades: 0 };
+      const weekColor = weekData.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+      grid += `
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${weekColor};">${weekData.pnl !== 0 ? fd(weekData.pnl) : ''}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">${weekData.trades > 0 ? weekData.trades + ' trades' : ''}</div>
+        </div>
+      `;
+      currentWeek++;
+    }
+  }
+  
+  grid += `</div>`;
+  document.getElementById('calendarGrid').innerHTML = grid;
+}
+
 
 // ── STATISTICS SCREEN ────────────────────────────────────────────────────────
 let statsMonth = null;
@@ -1251,6 +1397,18 @@ function renderAll(){ renderMain(); renderObj(); renderYear(); }
         <div id="stCalidadEntrada"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ═══════ CALENDAR SCREEN ═══════ -->
+<div id="calendarScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;">
+  <div style="max-width:1400px;margin:0 auto;padding:24px 20px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+      <button onclick="hideCalendar()" style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;transition:all .15s;">← Volver</button>
+      <div id="calendarTitle" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;">March, 2026</div>
+      <div id="calendarPNL" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--green);margin-left:auto;">$0</div>
+    </div>
+    <div id="calendarGrid"></div>
   </div>
 </div>
 
