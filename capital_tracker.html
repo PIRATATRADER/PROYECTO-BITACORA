@@ -16,7 +16,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 body::before{content:'';position:fixed;inset:0;
   background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
   background-size:40px 40px;opacity:.3;z-index:0;pointer-events:none;}
-.wrap{position:relative;z-index:1;max-width:1700px;margin:0 auto;padding:24px 20px;}
+.wrap{position:relative;z-index:1;max-width:2000px;margin:0 auto;padding:24px 20px;}
 
 /* Back */
 .back{display:inline-flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:11px;
@@ -34,7 +34,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 
 /* KPIs */
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
-.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;text-align:center;}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--gold));}
 .kpi-l{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;}
 .kpi-v{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1px;line-height:1;}
@@ -90,7 +90,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .pp{color:var(--green)!important;font-weight:600;} .pn{color:var(--red)!important;font-weight:600;} .pm{color:var(--muted)!important;}
 
 /* Main table min-width */
-#mt{min-width:1080px;}
+#mt{min-width:1500px;}
 
 /* Obj table */
 .obj-card{width:400px;flex-shrink:0;}
@@ -106,7 +106,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 
 /* Stats Screen */
 #statsScreen{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;}
-.stats-wrap{max-width:1200px;margin:0 auto;padding:24px 20px;}
+.stats-wrap{max-width:1600px;margin:0 auto;padding:24px 20px;}
 .stats-header{display:flex;align-items:center;gap:14px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
 .stats-back{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;transition:all .15s;}
 .stats-back:hover{color:var(--text);border-color:var(--muted2);background:var(--bg3);}
@@ -114,12 +114,12 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .stats-title span{color:var(--gold);}
 .stats-month-sel{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 13px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);color:var(--muted2);cursor:pointer;}
 .stats-month-sel.on{background:#f5a62315;border-color:var(--gold);color:var(--gold);}
-.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 @media(max-width:768px){.stats-grid{grid-template-columns:1fr;}}
-.stats-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;}
+.stats-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;min-height:520px;}
 .stats-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--gold));}
 .stats-card-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--muted2);margin-bottom:14px;}
-.stats-rows{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
+.stats-rows{display:flex;flex-direction:column;gap:6px;}
 .stats-rows::-webkit-scrollbar{width:3px;}
 .stats-rows::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 .sr2{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg3);border-radius:6px;font-size:12px;}
@@ -243,10 +243,12 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="text-align:center">Setup A</th>
           <th style="text-align:center">Setup B</th>
           <th style="text-align:center">Setup C</th>
+          <th>Score Entrada</th>
           <th>Shares</th>
           <th>HTB</th>
           <th>PNL Day</th>
           <th>% Day</th>
+          <th>R</th>
         </tr></thead>
         <tbody id="mb"></tbody>
       </table>
@@ -480,6 +482,8 @@ function renderMain() {
 
     // % Day = PNL / SOD  (automatic)
     const pctD = (pnl!==null&&sod) ? ((pnl/sod)*100).toFixed(2)+'%' : '';
+    // R = PNL Day / Risk Trade
+    const rValue = (pnl!==null&&c.rt) ? (pnl/c.rt).toFixed(2)+'R' : '';
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
 
@@ -495,10 +499,12 @@ function renderMain() {
       <td style="text-align:center">${c.sa?fd(c.sa):''}</td>
       <td style="text-align:center">${c.sb?fd(c.sb):''}</td>
       <td style="text-align:center">${c.sc?fd(c.sc):''}</td>
+      <td class="ed" data-k="${k}" data-f="scoreEntrada">${row.scoreEntrada||''}</td>
       <td class="ed" data-k="${k}" data-f="shares">${row.shares||''}</td>
       <td class="ed" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
+      <td class="${ptc}">${rValue}</td>
     </tr>`;
   });
 
@@ -515,10 +521,12 @@ function renderMain() {
     <td class="cgo" style="text-align:center" title="Promedio Setup A">${avgC.sa?fd(avgC.sa):''}</td>
     <td class="cgo" style="text-align:center" title="Promedio Setup B">${avgC.sb?fd(avgC.sb):''}</td>
     <td class="cgo" style="text-align:center" title="Promedio Setup C">${avgC.sc?fd(avgC.sc):''}</td>
+    <td></td>
     <td>${shTotal>0?shTotal.toLocaleString('en-US'):''}</td>
     <td>${htbTotal>0?fd(htbTotal):''}</td>
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
+    <td></td>
   </tr>`;
 
   document.getElementById('mb').innerHTML = rows;
@@ -887,6 +895,278 @@ function renderStats() {
     ? [...rows].sort((a, b) => a.p - b.p).slice(0, 10)
       .map(x => `<div class="sr2"><span class="sr2-l">${x.d}</span><span class="sr2-v ${x.p >= 0 ? 'cg' : 'cr'}">${fd(x.p)}</span></div>`).join('')
     : noDayData;
+
+  // ── Tarjeta 5: R Medio ──
+  if (rows.length === 0) {
+    document.getElementById('stRMedio').innerHTML = noDayData;
+  } else {
+    const winRows = rows.filter(x => x.p > 0);
+    const lossRows = rows.filter(x => x.p < 0);
+    
+    const avgWinR = winRows.length > 0 
+      ? (winRows.reduce((sum, x) => sum + x.p, 0) / winRows.length).toFixed(2) + 'R'
+      : '—';
+    
+    const avgLossR = lossRows.length > 0 
+      ? (lossRows.reduce((sum, x) => sum + x.p, 0) / lossRows.length).toFixed(2) + 'R'
+      : '—';
+    
+    const totalR = rows.length > 0
+      ? (rows.reduce((sum, x) => sum + x.p, 0) / rows.length).toFixed(2) + 'R'
+      : '—';
+    
+    const avgWinNum = winRows.length > 0 ? winRows.reduce((sum, x) => sum + x.p, 0) / winRows.length : 0;
+    const avgLossNum = lossRows.length > 0 ? Math.abs(lossRows.reduce((sum, x) => sum + x.p, 0) / lossRows.length) : 0;
+    const totalNum = rows.length > 0 ? rows.reduce((sum, x) => sum + x.p, 0) / rows.length : 0;
+    
+    let insight1 = '', insight2 = '';
+    
+    if (avgWinNum > 0 && avgWinNum >= 0.5) {
+      insight1 = 'Bien en wins';
+    } else if (avgWinNum > 0 && avgWinNum < 0.5) {
+      insight1 = 'Wins mejorables';
+    }
+    
+    if (avgLossNum > 0 && avgLossNum <= 1) {
+      insight2 = 'Loss controlable → correcto';
+    } else if (avgLossNum > 1) {
+      insight2 = 'Loss muy grande → revisar';
+    }
+    
+    document.getElementById('stRMedio').innerHTML = `
+      <div style="font-family:'DM Mono',monospace;font-size:11px;margin-bottom:12px;color:var(--muted2)">
+        <strong style="color:var(--text)">📊 Ejemplo:</strong>
+      </div>
+      <table style="width:100%;margin-bottom:16px;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Tipo</th>
+            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">R medio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:8px 0;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);text-align:center;">Ganadores</td>
+            <td style="padding:8px 0;text-align:center;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--green);">${avgWinR}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);text-align:center;">Perdedores</td>
+            <td style="padding:8px 0;text-align:center;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--red);">${avgLossR}</td>
+          </tr>
+          <tr style="border-top:2px solid var(--border);">
+            <td style="padding:8px 0;font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);font-weight:600;text-align:center;">Total</td>
+            <td style="padding:8px 0;text-align:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:${totalNum >= 0 ? 'var(--green)' : 'var(--red)'};">${totalR}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span>👉</span><strong style="color:var(--cyan)">Insight:</strong>
+        </div>
+        <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:1.8;">
+          ${insight1 ? `<li>${insight1}</li>` : ''}
+          ${insight2 ? `<li>${insight2}</li>` : ''}
+        </ul>
+      </div>
+    `;
+  }
+
+  // ── Tarjeta 6: Timing (ahora es R) ──
+  const tradesWithTiming = [];
+  m.days.forEach(d => {
+    const row = D[dk(d)] || {};
+    const pnl = pd(row.pnlDay);
+    const sod = pd(row.startOfDay);
+    if (pnl !== null && sod) {
+      const c = calc(sod);
+      const riskTrade = c.rt;
+      if (riskTrade) {
+        const rValue = pnl / riskTrade;
+        tradesWithTiming.push({ timing: rValue, pnl: rValue, trade: d });
+      }
+    }
+  });
+
+  if (tradesWithTiming.length === 0) {
+    document.getElementById('stTiming').innerHTML = noDayData;
+  } else {
+    // Calcular promedio de R para wins y losses
+    const timingWins = tradesWithTiming.filter(t => t.pnl > 0);
+    const timingLosses = tradesWithTiming.filter(t => t.pnl < 0);
+    
+    const avgTimingWin = timingWins.length > 0
+      ? (timingWins.reduce((sum, t) => sum + t.timing, 0) / timingWins.length).toFixed(2)
+      : '—';
+    
+    const avgTimingLoss = timingLosses.length > 0
+      ? (timingLosses.reduce((sum, t) => sum + t.timing, 0) / timingLosses.length).toFixed(2)
+      : '—';
+
+    // Insight sobre timing
+    let timingInsight = '';
+    const avgWinNum = parseFloat(avgTimingWin);
+    const avgLossNum = parseFloat(avgTimingLoss);
+    
+    if (!isNaN(avgWinNum) && !isNaN(avgLossNum)) {
+      if (avgWinNum > Math.abs(avgLossNum)) {
+        timingInsight = 'Buen timing en wins → mantener disciplina';
+      } else if (avgWinNum < Math.abs(avgLossNum)) {
+        timingInsight = 'Te adelantas o llegas tarde → clave mejorar aquí';
+      } else {
+        timingInsight = 'Timing similar en wins/losses → revisar entradas';
+      }
+    }
+
+    // Crear tabla de trades individuales con timing
+    const tradesTable = tradesWithTiming
+      .sort((a, b) => b.pnl - a.pnl)
+      .slice(0, 10)
+      .map(t => `
+        <tr>
+          <td style="padding:6px 0;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;">${t.trade}</td>
+          <td style="padding:6px 0;text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);">${t.timing.toFixed(2)}R</td>
+          <td style="padding:6px 0;text-align:center;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${t.pnl >= 0 ? 'var(--green)' : 'var(--red)'};">${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)}R</td>
+        </tr>
+      `).join('');
+
+    document.getElementById('stTiming').innerHTML = `
+      <div style="font-family:'DM Mono',monospace;font-size:11px;margin-bottom:12px;color:var(--muted2)">
+        <strong style="color:var(--text)">📊 Ejemplo:</strong>
+      </div>
+      <table style="width:100%;margin-bottom:16px;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Trade</th>
+            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Timing</th>
+            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Resultado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tradesTable}
+        </tbody>
+      </table>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">R Promedio Wins:</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--green);">${avgTimingWin}R</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">R Promedio Losses:</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--red);">${avgTimingLoss}R</span>
+        </div>
+      </div>
+      ${timingInsight ? `
+      <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span>👉</span><strong style="color:var(--yellow)">Insight:</strong>
+        </div>
+        <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:1.8;">
+          <li>${timingInsight}</li>
+        </ul>
+      </div>
+      ` : ''}
+    `;
+  }
+
+  // ── Tarjeta 7: Calidad de Entrada ──
+  const tradesWithScore = [];
+  m.days.forEach(d => {
+    const row = D[dk(d)] || {};
+    const score = row.scoreEntrada ? parseInt(row.scoreEntrada) : null;
+    const pnl = pd(row.pnlDay);
+    const sod = pd(row.startOfDay);
+    if (score !== null && pnl !== null && sod) {
+      const c = calc(sod);
+      const riskTrade = c.rt;
+      if (riskTrade) {
+        const rValue = pnl / riskTrade;
+        tradesWithScore.push({ trade: d, score, pnl: rValue });
+      }
+    }
+  });
+
+  if (tradesWithScore.length === 0) {
+    document.getElementById('stCalidadEntrada').innerHTML = noDayData;
+  } else {
+    // Calcular promedio de score para wins y losses
+    const scoreWins = tradesWithScore.filter(t => t.pnl > 0);
+    const scoreLosses = tradesWithScore.filter(t => t.pnl < 0);
+    
+    const avgScoreWin = scoreWins.length > 0
+      ? (scoreWins.reduce((sum, t) => sum + t.score, 0) / scoreWins.length).toFixed(1)
+      : '—';
+    
+    const avgScoreLoss = scoreLosses.length > 0
+      ? (scoreLosses.reduce((sum, t) => sum + t.score, 0) / scoreLosses.length).toFixed(1)
+      : '—';
+
+    // Insight sobre calidad de entrada
+    let entryInsight = '';
+    const avgWinScore = parseFloat(avgScoreWin);
+    const avgLossScore = parseFloat(avgScoreLoss);
+    
+    if (!isNaN(avgWinScore) && !isNaN(avgLossScore)) {
+      if (avgLossScore < 5) {
+        entryInsight = 'Todo lo <5 pierde → problema NO es estrategia, es ejecución';
+      } else if (avgWinScore >= 7 && avgLossScore < 7) {
+        entryInsight = 'Calidad alta en wins, baja en losses → mejorar paciencia';
+      } else if (avgWinScore < 7 && avgLossScore < 7) {
+        entryInsight = 'Scores bajos generales → revisar criterios de entrada';
+      } else if (avgWinScore >= 7 && avgLossScore >= 7) {
+        entryInsight = 'Buena calidad en ambos → el problema puede ser gestión de salida';
+      }
+    }
+
+    // Crear tabla de trades individuales con score
+    const scoresTable = tradesWithScore
+      .sort((a, b) => b.pnl - a.pnl)
+      .slice(0, 10)
+      .map(t => `
+        <tr>
+          <td style="padding:6px 0;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;">${t.trade}</td>
+          <td style="padding:6px 0;text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);">${t.score}</td>
+          <td style="padding:6px 0;text-align:center;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${t.pnl >= 0 ? 'var(--green)' : 'var(--red)'};">${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(1)}R</td>
+        </tr>
+      `).join('');
+
+    document.getElementById('stCalidadEntrada').innerHTML = `
+      <div style="font-family:'DM Mono',monospace;font-size:11px;margin-bottom:12px;color:var(--muted2)">
+        <strong style="color:var(--text)">📊 Ejemplo:</strong>
+      </div>
+      <table style="width:100%;margin-bottom:16px;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Trade</th>
+            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Score Entrada</th>
+            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Resultado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${scoresTable}
+        </tbody>
+      </table>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">Score Promedio Wins:</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--green);">${avgScoreWin}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">Score Promedio Losses:</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--red);">${avgScoreLoss}</span>
+        </div>
+      </div>
+      ${entryInsight ? `
+      <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span>👉</span><strong style="color:var(--blue)">Insight:</strong>
+        </div>
+        <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:1.8;">
+          <li>${entryInsight}</li>
+        </ul>
+      </div>
+      ` : ''}
+    `;
+  }
 }
 
 function renderAll(){ renderMain(); renderObj(); renderYear(); }
@@ -940,6 +1220,21 @@ function renderAll(){ renderMain(); renderObj(); renderYear(); }
       <div class="stats-card" style="--ac:var(--red)">
         <div class="stats-card-title">⚠️ Peores Días del Mes</div>
         <div class="stats-rows" id="stWorst"></div>
+      </div>
+      <!-- Tarjeta 5: R Medio -->
+      <div class="stats-card" style="--ac:var(--cyan)">
+        <div class="stats-card-title">⚖️ R Medio</div>
+        <div id="stRMedio"></div>
+      </div>
+      <!-- Tarjeta 6: Timing -->
+      <div class="stats-card" style="--ac:var(--yellow)">
+        <div class="stats-card-title">⏱️ Timing</div>
+        <div id="stTiming"></div>
+      </div>
+      <!-- Tarjeta 7: Calidad de Entrada -->
+      <div class="stats-card" style="--ac:var(--blue)">
+        <div class="stats-card-title">🎯 Calidad de Entrada</div>
+        <div id="stCalidadEntrada"></div>
       </div>
     </div>
   </div>
