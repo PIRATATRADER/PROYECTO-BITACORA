@@ -67,12 +67,12 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 table{width:100%;border-collapse:collapse;}
 thead th{
   font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.3px;text-transform:uppercase;
-  color:var(--muted);padding:9px 10px;text-align:right;border-bottom:1px solid var(--border);
+  color:var(--muted);padding:9px 10px;text-align:center;border-bottom:1px solid var(--border);
   background:var(--bg2);white-space:nowrap;}
 thead th:first-child{text-align:left;padding-left:16px;}
 tbody tr{border-bottom:1px solid #0c1015;transition:background .1s;}
 tbody tr:hover{background:#131820;}
-tbody td{padding:8px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);text-align:right;white-space:nowrap;}
+tbody td{padding:8px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);text-align:center;white-space:nowrap;}
 tbody td:first-child{text-align:left;padding-left:16px;color:var(--muted2);}
 .tr-total{background:var(--bg3)!important;border-top:2px solid var(--border);}
 .tr-total td:first-child{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;color:var(--gold);}
@@ -81,12 +81,16 @@ tbody td:first-child{text-align:left;padding-left:16px;color:var(--muted2);}
 td.ed{cursor:pointer;}
 td.ed:hover{background:#1a2035!important;}
 td.ed input{background:transparent;border:none;color:inherit;font-family:'DM Mono',monospace;
-  font-size:11px;width:95px;text-align:right;outline:none;padding:0;}
+  font-size:11px;width:95px;text-align:center;outline:none;padding:0;}
 td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 
 /* Colors */
 .cg{color:var(--green)!important;} .cr{color:var(--red)!important;}
 .cgo{color:var(--gold)!important;} .cm{color:var(--muted)!important;}
+.cblue{color:var(--blue)!important;}
+.crs{color:#ff8a8a!important;} /* Rojo suave para Risk Trade */
+.cgl{color:#6effa3!important;} /* Verde claro para Targets */
+.cpink{color:#ff6b9d!important;} /* Rosa/fucsia para HTB */
 .pp{color:var(--green)!important;font-weight:600;} .pn{color:var(--red)!important;font-weight:600;} .pm{color:var(--muted)!important;}
 
 /* Main table min-width */
@@ -233,19 +237,19 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
       <table id="mt">
         <thead><tr>
           <th>Fecha</th>
-          <th>Start of Day</th>
-          <th>Max Loss</th>
-          <th>Risk Trade</th>
-          <th>Target 1</th>
-          <th>Target 3</th>
-          <th>Target 5</th>
-          <th style="text-align:center">Setup DATA</th>
+          <th style="color:var(--text)">Start of Day</th>
+          <th style="color:var(--red)">Max Loss</th>
+          <th style="color:#ff8a8a">Risk Trade</th>
+          <th style="color:#6effa3">Target 1</th>
+          <th style="color:#6effa3">Target 3</th>
+          <th style="color:#6effa3">Target 5</th>
+          <th style="text-align:center;color:var(--blue)">Setup DATA</th>
           <th style="text-align:center">Setup A</th>
           <th style="text-align:center">Setup B</th>
           <th style="text-align:center">Setup C</th>
           <th>Score Entrada</th>
           <th>Shares</th>
-          <th>HTB</th>
+          <th style="color:#ff6b9d">HTB</th>
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
@@ -455,6 +459,7 @@ function renderMain() {
 
   let rows='', pnlTotal=0, shTotal=0, htbTotal=0, wins=0, losses=0, firstSOD=null;
   let sodSum=0, sodCount=0;
+  let rSum=0, rCount=0;
 
   m.days.forEach(d => {
     // Check if this day is a holiday
@@ -484,6 +489,8 @@ function renderMain() {
     const pctD = (pnl!==null&&sod) ? ((pnl/sod)*100).toFixed(2)+'%' : '';
     // R = PNL Day / Risk Trade
     const rValue = (pnl!==null&&c.rt) ? (pnl/c.rt).toFixed(2)+'R' : '';
+    const rNum = (pnl!==null&&c.rt) ? (pnl/c.rt) : null;
+    if(rNum!==null){ rSum+=rNum; rCount++; }
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
 
@@ -491,17 +498,17 @@ function renderMain() {
       <td>${d}</td>
       <td class="ed" data-k="${k}" data-f="startOfDay">${sod?fd(sod):''}</td>
       <td class="cr">${c.ml?fd(c.ml):''}</td>
-      <td class="cm">${c.rt?fd(c.rt):''}</td>
-      <td class="${c.t1?'cgo':''}">${c.t1?fd(c.t1):''}</td>
-      <td class="${c.t3?'cgo':''}">${c.t3?fd(c.t3):''}</td>
-      <td class="${c.t5?'cgo':''}">${c.t5?fd(c.t5):''}</td>
-      <td style="text-align:center">${c.sd?fd(c.sd):''}</td>
+      <td class="crs">${c.rt?fd(c.rt):''}</td>
+      <td class="${c.t1?'cgl':''}">${c.t1?fd(c.t1):''}</td>
+      <td class="${c.t3?'cgl':''}">${c.t3?fd(c.t3):''}</td>
+      <td class="${c.t5?'cgl':''}">${c.t5?fd(c.t5):''}</td>
+      <td class="cblue" style="text-align:center">${c.sd?fd(c.sd):''}</td>
       <td style="text-align:center">${c.sa?fd(c.sa):''}</td>
       <td style="text-align:center">${c.sb?fd(c.sb):''}</td>
       <td style="text-align:center">${c.sc?fd(c.sc):''}</td>
       <td class="ed" data-k="${k}" data-f="scoreEntrada">${row.scoreEntrada||''}</td>
       <td class="ed" data-k="${k}" data-f="shares">${row.shares||''}</td>
-      <td class="ed" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
+      <td class="ed cpink" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
@@ -513,20 +520,27 @@ function renderMain() {
   const tpct=firstSOD&&pnlTotal!==0?((pnlTotal/firstSOD)*100).toFixed(2)+'%':'';
   const avgSOD = sodCount>0 ? sodSum/sodCount : null;
   const avgC = calc(avgSOD);
+  const avgR = rCount>0 ? (rSum/rCount).toFixed(2)+'R' : '';
+  const avgRClass = rCount>0 ? (rSum/rCount>=0?'cg':'cr') : '';
   const avgLbl = sodCount>0 ? `<span style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px">PROM</span>` : '';
   rows+=`<tr class="tr-total">
     <td>TOTAL MES</td>
-    <td></td><td></td><td></td><td></td><td></td><td></td>
-    <td class="cgo" style="text-align:center" title="Promedio Setup DATA">${avgC.sd?fd(avgC.sd):''}</td>
+    <td>${avgSOD?fd(avgSOD):''}</td>
+    <td class="cr">${avgC.ml?fd(avgC.ml):''}</td>
+    <td class="crs">${avgC.rt?fd(avgC.rt):''}</td>
+    <td class="cgl">${avgC.t1?fd(avgC.t1):''}</td>
+    <td class="cgl">${avgC.t3?fd(avgC.t3):''}</td>
+    <td class="cgl">${avgC.t5?fd(avgC.t5):''}</td>
+    <td class="cblue" style="text-align:center" title="Promedio Setup DATA">${avgC.sd?fd(avgC.sd):''}</td>
     <td class="cgo" style="text-align:center" title="Promedio Setup A">${avgC.sa?fd(avgC.sa):''}</td>
     <td class="cgo" style="text-align:center" title="Promedio Setup B">${avgC.sb?fd(avgC.sb):''}</td>
     <td class="cgo" style="text-align:center" title="Promedio Setup C">${avgC.sc?fd(avgC.sc):''}</td>
     <td></td>
     <td>${shTotal>0?shTotal.toLocaleString('en-US'):''}</td>
-    <td>${htbTotal>0?fd(htbTotal):''}</td>
+    <td class="cpink">${htbTotal>0?fd(htbTotal):''}</td>
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
-    <td></td>
+    <td class="${avgRClass}">${avgR}</td>
   </tr>`;
 
   document.getElementById('mb').innerHTML = rows;
