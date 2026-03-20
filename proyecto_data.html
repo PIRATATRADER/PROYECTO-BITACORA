@@ -1267,9 +1267,9 @@
 
     <!-- Exit Strategy -->
     <div class="exit-card">
-      <div class="chart-title">Exit Strategy · Mejor Cierre</div>
+      <div class="chart-title">Exit Strategy · Objetivo 1</div>
       <div class="exit-rows" id="exitRows">
-        <div class="exit-empty">Sin datos de cierre aún</div>
+        <div class="exit-empty">Sin datos de objetivo aún</div>
       </div>
     </div>
 
@@ -1408,18 +1408,14 @@
           <div class="info-pill"><div class="info-pill-label">Cash</div><div class="info-pill-val" id="modalCash">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Inicio</div><div class="info-pill-val" id="modalInicio">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Final</div><div class="info-pill-val" id="modalFinal">—</div></div>
-          <div class="info-pill"><div class="info-pill-label">Mejor Cierre</div><div class="info-pill-val" id="modalMejorCierre">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Runner</div><div class="info-pill-val" id="modalRunner">—</div></div>
+          <div class="info-pill"><div class="info-pill-label">Objetivo 1</div><div class="info-pill-val" id="modalObjetivo1">—</div></div>
+          <div class="info-pill"><div class="info-pill-label">Objetivo 2</div><div class="info-pill-val" id="modalObjetivo2">—</div></div>
+          <div class="info-pill"><div class="info-pill-label">Objetivo 3</div><div class="info-pill-val" id="modalObjetivo3">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Insiders</div><div class="info-pill-val" id="modalInsiders">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Inst. Own</div><div class="info-pill-val" id="modalInstOwn">—</div></div>
           <div class="info-pill"><div class="info-pill-label">Dilución</div><div class="info-pill-val" id="modalDilucion">—</div></div>
         </div>
-      </div>
-
-      <!-- Targets -->
-      <div id="modalTargetsSection" style="display:none">
-        <div class="section-title">Targets</div>
-        <div class="targets-display" id="modalTargetsDisplay"></div>
       </div>
 
       <!-- Observaciones -->
@@ -1727,18 +1723,6 @@
           </div>
         </div>
         <div class="form-field">
-          <label class="form-label">Mejor Cierre</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_mejorCierre">
-              <option value="">— Seleccionar —</option>
-              <option>CLOSE DIA ANTERIOR</option>
-              <option>JLINES</option>
-              <option>MINIMO DEL PREMARKET</option>
-              <option>BASE ANTERIOR</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
           <label class="form-label">Runner</label>
           <div class="form-select-wrap">
             <select class="form-select" id="ff_runner">
@@ -1748,27 +1732,53 @@
             </select>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Sección: Targets -->
-    <div class="form-section">
-      <div class="form-section-title">Targets <span class="form-label-opt" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-left:6px">— opcional</span></div>
-      <div class="target-rows">
-        <div class="target-row">
-          <span class="target-row-label">TARGET 1</span>
-          <div class="form-field" style="margin:0"><label class="form-label">PNL ($)</label><input class="form-input" type="number" id="ff_t1_pnl" placeholder="350.00" step="0.01"></div>
-          <div class="form-field" style="margin:0"><label class="form-label">% posición</label><input class="form-input" type="number" id="ff_t1_pct" placeholder="56" step="0.1" min="0" max="100"></div>
+        <div class="form-field">
+          <label class="form-label">Objetivo 1</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="ff_objetivo1">
+              <option value="">— Seleccionar —</option>
+              <option>JLINES</option>
+              <option>VWAP</option>
+              <option>CLOSE DAY ANTERIOR</option>
+              <option>CLOSE DAY</option>
+              <option>POST-MARKET (22:30)</option>
+              <option>CLOSE 15%</option>
+              <option>CLOSE 20%</option>
+              <option>CLOSE 25%</option>
+            </select>
+          </div>
         </div>
-        <div class="target-row">
-          <span class="target-row-label">TARGET 2</span>
-          <div class="form-field" style="margin:0"><label class="form-label">PNL ($)</label><input class="form-input" type="number" id="ff_t2_pnl" placeholder="120.00" step="0.01"></div>
-          <div class="form-field" style="margin:0"><label class="form-label">% posición</label><input class="form-input" type="number" id="ff_t2_pct" placeholder="30" step="0.1" min="0" max="100"></div>
+        <div class="form-field">
+          <label class="form-label">Objetivo 2</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="ff_objetivo2">
+              <option value="">— Seleccionar —</option>
+              <option>JLINES</option>
+              <option>VWAP</option>
+              <option>CLOSE DAY ANTERIOR</option>
+              <option>CLOSE DAY</option>
+              <option>POST-MARKET (22:30)</option>
+              <option>CLOSE 15%</option>
+              <option>CLOSE 20%</option>
+              <option>CLOSE 25%</option>
+            </select>
+          </div>
         </div>
-        <div class="target-row">
-          <span class="target-row-label">TARGET 3</span>
-          <div class="form-field" style="margin:0"><label class="form-label">PNL ($)</label><input class="form-input" type="number" id="ff_t3_pnl" placeholder="60.00" step="0.01"></div>
-          <div class="form-field" style="margin:0"><label class="form-label">% posición</label><input class="form-input" type="number" id="ff_t3_pct" placeholder="14" step="0.1" min="0" max="100"></div>
+        <div class="form-field">
+          <label class="form-label">Objetivo 3</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="ff_objetivo3">
+              <option value="">— Seleccionar —</option>
+              <option>JLINES</option>
+              <option>VWAP</option>
+              <option>CLOSE DAY ANTERIOR</option>
+              <option>CLOSE DAY</option>
+              <option>POST-MARKET (22:30)</option>
+              <option>CLOSE 15%</option>
+              <option>CLOSE 20%</option>
+              <option>CLOSE 25%</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -2202,13 +2212,13 @@ function renderSetupBars(containerId, closedTrades, totalCount, key) {
   }).join('');
 }
 
-// Exit Strategy card — grouped by mejorCierre
+// Exit Strategy card — grouped by objetivo1
 function renderExitCard(closedTrades) {
   const el = document.getElementById('exitRows');
   if (!el) return;
   const groups = {};
   closedTrades.forEach(t => {
-    const k = (t.mejorCierre || '').trim();
+    const k = (t.objetivo1 || '').trim();
     if (!k) return;
     if (!groups[k]) groups[k] = { pnl: 0, wins: 0, total: 0 };
     groups[k].pnl   += t.pnl;
@@ -2217,7 +2227,7 @@ function renderExitCard(closedTrades) {
   });
   const entries = Object.entries(groups).sort((a,b) => b[1].pnl - a[1].pnl);
   if (!entries.length) {
-    el.innerHTML = '<div class="exit-empty">Añade trades con<br>Mejor Cierre para ver stats</div>';
+    el.innerHTML = '<div class="exit-empty">Añade trades con<br>Objetivo 1 para ver stats</div>';
     return;
   }
   const totalTagged = entries.reduce((s,[,v]) => s + v.total, 0);
@@ -2406,38 +2416,15 @@ function openModal(t) {
   document.getElementById('modalFloat').textContent = t.float || '—';
   document.getElementById('modalOverhead').textContent = t.overhead || '—';
   document.getElementById('modalCash').textContent = t.cash || '—';
-  document.getElementById('modalInicio').textContent      = t.inicio        || '—';
-  document.getElementById('modalMejorCierre').textContent = t.mejorCierre   || '—';
+  document.getElementById('modalInicio').textContent = t.inicio || '—';
   document.getElementById('modalFinal').textContent = t.final || '—';
   document.getElementById('modalRunner').textContent = t.runner || '—';
+  document.getElementById('modalObjetivo1').textContent = t.objetivo1 || '—';
+  document.getElementById('modalObjetivo2').textContent = t.objetivo2 || '—';
+  document.getElementById('modalObjetivo3').textContent = t.objetivo3 || '—';
   document.getElementById('modalInsiders').textContent = t.insiders || '—';
   document.getElementById('modalInstOwn').textContent = t.instOwn || '—';
   document.getElementById('modalDilucion').textContent = t.dilucion || '—';
-
-  // Targets
-  const targSec = document.getElementById('modalTargetsSection');
-  const targDisp = document.getElementById('modalTargetsDisplay');
-  const tgs = t.targets || [];
-  if (tgs.length && targSec && targDisp) {
-    targSec.style.display = 'block';
-    const sum = tgs.reduce((s,tg) => s + (tg.pnl != null ? tg.pnl : 0), 0);
-    targDisp.innerHTML = tgs.map((tg,i) => {
-      const hasPnl = tg.pnl != null; const hasPct = tg.pct != null;
-      const col = hasPnl ? (tg.pnl>=0?'var(--green)':'var(--red)') : 'var(--muted2)';
-      return `<div class="target-display-row">
-        <span class="target-display-label">Target ${i+1}</span>
-        <div class="target-display-vals">
-          ${hasPct ? `<span class="target-display-pct">${tg.pct}%</span>` : ''}
-          <span class="target-display-pnl" style="color:${col}">${hasPnl?(tg.pnl>=0?'+':'')+fmtPlain(tg.pnl):'—'}</span>
-        </div>
-      </div>`;
-    }).join('');
-    if (t.pnl == null && tgs.every(tg => tg.pnl != null))
-      targDisp.innerHTML += `<div class="target-display-row" style="border-top:1px solid var(--border);margin-top:4px">
-        <span class="target-display-label" style="color:var(--text)">Total</span>
-        <span class="target-display-pnl" style="color:${sum>=0?'var(--green)':'var(--red)'};font-size:15px">${sum>=0?'+':''}${fmtPlain(sum)}</span>
-      </div>`;
-  } else if (targSec) { targSec.style.display = 'none'; }
 
   // Observaciones — load from localStorage
   const obsEl = document.getElementById('modalObservaciones');
@@ -2534,11 +2521,11 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { /* handled
 // ── Add Trade Form ────────────────────────────────────────────────────────────
 function openAddTradeModal() {
   // Reset form
-  ['ff_fecha','ff_stock','ff_pnl','ff_pct','ff_realR','ff_setup_custom','ff_play_custom','ff_pais_custom','ff_t1_pnl','ff_t1_pct','ff_t2_pnl','ff_t2_pct','ff_t3_pnl','ff_t3_pct','ff_observaciones'].forEach(id => {
+  ['ff_fecha','ff_stock','ff_pnl','ff_pct','ff_realR','ff_setup_custom','ff_play_custom','ff_pais_custom','ff_observaciones'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  ['ff_setup','ff_play','ff_noticia','ff_pais','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_inicio','ff_final','ff_mejorCierre','ff_runner'].forEach(id => {
+  ['ff_setup','ff_play','ff_noticia','ff_pais','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_inicio','ff_final','ff_runner','ff_objetivo1','ff_objetivo2','ff_objetivo3'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.selectedIndex = 0;
   });
@@ -2610,7 +2597,7 @@ function openEditTradeModal(t) {
   setSel('ff_setup', t.setup, 'ff_setup_custom', 'ff_setup_custom_wrap');
   setSel('ff_play',  t.play,  'ff_play_custom',  'ff_play_custom_wrap');
   setSel('ff_pais',  t.pais,  'ff_pais_custom',  'ff_pais_custom_wrap');
-  ['ff_noticia','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_inicio','ff_final','ff_mejorCierre','ff_runner'].forEach(id => {
+  ['ff_noticia','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_inicio','ff_final','ff_runner','ff_objetivo1','ff_objetivo2','ff_objetivo3'].forEach(id => {
     const key = id.replace('ff_','');
     setSel(id, t[key]);
   });
@@ -2622,8 +2609,6 @@ function openEditTradeModal(t) {
       if (selected.includes(cb.value)) cb.checked = true;
     });
   }
-  const tgs = t.targets || [];
-  ['t1','t2','t3'].forEach((tl,i) => { setVal('ff_'+tl+'_pnl', tgs[i]?.pnl); setVal('ff_'+tl+'_pct', tgs[i]?.pct); });
 
   // Cargar observaciones existentes del trade al editar
   const tKey = tradeKey(t);
@@ -2671,16 +2656,10 @@ document.getElementById('addTradeSubmitBtn').addEventListener('click', () => {
     dilucion:Array.from(document.querySelectorAll('#ff_dilucion input[type="checkbox"]:checked')).map(cb => cb.value).join(', '),
     inicio:  document.getElementById('ff_inicio').value,
     final:   document.getElementById('ff_final').value,
-    mejorCierre: document.getElementById('ff_mejorCierre').value,
     runner:  document.getElementById('ff_runner').value,
-    targets: [
-      { pnl: document.getElementById('ff_t1_pnl').value !== '' ? parseFloat(document.getElementById('ff_t1_pnl').value) : null,
-        pct: document.getElementById('ff_t1_pct').value !== '' ? parseFloat(document.getElementById('ff_t1_pct').value) : null },
-      { pnl: document.getElementById('ff_t2_pnl').value !== '' ? parseFloat(document.getElementById('ff_t2_pnl').value) : null,
-        pct: document.getElementById('ff_t2_pct').value !== '' ? parseFloat(document.getElementById('ff_t2_pct').value) : null },
-      { pnl: document.getElementById('ff_t3_pnl').value !== '' ? parseFloat(document.getElementById('ff_t3_pnl').value) : null,
-        pct: document.getElementById('ff_t3_pct').value !== '' ? parseFloat(document.getElementById('ff_t3_pct').value) : null },
-    ].filter(tg => tg.pnl != null || tg.pct != null),
+    objetivo1: document.getElementById('ff_objetivo1').value,
+    objetivo2: document.getElementById('ff_objetivo2').value,
+    objetivo3: document.getElementById('ff_objetivo3').value,
   };
 
   if (editingTradeKey) {
