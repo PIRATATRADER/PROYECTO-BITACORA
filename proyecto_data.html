@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Proyecto Data</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -51,9 +51,9 @@
   .container {
     position: relative;
     z-index: 1;
-    max-width: 1300px;
-    margin: 0 auto;
-    padding: 32px 24px;
+    max-width: 100%;
+    margin: 0;
+    padding: 24px 32px;
   }
 
   /* Header */
@@ -187,6 +187,10 @@
     animation: fadeUp 0.5s ease forwards;
     opacity: 0;
     transform: translateY(16px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
 
   .kpi-card::before {
@@ -236,7 +240,7 @@
   /* Charts row */
   .charts-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     margin-bottom: 32px;
   }
@@ -315,12 +319,105 @@
     font-family: 'DM Mono', monospace;
     font-size: 10px;
     color: var(--muted2);
-    width: 80px;
+    width: 120px;
     flex-shrink: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  #setupCard {
+    min-width: 0;
+  }
+
+  #setupCard .bar-chart, #countryCard .bar-chart, #finalCard .bar-chart, #exitCard .bar-chart, #finalBars .bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  #setupCard .setup-header, #countryCard .setup-header, #finalCard .setup-header, #exitCard .setup-header, #finalBars .setup-header {
+    display: grid;
+    grid-template-columns: 120px 80px 55px 65px 65px 100px;
+    gap: 10px;
+    padding: 6px 8px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+
+  #setupCard .setup-header span, #countryCard .setup-header span, #finalCard .setup-header span, #exitCard .setup-header span, #finalBars .setup-header span {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  #setupCard .setup-header span:first-child, #countryCard .setup-header span:first-child, #finalCard .setup-header span:first-child, #exitCard .setup-header span:first-child, #finalBars .setup-header span:first-child { text-align: left; }
+  #setupCard .setup-header span:nth-child(2), #countryCard .setup-header span:nth-child(2), #finalCard .setup-header span:nth-child(2), #exitCard .setup-header span:nth-child(2), #finalBars .setup-header span:nth-child(2) { text-align: left; }
+
+  #setupCard .setup-row, #countryCard .setup-row, #finalCard .setup-row, #exitCard .setup-row, #finalBars .setup-row {
+    display: grid;
+    grid-template-columns: 120px 80px 55px 65px 65px 100px;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+
+  #setupCard .setup-row:hover, #countryCard .setup-row:hover, #finalCard .setup-row:hover, #exitCard .setup-row:hover, #finalBars .setup-row:hover { background: var(--bg3); }
+
+  #setupCard .setup-name, #countryCard .setup-name, #finalCard .setup-name, #exitCard .setup-name, #finalBars .setup-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #setupCard .setup-bar-wrap, #countryCard .setup-bar-wrap, #finalCard .setup-bar-wrap, #exitCard .setup-bar-wrap, #finalBars .setup-bar-wrap {
+    display: flex;
+    align-items: center;
+    height: 5px;
+    background: var(--bg3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  #setupCard .setup-bar-fill, #countryCard .setup-bar-fill, #finalCard .setup-bar-fill, #exitCard .setup-bar-fill, #finalBars .setup-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  #setupCard .setup-stat, #countryCard .setup-stat, #finalCard .setup-stat, #exitCard .setup-stat, #finalBars .setup-stat {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  #setupCard .setup-trades, #countryCard .setup-trades, #finalCard .setup-trades, #exitCard .setup-trades, #finalBars .setup-trades {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+  }
+
+  #setupCard .tw, #countryCard .tw, #finalCard .tw, #exitCard .tw, #finalBars .tw { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tl, #countryCard .tl, #finalCard .tl, #exitCard .tl, #finalBars .tl { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tp, #countryCard .tp, #finalCard .tp, #exitCard .tp, #finalBars .tp { color: #448aff; background: #448aff14; padding: 1px 6px; border-radius: 4px; }
+  .badge-wr-g { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
+  .badge-wr-y { color: #ffd600; background: #ffd60014; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
+  .badge-wr-r { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
+  .badge-pct  { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
+  .badge-pct-r{ color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
+  .badge-share{ color: #448aff; background: #448aff14; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
 
   .bar-track {
     flex: 1;
@@ -368,8 +465,6 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 24px;
-    animation: fadeUp 0.5s ease 0.8s forwards;
-    opacity: 0;
   }
 
   .table-title {
@@ -395,7 +490,9 @@
     padding: 0 0 12px 0;
     text-align: left;
     border-bottom: 1px solid var(--border);
+    transition: color 0.15s;
   }
+  thead th:hover { color: var(--text); }
 
   tbody tr {
     border-bottom: 1px solid var(--border);
@@ -415,6 +512,15 @@
     font-family: 'DM Mono', monospace;
     font-size: 11px;
   }
+
+  #tradesHead th:nth-child(1), tbody td:nth-child(1) { width: 80px; }
+  #tradesHead th:nth-child(2), tbody td:nth-child(2) { width: 70px; }
+  #tradesHead th:nth-child(3), tbody td:nth-child(3) { width: 160px; }
+  #tradesHead th:nth-child(4), tbody td:nth-child(4) { width: 80px; }
+  #tradesHead th:nth-child(5), tbody td:nth-child(5) { width: 75px; }
+  #tradesHead th:nth-child(6), tbody td:nth-child(6) { width: 55px; }
+  #tradesHead th:nth-child(7), tbody td:nth-child(7) { width: 55px; }
+  table { table-layout: fixed; }
 
   .badge {
     display: inline-block;
@@ -1116,10 +1222,11 @@
   z-index:9999;gap:16px;transition:opacity 0.4s ease;
 ">
   <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:3px;color:#00e676">PROYECTO DATA</div>
-  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#7a8599;letter-spacing:2px">CONECTANDO CON FIREBASE...</div>
+  <div id="fbStatusMsg" style="font-family:'DM Mono',monospace;font-size:11px;color:#7a8599;letter-spacing:2px">CONECTANDO CON FIREBASE...</div>
   <div style="width:200px;height:2px;background:#1e2530;border-radius:2px;overflow:hidden;margin-top:8px">
     <div id="fbLoadBar" style="height:100%;background:#00e676;width:0%;transition:width 2s ease;border-radius:2px"></div>
   </div>
+  <div id="fbDiag" style="font-family:'DM Mono',monospace;font-size:10px;color:#4a5568;max-width:360px;text-align:center;line-height:1.8;margin-top:8px"></div>
 </div>
 
 <div class="container">
@@ -1159,169 +1266,132 @@
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
   </div>
 
-  <!-- KPIs -->
-  <div class="kpi-grid">
-    <div class="kpi-card" style="--accent: var(--green)">
-      <div class="kpi-label">PNL Total</div>
-      <div class="kpi-value green" id="kpiPNL">$0</div>
-      <div class="kpi-sub" id="kpiPNLSub">0 operaciones</div>
-    </div>
-    <div class="kpi-card" style="--accent: var(--blue)">
-      <div class="kpi-label">Win Rate</div>
-      <div class="kpi-value" id="kpiWR">0%</div>
-      <div class="kpi-sub" id="kpiWRSub">wins / losses</div>
-    </div>
-    <div class="kpi-card" style="--accent: var(--yellow)">
-      <div class="kpi-label">Avg. REAL R</div>
-      <div class="kpi-value yellow" id="kpiR">0.00</div>
-      <div class="kpi-sub">ratio riesgo/recompensa</div>
-    </div>
-    <div class="kpi-card" style="--accent: var(--red)">
-      <div class="kpi-label">Avg. PNL / Trade</div>
-      <div class="kpi-value" id="kpiAvg">$0</div>
-      <div class="kpi-sub" id="kpiAvgSub">media por operación</div>
-    </div>
-  </div>
+  <!-- Layout principal: izquierda operaciones | separador doble | derecha estadísticas -->
+  <div style="display:grid;grid-template-columns:780px 20px 1fr;gap:0;align-items:start;width:100%;">
 
-  <!-- Charts Row -->
-  <div class="charts-row">
+    <!-- ── COLUMNA IZQUIERDA: Operaciones recientes ── -->
+    <div style="min-width:0;">
+      <div class="table-card" style="height:100%;">
+        <div class="table-title">Operaciones recientes</div>
+        <table style="width:100%;">
+          <thead id="tradesHead">
+            <tr>
+              <th onclick="window._sortTrades('fecha')" style="cursor:pointer;user-select:none;">Fecha<span id="arr_fecha" style="color:#2a3040;margin-left:3px;font-size:9px;">&#x21C5;</span></th>
+              <th onclick="window._sortTrades('stock')" style="cursor:pointer;user-select:none;">Stock<span id="arr_stock" style="color:#2a3040;margin-left:3px;font-size:9px;">&#x21C5;</span></th>
+              <th onclick="window._sortTrades('setup')" style="cursor:pointer;user-select:none;">Setup<span id="arr_setup" style="color:#2a3040;margin-left:3px;font-size:9px;">&#x21C5;</span></th>
+              <th onclick="window._sortTrades('pais')" style="cursor:pointer;user-select:none;">País<span id="arr_pais" style="color:#2a3040;margin-left:3px;font-size:9px;">&#x21C5;</span></th>
+              <th onclick="window._sortTrades('pnl')" style="cursor:pointer;user-select:none;">PNL<span id="arr_pnl" style="color:#2a3040;margin-left:3px;font-size:9px;">&#x21C5;</span></th>
+              <th onclick="window._sortTrades('realR')" style="cursor:pointer;user-select:none;">R<span id="arr_realR" style="color:#2a3040;margin-left:3px;font-size:9px;">&#x21C5;</span></th>
+              <th>Res.</th>
+            </tr>
+          </thead>
+          <tbody id="tradesBody">
+            <tr><td colspan="7" class="empty-hint">Carga tu Excel para ver las operaciones</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-    <!-- Win/Loss Donut -->
-    <div class="chart-card">
-      <div class="chart-title">Win / Loss ratio</div>
-      <div class="donut-wrap">
-        <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="38" fill="none" stroke="#1e2530" stroke-width="14"/>
-          <circle cx="50" cy="50" r="38" fill="none" stroke="#ff3d57" stroke-width="14"
-            stroke-dasharray="239" stroke-dashoffset="0" stroke-linecap="round"
-            transform="rotate(-90 50 50)" id="donutLoss"/>
-          <circle cx="50" cy="50" r="38" fill="none" stroke="#00e676" stroke-width="14"
-            stroke-dasharray="239" stroke-dashoffset="239" stroke-linecap="round"
-            transform="rotate(-90 50 50)" id="donutWin"
-            style="transition: stroke-dashoffset 1s ease"/>
-          <text x="50" y="54" text-anchor="middle" fill="#e8eaf0"
-            font-family="'Bebas Neue', sans-serif" font-size="18" id="donutPct">0%</text>
-        </svg>
-        <div class="donut-legend">
-          <div class="legend-item">
-            <div class="legend-dot" style="background:var(--green)"></div>
-            <span class="legend-label">Wins</span>
-            <span class="legend-val" id="legendWins">0</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot" style="background:var(--red)"></div>
-            <span class="legend-label">Losses</span>
-            <span class="legend-val" id="legendLosses">0</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot" style="background:var(--muted)"></div>
-            <span class="legend-label">BE</span>
-            <span class="legend-val" id="legendBE">0</span>
-          </div>
+    <!-- ── SEPARADOR DOBLE ── -->
+    <div style="display:flex;flex-direction:row;align-items:stretch;gap:5px;padding:0 5px;">
+      <div style="flex:1;border-left:1.5px solid #2a3347;"></div>
+      <div style="flex:1;border-left:1.5px solid #2a3347;"></div>
+    </div>
+
+    <!-- ── COLUMNA DERECHA: Todas las estadísticas ── -->
+    <div style="min-width:0;display:flex;flex-direction:column;gap:16px;">
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--accent: var(--green)">
+          <div class="kpi-label">PNL Total</div>
+          <div class="kpi-value green" id="kpiPNL">$0</div>
+          <div class="kpi-sub" id="kpiPNLSub">0 operaciones</div>
         </div>
-      </div>
-    </div>
-
-    <!-- PNL por Setup -->
-    <div class="chart-card">
-      <div class="chart-title">PNL por Setup</div>
-      <div class="bar-chart" id="setupBars">
-        <div class="empty-hint">Sin datos</div>
-      </div>
-    </div>
-
-    <!-- PNL por País -->
-    <div class="chart-card">
-      <div class="chart-title">PNL por País</div>
-      <div class="bar-chart" id="countryBars">
-        <div class="empty-hint">Sin datos</div>
-      </div>
-    </div>
-
-    <!-- Exit Strategy -->
-    <div class="exit-card">
-      <div class="chart-title">Exit Strategy · Objetivo 1</div>
-      <div class="exit-rows" id="exitRows">
-        <div class="exit-empty">Sin datos de objetivo aún</div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Bottom Row -->
-  <div class="bottom-row">
-
-    <!-- Tabla de operaciones -->
-    <div class="table-card">
-      <div class="table-title">Operaciones recientes</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Stock</th>
-            <th>Setup</th>
-            <th>País</th>
-            <th>PNL</th>
-            <th>R</th>
-            <th>Res.</th>
-          </tr>
-        </thead>
-        <tbody id="tradesBody">
-          <tr><td colspan="7" class="empty-hint">Carga tu Excel para ver las operaciones</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Stats laterales -->
-    <div class="stats-side">
-      <div class="stat-card">
-        <div class="stat-card-title">Estadísticas generales</div>
-        <div class="stat-rows">
-          <div class="stat-row">
-            <span class="stat-row-label">Total operaciones</span>
-            <span class="stat-row-val" id="statTotal">0</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-row-label">Mejor trade</span>
-            <span class="stat-row-val" id="statBest" style="color:var(--green)">$0</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-row-label">Peor trade</span>
-            <span class="stat-row-val" id="statWorst" style="color:var(--red)">$0</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-row-label">Avg. win</span>
-            <span class="stat-row-val" id="statAvgWin" style="color:var(--green)">$0</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-row-label">Avg. loss</span>
-            <span class="stat-row-val" id="statAvgLoss" style="color:var(--red)">$0</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-row-label">Profit factor</span>
-            <span class="stat-row-val" id="statPF">0.00</span>
-          </div>
+        <div class="kpi-card" style="--accent: var(--blue)">
+          <div class="kpi-label">Win Rate</div>
+          <div class="kpi-value" id="kpiWR">0%</div>
+          <div class="kpi-sub" id="kpiWRSub">wins / losses</div>
+        </div>
+        <div class="kpi-card" style="--accent: var(--yellow)">
+          <div class="kpi-label">Avg. REAL R</div>
+          <div class="kpi-value yellow" id="kpiR">0.00</div>
+          <div class="kpi-sub">ratio riesgo/recompensa</div>
+        </div>
+        <div class="kpi-card" style="--accent: var(--red)">
+          <div class="kpi-label">Avg. PNL / Trade</div>
+          <div class="kpi-value" id="kpiAvg">$0</div>
+          <div class="kpi-sub" id="kpiAvgSub">media por operación</div>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-card-title">Top setups</div>
-        <div class="stat-rows" id="topSetups">
-          <div class="stat-row">
-            <span class="stat-row-label" style="color:var(--muted)">Sin datos</span>
+      <!-- Fila 1: Win/Loss + Estadísticas generales + Runner Stats -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:start;">
+        <div class="chart-card">
+          <div class="chart-title">Win / Loss ratio</div>
+          <div class="donut-wrap">
+            <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#1e2530" stroke-width="14"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#ff3d57" stroke-width="14"
+                stroke-dasharray="239" stroke-dashoffset="0" stroke-linecap="round"
+                transform="rotate(-90 50 50)" id="donutLoss"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#00e676" stroke-width="14"
+                stroke-dasharray="239" stroke-dashoffset="239" stroke-linecap="round"
+                transform="rotate(-90 50 50)" id="donutWin"
+                style="transition: stroke-dashoffset 1s ease"/>
+              <text x="50" y="54" text-anchor="middle" fill="#e8eaf0"
+                font-family="'Bebas Neue', sans-serif" font-size="18" id="donutPct">0%</text>
+            </svg>
+            <div class="donut-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div><span class="legend-label">Wins</span><span class="legend-val" id="legendWins">0</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div><span class="legend-label">Losses</span><span class="legend-val" id="legendLosses">0</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--muted)"></div><span class="legend-label">BE</span><span class="legend-val" id="legendBE">0</span></div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Runner Stats -->
-      <div class="exit-card" style="margin-top:12px">
-        <div class="chart-title">Runner Stats</div>
-        <div class="exit-rows" id="runnerRows">
-          <div class="exit-empty">Sin datos de runner aún</div>
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:14px;">Estadísticas generales</div>
+          <div class="stat-rows">
+            <div class="stat-row"><span class="stat-row-label">Total operaciones</span><span class="stat-row-val" id="statTotal">0</span></div>
+            <div class="stat-row"><span class="stat-row-label">Mejor trade</span><span class="stat-row-val" id="statBest" style="color:var(--green)">$0</span></div>
+            <div class="stat-row"><span class="stat-row-label">Peor trade</span><span class="stat-row-val" id="statWorst" style="color:var(--red)">$0</span></div>
+            <div class="stat-row"><span class="stat-row-label">Avg. win</span><span class="stat-row-val" id="statAvgWin" style="color:var(--green)">$0</span></div>
+            <div class="stat-row"><span class="stat-row-label">Avg. loss</span><span class="stat-row-val" id="statAvgLoss" style="color:var(--red)">$0</span></div>
+            <div class="stat-row"><span class="stat-row-label">Profit factor</span><span class="stat-row-val" id="statPF">0.00</span></div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:14px;">Runner Stats</div>
+          <div class="exit-rows" id="runnerRows"><div class="exit-empty">Sin datos de runner aún</div></div>
         </div>
       </div>
-    </div>
 
+      <!-- Fila 2: Setup + País -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+        <div class="chart-card" id="setupCard">
+          <div class="chart-title">Rendimiento por Setup</div>
+          <div class="bar-chart" id="setupBars"><div class="empty-hint">Sin datos</div></div>
+        </div>
+        <div class="chart-card" id="countryCard">
+          <div class="chart-title">Rendimiento por País</div>
+          <div class="bar-chart" id="countryBars"><div class="empty-hint">Sin datos</div></div>
+        </div>
+      </div>
+
+      <!-- Final + Exit Strategy -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="chart-card" id="finalCard">
+          <div class="chart-title">Estadística por Final</div>
+          <div class="bar-chart" id="finalBars"><div class="empty-hint">Sin datos</div></div>
+        </div>
+        <div class="chart-card" id="exitCard">
+          <div class="chart-title">Objetivo 1 · Exit Strategy</div>
+          <div class="bar-chart" id="exitRows"><div class="exit-empty">Sin datos de objetivo aún</div></div>
+        </div>
+      </div>
+
+
+    </div>
   </div>
 
 </div>
@@ -1868,13 +1938,19 @@ async function saveNotesToFirebase() {
 // Carga trades, notas y charts en paralelo
 // Si Firebase falla, intenta recuperar de localStorage
 async function loadFromFirebase() {
+  const setMsg = (txt, col) => { const el = document.getElementById('fbStatusMsg'); if(el){ el.textContent = txt; if(col) el.style.color = col; } };
+  const setDiag = (txt) => { const el = document.getElementById('fbDiag'); if(el) el.textContent = txt; };
+
   setTimeout(() => { const b = document.getElementById('fbLoadBar'); if(b) b.style.width = '60%'; }, 100);
+  setMsg('CONECTANDO CON FIREBASE...');
+  setDiag('Proyecto: proyecto-bitacora-fead3');
 
   let loadDone = false;
   const safetyTimeout = setTimeout(() => {
     if (loadDone) return;
     loadDone = true;
-    console.warn('Firebase timeout — cargando datos locales');
+    setMsg('TIEMPO AGOTADO — CARGANDO LOCAL', '#ffd600');
+    setDiag('Firebase no respondio en 8s. Comprueba tu conexion a internet y las reglas de Firestore.');
     try {
       const bt = localStorage.getItem(LS_TRADES);
       if (bt) trades = JSON.parse(bt);
@@ -1885,6 +1961,7 @@ async function loadFromFirebase() {
   }, 8000);
 
   try {
+    setDiag('Leyendo coleccion proyecto_data...');
     const [tradesDoc, notesDoc, chartsSnap] = await Promise.all([
       DOC_REF.get(),
       NOTES_REF.get(),
@@ -1893,6 +1970,7 @@ async function loadFromFirebase() {
     if (loadDone) return;
     loadDone = true;
     clearTimeout(safetyTimeout);
+    setMsg('CONEXION OK', '#00e676');
     if (tradesDoc.exists && tradesDoc.data().trades) {
       trades = tradesDoc.data().trades;
     }
@@ -1910,16 +1988,15 @@ async function loadFromFirebase() {
     loadDone = true;
     clearTimeout(safetyTimeout);
     console.error('Error loading from Firebase:', e);
+    setMsg('ERROR DE CONEXION', '#ff3d57');
+    setDiag('Error: ' + (e.code || e.message || e.toString()));
     try {
       const bt = localStorage.getItem(LS_TRADES);
       if (bt) trades = JSON.parse(bt);
       const bn = localStorage.getItem(LS_NOTES);
       if (bn) notesCache = JSON.parse(bn);
-      showToast('⚠ Offline — datos locales cargados');
-    } catch(e2) {
-      showToast('⚠ Error al conectar con Firebase');
-    }
-    finishLoading(false);
+    } catch(e2) {}
+    setTimeout(() => finishLoading(false), 3000);
   }
 }
 
@@ -2067,6 +2144,71 @@ function groupBy(arr, key) {
   }, {});
 }
 
+// Tabla de operaciones — sorting
+const _tradeSort = { col: 'fecha', dir: -1 };
+
+window._sortTrades = function(col) {
+  if (_tradeSort.col === col) { _tradeSort.dir *= -1; }
+  else { _tradeSort.col = col; _tradeSort.dir = -1; }
+  renderTradesTable();
+  // Actualizar flechas
+  ['fecha','stock','setup','pais','pnl','realR'].forEach(function(c) {
+    const el = document.getElementById('arr_' + c);
+    if (!el) return;
+    if (_tradeSort.col === c) {
+      el.innerHTML = _tradeSort.dir === -1 ? '&#x2193;' : '&#x2191;';
+      el.style.color = '#448aff';
+    } else {
+      el.innerHTML = '&#x21C5;';
+      el.style.color = '#2a3040';
+    }
+  });
+};
+
+function renderTradesTable() {
+  const body = document.getElementById('tradesBody');
+  if (!trades || !trades.length) {
+    body.innerHTML = '<tr><td colspan="7" class="empty-hint">Sin trades cargados</td></tr>';
+    return;
+  }
+  const sorted = trades.slice().sort(function(a, b) {
+    const col = _tradeSort.col;
+    let av = a[col], bv = b[col];
+    if (col === 'pnl' || col === 'realR') {
+      av = av == null ? -Infinity : Number(av);
+      bv = bv == null ? -Infinity : Number(bv);
+      return _tradeSort.dir * (bv - av);
+    }
+    av = (av || '').toString().toLowerCase();
+    bv = (bv || '').toString().toLowerCase();
+    return _tradeSort.dir * av.localeCompare(bv);
+  });
+  window._recentTrades = sorted;
+  body.innerHTML = sorted.map(function(t, i) {
+    const hasImg = chartImages[tradeKey(t)] ? '📷 ' : '';
+    let res, pnlDisplay, pnlColor;
+    if (t.pnl == null) {
+      res = '<span class="badge" style="background:#448aff22;color:var(--blue);border:1px solid #448aff55">OPEN</span>';
+      pnlDisplay = '—'; pnlColor = 'var(--muted2)';
+    } else {
+      res = t.pnl > 0 ? '<span class="badge badge-green">WIN</span>'
+          : t.pnl < 0 ? '<span class="badge badge-red">LOSS</span>'
+          : '<span class="badge badge-yellow">BE</span>';
+      pnlDisplay = fmtPlain(t.pnl);
+      pnlColor = t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+    return '<tr onclick="openModal(window._recentTrades[' + i + '])" title="Click para ver detalle">'
+      + '<td class="td-mono">' + (t.fecha||'-') + '</td>'
+      + '<td><strong>' + hasImg + (t.stock||'-') + '</strong></td>'
+      + '<td><span class="badge badge-blue">' + (t.setup||'-') + '</span></td>'
+      + '<td>' + (t.pais||'-') + '</td>'
+      + '<td class="td-mono" style="color:' + pnlColor + '">' + pnlDisplay + '</td>'
+      + '<td class="td-mono">' + ((t.realR||0)).toFixed(2) + 'R</td>'
+      + '<td>' + res + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
 function render() {
   const total = trades.length;
   const closedTrades = trades.filter(t => t.pnl != null);
@@ -2122,51 +2264,13 @@ function render() {
   // Setup bars with % of total
   renderSetupBars('setupBars',   closedTrades, closedTrades.length, 'setup');
   renderSetupBars('countryBars', closedTrades, closedTrades.length, 'pais');
+  renderFinalCard(closedTrades);
   // Exit Strategy card
   renderExitCard(closedTrades);
   renderRunnerCard(closedTrades);
 
-  // Top setups
-  const setupPNL = groupBy(closedTrades, 'setup');
-  const topSetup = document.getElementById('topSetups');
-  const sorted = Object.entries(setupPNL).sort((a,b)=>b[1]-a[1]).slice(0,4);
-  if (sorted.length) {
-    topSetup.innerHTML = sorted.map(([k,v]) => `
-      <div class="stat-row">
-        <span class="stat-row-label">${k || 'N/A'}</span>
-        <span class="stat-row-val" style="color:${v>=0?'var(--green)':'var(--red)'}">${fmtPlain(v)}</span>
-      </div>`).join('');
-  }
-
-  // Table — handles null PNL (open trades)
-  const body = document.getElementById('tradesBody');
-  const recent = [...trades].reverse().slice(0, 20);
-  window._recentTrades = recent;
-  body.innerHTML = recent.map((t, i) => {
-    const hasImg = chartImages[tradeKey(t)] ? '📷 ' : '';
-    const hasTargets = t.targets && t.targets.length > 0;
-    const targetDot = hasTargets ? '<span style="color:var(--yellow);margin-left:4px">◎</span>' : '';
-    let res, pnlDisplay, pnlColor;
-    if (t.pnl == null) {
-      res = '<span class="badge" style="background:#448aff22;color:var(--blue);border:1px solid #448aff55">OPEN</span>';
-      pnlDisplay = '—'; pnlColor = 'var(--muted2)';
-    } else {
-      res = t.pnl > 0 ? '<span class="badge badge-green">WIN</span>'
-          : t.pnl < 0 ? '<span class="badge badge-red">LOSS</span>'
-          : '<span class="badge badge-yellow">BE</span>';
-      pnlDisplay = fmtPlain(t.pnl);
-      pnlColor = t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
-    }
-    return `<tr onclick="openModal(window._recentTrades[${i}])" title="Click para ver detalle">
-      <td class="td-mono">${t.fecha}</td>
-      <td><strong>${hasImg}${t.stock}</strong>${targetDot}</td>
-      <td><span class="badge badge-blue">${t.setup || '-'}</span></td>
-      <td>${t.pais || '-'}</td>
-      <td class="td-mono" style="color:${pnlColor}">${pnlDisplay}</td>
-      <td class="td-mono">${(t.realR||0).toFixed(2)}R</td>
-      <td>${res}</td>
-    </tr>`;
-  }).join('');
+  // Table
+  renderTradesTable();
 }
 
 function renderBars(containerId, dataObj) {
@@ -2185,85 +2289,160 @@ function renderBars(containerId, dataObj) {
   }).join('');
 }
 
-// Setup bars — PNL in $ + % of total trades per setup
+// Setup bars — sortable by column header
+const _sortState    = {};
+const _cachedGroups = {};
+
+window._sortTable = function(cid, col) {
+  if (!_sortState[cid]) _sortState[cid] = { col: 'share', dir: 1 };
+  const st = _sortState[cid];
+  if (st.col === col) { st.dir *= -1; } else { st.col = col; st.dir = -1 };
+  const c = _cachedGroups[cid];
+  if (c) renderSortableTable(cid, c.groups, c.totalCount, c.label);
+};
+
+function renderSortableTable(containerId, groups, totalCount, colLabel) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const st       = _sortState[containerId];
+  const isCols   = containerId === 'countryBars';
+  const gridCols = isCols ? '110px 100px 60px 72px 72px 120px' : '180px 120px 70px 80px 80px 130px';
+  const label    = colLabel || 'Setup';
+
+  const allEntries = Object.entries(groups);
+  const sorted = allEntries.slice().sort(function(ra, rb) {
+    const a = ra[1], b = rb[1];
+    var diff = 0;
+    if      (st.col === 'wr')    diff = (b.count ? b.wins/b.count : 0) - (a.count ? a.wins/a.count : 0);
+    else if (st.col === 'pnl')   diff = b.pnl - a.pnl;
+    else if (st.col === 'share') diff = b.count - a.count;
+    else if (st.col === 'count') diff = b.count - a.count;
+    else if (st.col === 'name')  diff = ra[0].localeCompare(rb[0]);
+    return st.dir * diff;
+  });
+
+  if (!sorted.length) { el.innerHTML = '<div class="empty-hint">Sin datos</div>'; return; }
+  const maxWR = Math.max.apply(null, sorted.map(function(e) { return e[1].count ? e[1].wins/e[1].count : 0; }).concat([0.01]));
+
+  function arrow(col) {
+    if (st.col !== col) return '<span style="color:#2a3040;margin-left:2px;font-size:9px;">&#x21C5;</span>';
+    return st.dir === -1
+      ? '<span style="color:#448aff;margin-left:2px;font-size:9px;">&#x2193;</span>'
+      : '<span style="color:#448aff;margin-left:2px;font-size:9px;">&#x2191;</span>';
+  }
+
+  function th(col, txt, extra) {
+    return '<span style="cursor:pointer;user-select:none;' + (extra||'') + '" onclick="window._sortTable(\'' + containerId + '\',\'' + col + '\')">' + txt + arrow(col) + '</span>';
+  }
+
+  var rows = sorted.map(function(entry) {
+    var k = entry[0], v = entry[1];
+    var wr       = v.count ? v.wins / v.count : 0;
+    var wrPct    = Math.round(wr * 100);
+    var barW     = Math.round(wr / maxWR * 100);
+    var pnlCol   = v.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    var wrCol    = wrPct >= 60 ? 'var(--green)' : wrPct >= 40 ? 'var(--yellow)' : 'var(--red)';
+    var sharePct = totalCount ? Math.round(v.count / totalCount * 100) : 0;
+    var losses   = v.count - v.wins;
+    return '<div class="setup-row" style="grid-template-columns:' + gridCols + ';">'
+      + '<span class="setup-name" title="' + k + '">' + (k||'N/A') + '</span>'
+      + '<div class="setup-bar-wrap"><div class="setup-bar-fill" style="width:' + barW + '%;background:' + wrCol + '"></div></div>'
+      + '<span class="setup-stat" style="color:' + wrCol + '">' + wrPct + '%</span>'
+      + '<span class="setup-stat" style="color:' + pnlCol + '">' + (v.pnl>=0?'+':'') + '$' + Math.abs(v.pnl).toFixed(0) + '</span>'
+      + '<div class="setup-trades"><span class="badge-share">' + sharePct + '%</span></div>'
+      + '<div class="setup-trades">'
+        + '<span style="color:#e8eaf0;background:#e8eaf018;padding:1px 6px;border-radius:4px;font-family:\'DM Mono\',monospace;font-size:11px;">' + v.count + 'T</span>'
+        + '<span class="tw">' + v.wins + 'W</span>'
+        + '<span class="tl">' + losses + 'L</span>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  el.innerHTML = '<div class="setup-header" style="grid-template-columns:' + gridCols + ';">'
+    + th('name', label, 'text-align:left;')
+    + th('wr', 'Acierto', 'text-align:left;')
+    + th('wr', 'WR %', '')
+    + th('pnl', 'PNL $', '')
+    + th('share', '% Total', '')
+    + th('count', 'Trades', '')
+    + '</div>' + rows;
+}
+
 function renderSetupBars(containerId, closedTrades, totalCount, key) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  const field = key || 'setup';
-  const groups = {};
-  closedTrades.forEach(t => {
+  const field   = key || 'setup';
+  const isSetup = containerId === 'setupBars';
+  const isPais  = containerId === 'countryBars';
+  const groups  = {};
+  closedTrades.forEach(function(t) {
     const k = (t[field] || 'N/A').trim() || 'N/A';
-    if (!groups[k]) groups[k] = { pnl: 0, count: 0 };
-    groups[k].pnl   += t.pnl;
+    if (!groups[k]) groups[k] = { pnl: 0, pct: 0, count: 0, wins: 0 };
+    groups[k].pnl   += (t.pnl || 0);
+    groups[k].pct   += (t.pct || 0);
     groups[k].count += 1;
+    if ((t.pnl || 0) > 0) groups[k].wins += 1;
   });
-  const entries = Object.entries(groups).sort((a,b) => b[1].pnl - a[1].pnl);
+
+  if (isSetup || isPais) {
+    const label = isSetup ? 'Setup' : 'País';
+    _cachedGroups[containerId] = { groups: groups, totalCount: totalCount, label: label };
+    if (!_sortState[containerId]) _sortState[containerId] = { col: 'share', dir: 1, _default: true };
+    renderSortableTable(containerId, groups, totalCount, label);
+    return;
+  }
+
+  // Otras tarjetas — barras simples
+  const entries = Object.entries(groups).sort(function(a,b) { return b[1].pnl - a[1].pnl; });
   if (!entries.length) { el.innerHTML = '<div class="empty-hint">Sin datos</div>'; return; }
-  const maxAbs = Math.max(...entries.map(([,v]) => Math.abs(v.pnl)), 1);
-  el.innerHTML = entries.slice(0,6).map(([k,v]) => {
-    const barPct   = Math.round(Math.abs(v.pnl) / maxAbs * 100);
-    const sharePct = totalCount ? Math.round(v.count / totalCount * 100) : 0;
-    const col      = v.pnl >= 0 ? 'var(--green)' : 'var(--red)';
-    return `<div class="bar-row" style="align-items:center">
-      <span class="bar-label" title="${k}">${k || 'N/A'}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${barPct}%;background:${col}"></div></div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;width:62px;flex-shrink:0">
-        <span class="bar-val" style="color:${col};width:auto">${fmtPlain(v.pnl)}</span>
-        <span class="bar-sub">${sharePct}% · ${v.count}T</span>
-      </div>
-    </div>`;
+  const maxAbs = Math.max.apply(null, entries.map(function(e) { return Math.abs(e[1].pnl); }).concat([1]));
+  el.innerHTML = entries.map(function(entry) {
+    const k = entry[0], v = entry[1];
+    const col    = v.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    const barPct = Math.round(Math.abs(v.pnl) / maxAbs * 100);
+    return '<div class="bar-row" style="align-items:center">'
+      + '<span class="bar-label" title="' + k + '">' + (k||'N/A') + '</span>'
+      + '<div class="bar-track"><div class="bar-fill" style="width:' + barPct + '%;background:' + col + '"></div></div>'
+      + '<span class="bar-val" style="color:' + col + ';width:auto">' + fmtPlain(v.pnl) + '</span>'
+      + '</div>';
   }).join('');
+}
+
+
+// Final card — mismo formato que País (sortable)
+function renderFinalCard(closedTrades) {
+  const groups = {};
+  closedTrades.forEach(function(t) {
+    const k = (t.final || '').trim();
+    if (!k) return;
+    if (!groups[k]) groups[k] = { pnl: 0, pct: 0, count: 0, wins: 0 };
+    groups[k].pnl   += (t.pnl || 0);
+    groups[k].pct   += (t.pct || 0);
+    groups[k].count += 1;
+    if ((t.pnl || 0) > 0) groups[k].wins += 1;
+  });
+  const totalCount = closedTrades.length;
+  _cachedGroups['finalBars'] = { groups: groups, totalCount: totalCount, label: 'Final' };
+  if (!_sortState['finalBars']) _sortState['finalBars'] = { col: 'share', dir: 1, _default: true };
+  renderSortableTable('finalBars', groups, totalCount, 'Final');
 }
 
 // Exit Strategy card — grouped by objetivo1
 function renderExitCard(closedTrades) {
-  const el = document.getElementById('exitRows');
-  if (!el) return;
   const groups = {};
-  closedTrades.forEach(t => {
+  closedTrades.forEach(function(t) {
     const k = (t.objetivo1 || '').trim();
     if (!k) return;
-    if (!groups[k]) groups[k] = { pnl: 0, wins: 0, total: 0 };
-    groups[k].pnl   += t.pnl;
-    groups[k].total += 1;
-    if (t.pnl > 0) groups[k].wins += 1;
+    if (!groups[k]) groups[k] = { pnl: 0, pct: 0, count: 0, wins: 0 };
+    groups[k].pnl   += (t.pnl || 0);
+    groups[k].pct   += (t.pct || 0);
+    groups[k].count += 1;
+    if ((t.pnl || 0) > 0) groups[k].wins += 1;
   });
-  const entries = Object.entries(groups).sort((a,b) => b[1].pnl - a[1].pnl);
-  if (!entries.length) {
-    el.innerHTML = '<div class="exit-empty">Añade trades con<br>Objetivo 1 para ver stats</div>';
-    return;
-  }
-  const totalTagged = entries.reduce((s,[,v]) => s + v.total, 0);
-  const maxAbs = Math.max(...entries.map(([,v]) => Math.abs(v.pnl)), 1);
-  el.innerHTML = entries.map(([name, s], i) => {
-    const wr       = s.total ? Math.round(s.wins / s.total * 100) : 0;
-    const sharePct = totalTagged ? Math.round(s.total / totalTagged * 100) : 0;
-    const pnlPos   = s.pnl >= 0;
-    const pnlCol   = pnlPos ? 'var(--green)' : 'var(--red)';
-    const fillCol  = pnlPos ? (i===0?'var(--green)':i===1?'var(--blue)':'var(--yellow)') : 'var(--red)';
-    const fillPct  = Math.round(Math.abs(s.pnl) / maxAbs * 100);
-    const rankCls  = s.pnl < 0 ? 'rank-neg' : i===0 ? 'rank-1' : i===1 ? 'rank-2' : 'rank-3';
-    const wrBg     = wr>=60?'#00e67618':wr>=40?'#ffd60018':'#ff3d5718';
-    const wrCol    = wr>=60?'var(--green)':wr>=40?'var(--yellow)':'var(--red)';
-    return `<div class="exit-row ${rankCls}">
-      <div class="exit-row-left">
-        <span class="exit-name">${name}</span>
-        <div class="exit-track"><div class="exit-fill" data-w="${fillPct}" style="width:0%;background:${fillCol}"></div></div>
-      </div>
-      <div class="exit-row-right">
-        <span class="exit-pnl" style="color:${pnlCol}">${pnlPos?'+':''}${fmtPlain(s.pnl)}</span>
-        <div class="exit-meta">
-          <span class="exit-wr" style="background:${wrBg};color:${wrCol}">${wr}% WR</span>
-          <span class="exit-count">${sharePct}% · ${s.total}T</span>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-  requestAnimationFrame(() => {
-    el.querySelectorAll('.exit-fill[data-w]').forEach(b => {
-      setTimeout(() => { b.style.width = b.dataset.w + '%'; }, 80);
-    });
-  });
+  const totalCount = closedTrades.length;
+  _cachedGroups['exitRows'] = { groups: groups, totalCount: totalCount, label: 'Objetivo 1' };
+  if (!_sortState['exitRows']) _sortState['exitRows'] = { col: 'share', dir: 1, _default: true };
+  renderSortableTable('exitRows', groups, totalCount, 'Objetivo 1');
 }
 
 function renderRunnerCard(closedTrades) {
@@ -2304,7 +2483,10 @@ function renderRunnerCard(closedTrades) {
         <span class="exit-pnl" style="color:${pnlCol}">${pnlPos?'+':''}${fmtPlain(s.pnl)}</span>
         <div class="exit-meta">
           <span class="exit-wr" style="background:${wrBg};color:${wrCol}">${wr}% WR</span>
-          <span class="exit-count">${sharePct}% · ${s.total}T</span>
+          <div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap;">
+            <span class="badge-share">${sharePct}%</span>
+            <span style="color:#e8eaf0;font-family:'DM Mono',monospace;font-size:10px;">${s.total}T</span>
+          </div>
         </div>
       </div>
     </div>`;
@@ -2732,7 +2914,25 @@ document.addEventListener('keydown', e => {
 
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-loadFromFirebase();
+// Comprobar que Firebase cargó correctamente antes de intentar conectar
+if (typeof firebase === 'undefined') {
+  console.error('Firebase no cargó — comprueba la conexión a internet');
+  const bar = document.getElementById('fbLoadBar');
+  if (bar) { bar.style.background = '#ff3d57'; bar.style.width = '100%'; }
+  const hint = document.querySelector('#fbLoading div:nth-child(2)');
+  if (hint) hint.textContent = 'ERROR: sin conexión — cargando datos locales...';
+  setTimeout(() => {
+    try {
+      const bt = localStorage.getItem('proyecto_data_trades_backup');
+      if (bt) trades = JSON.parse(bt);
+      const bn = localStorage.getItem('proyecto_data_notes_backup');
+      if (bn) notesCache = JSON.parse(bn);
+    } catch(e) {}
+    finishLoading(false);
+  }, 2000);
+} else {
+  loadFromFirebase();
+}
 </script>
 </body>
 </html>
