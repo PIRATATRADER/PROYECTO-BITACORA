@@ -272,7 +272,9 @@
   .donut-wrap {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 20px;
+    height: 100%;
   }
 
   .donut-svg { flex-shrink: 0; }
@@ -1326,7 +1328,7 @@
       </div>
 
       <!-- Fila 1: Win/Loss + Estadísticas generales + Runner Stats -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:start;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:stretch;">
         <div class="chart-card">
           <div class="chart-title">Win / Loss ratio</div>
           <div class="donut-wrap">
@@ -1367,7 +1369,7 @@
       </div>
 
       <!-- Fila 2: Setup + País -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;">
         <div class="chart-card" id="setupCard">
           <div class="chart-title">Rendimiento por Setup</div>
           <div class="bar-chart" id="setupBars"><div class="empty-hint">Sin datos</div></div>
@@ -1389,7 +1391,6 @@
           <div class="bar-chart" id="exitRows"><div class="exit-empty">Sin datos de objetivo aún</div></div>
         </div>
       </div>
-
 
     </div>
   </div>
