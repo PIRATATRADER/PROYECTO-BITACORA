@@ -1029,30 +1029,6 @@
   }
 
 
-  /* Export / Import buttons */
-  .io-btn {
-    border: none;
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    letter-spacing: 0.3px;
-    transition: all 0.15s;
-  }
-  .io-btn-export {
-    background: #00e67622;
-    border: 1px solid var(--green);
-    color: var(--green);
-  }
-  .io-btn-export:hover { background: var(--green); color: #000; }
-  .io-btn-import {
-    background: #448aff22;
-    border: 1px solid var(--blue);
-    color: var(--blue);
-  }
-  .io-btn-import:hover { background: var(--blue); color: #fff; }
 
 
   /* ── Exit Strategy card ─────────────────────────────────────────────────── */
@@ -1166,9 +1142,6 @@
     </div>
     <div class="header-right" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
       <div class="last-updated" id="lastUpdated">Cargando...</div>
-      <button class="io-btn io-btn-import" onclick="document.getElementById('importJsonInput').click()" title="Importar backup JSON">⬆ Importar</button>
-      <button class="io-btn io-btn-export" onclick="exportJSON()" title="Exportar trades a JSON">⬇ Exportar</button>
-      <input type="file" id="importJsonInput" accept=".json" style="display:none">
       <button class="add-trade-btn" id="openAddTrade">＋ Añadir Trade</button>
     </div>
   </header>
@@ -1707,6 +1680,7 @@
               <option>OPEN</option>
               <option>MID-DAY</option>
               <option>POST-MARKET</option>
+              <option>SE DIO LA VUELTA</option>
             </select>
           </div>
         </div>
@@ -1719,6 +1693,7 @@
               <option>MID-DAY</option>
               <option>CLOSE</option>
               <option>POST-MARKET</option>
+              <option>SE DIO LA VUELTA</option>
             </select>
           </div>
         </div>
@@ -1894,28 +1869,47 @@ async function saveNotesToFirebase() {
 // Si Firebase falla, intenta recuperar de localStorage
 async function loadFromFirebase() {
   setTimeout(() => { const b = document.getElementById('fbLoadBar'); if(b) b.style.width = '60%'; }, 100);
+
+  let loadDone = false;
+  const safetyTimeout = setTimeout(() => {
+    if (loadDone) return;
+    loadDone = true;
+    console.warn('Firebase timeout — cargando datos locales');
+    try {
+      const bt = localStorage.getItem(LS_TRADES);
+      if (bt) trades = JSON.parse(bt);
+      const bn = localStorage.getItem(LS_NOTES);
+      if (bn) notesCache = JSON.parse(bn);
+    } catch(e) {}
+    finishLoading(false);
+  }, 8000);
+
   try {
     const [tradesDoc, notesDoc, chartsSnap] = await Promise.all([
       DOC_REF.get(),
       NOTES_REF.get(),
       CHARTS_COL.get()
     ]);
+    if (loadDone) return;
+    loadDone = true;
+    clearTimeout(safetyTimeout);
     if (tradesDoc.exists && tradesDoc.data().trades) {
       trades = tradesDoc.data().trades;
     }
     if (notesDoc.exists && notesDoc.data().notes) {
       notesCache = notesDoc.data().notes;
     }
-    // Cargar todas las imágenes de charts
     chartsSnap.forEach(doc => {
       if (doc.data().image) chartImages[doc.id] = doc.data().image;
     });
-    // Guardar respaldo en localStorage
     try { localStorage.setItem(LS_TRADES, JSON.stringify(trades)); } catch(e) {}
     try { localStorage.setItem(LS_NOTES, JSON.stringify(notesCache)); } catch(e) {}
+    finishLoading(true);
   } catch(e) {
+    if (loadDone) return;
+    loadDone = true;
+    clearTimeout(safetyTimeout);
     console.error('Error loading from Firebase:', e);
-    // Fallback: intentar recuperar de localStorage
     try {
       const bt = localStorage.getItem(LS_TRADES);
       if (bt) trades = JSON.parse(bt);
@@ -1925,18 +1919,27 @@ async function loadFromFirebase() {
     } catch(e2) {
       showToast('⚠ Error al conectar con Firebase');
     }
+    finishLoading(false);
   }
+}
+
+function finishLoading(fromFirebase) {
   const overlay = document.getElementById('fbLoading');
   const bar = document.getElementById('fbLoadBar');
   if (bar) bar.style.width = '100%';
   setTimeout(() => {
     if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 400); }
     render();
-    document.getElementById('lastUpdated').textContent = trades.length
-      ? `Firebase · ${trades.length} trades cargados`
-      : `Firebase conectado · Sin trades`;
-    // Activar sincronización en tiempo real entre dispositivos
-    startRealtimeSync();
+    if (fromFirebase) {
+      document.getElementById('lastUpdated').textContent = trades.length
+        ? `Firebase · ${trades.length} trades cargados`
+        : 'Firebase conectado · Sin trades';
+      startRealtimeSync();
+    } else {
+      document.getElementById('lastUpdated').textContent = trades.length
+        ? `⚠ Offline · ${trades.length} trades locales`
+        : '⚠ Sin conexión · Sin datos';
+    }
   }, 500);
 }
 
@@ -2727,57 +2730,6 @@ document.addEventListener('keydown', e => {
 });
 
 
-// ── Export / Import JSON ─────────────────────────────────────────────────────
-function exportJSON() {
-  if (!trades || !trades.length) {
-    showToast('⚠ No hay trades para exportar');
-    return;
-  }
-  const payload = {
-    version: 1,
-    exportDate: new Date().toISOString(),
-    trades: trades,
-    notes: notesCache,
-    chartImages: chartImages
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const fecha = new Date().toLocaleDateString('es-ES').replace(/\//g,'-');
-  a.href = url;
-  a.download = `proyecto_data_backup_${fecha}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('✓ Backup exportado correctamente');
-}
-
-document.getElementById('importJsonInput').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    try {
-      const payload = JSON.parse(ev.target.result);
-      if (!payload.trades || !Array.isArray(payload.trades)) {
-        showToast('⚠ Archivo JSON no válido');
-        return;
-      }
-      if (!confirm(`¿Importar ${payload.trades.length} trades? Esto REEMPLAZARÁ los datos actuales.`)) return;
-      trades.length = 0;
-      payload.trades.forEach(t => trades.push(t));
-      if (payload.notes) { notesCache = payload.notes; }
-      if (payload.chartImages) { Object.assign(chartImages, payload.chartImages); }
-      render();
-      saveToFirebase();
-      saveNotesToFirebase();
-      showToast(`✓ ${payload.trades.length} trades importados correctamente`);
-    } catch(err) {
-      showToast('⚠ Error al leer el archivo');
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadFromFirebase();
