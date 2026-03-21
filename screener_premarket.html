@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screener Premarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --bg2: #111318;
+    --bg3: #181c24;
+    --border: #1e2530;
+    --green: #00e676;
+    --green-dim: #00e67622;
+    --red: #ff3d57;
+    --red-dim: #ff3d5722;
+    --yellow: #ffd600;
+    --blue: #448aff;
+    --text: #e8eaf0;
+    --muted: #4a5568;
+    --muted2: #7a8599;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-area h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .logo-area h1 span {
+    color: var(--green);
+  }
+
+  .logo-area p {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted2);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    margin-bottom: 16px;
+  }
+
+  .back-btn:hover {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-dim);
+  }
+
+  .header-right {
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .last-updated {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .refresh-btn {
+    background: var(--green);
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .refresh-btn:hover {
+    opacity: 0.85;
+  }
+
+  .refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Table Card */
+  .table-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: fadeUp 0.5s ease forwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .table-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .table-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .table-badge {
+    background: var(--green-dim);
+    color: var(--green);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .data-table thead {
+    background: var(--bg3);
+  }
+
+  .data-table th {
+    padding: 16px 24px;
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted2);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table th:first-child {
+    padding-left: 32px;
+  }
+
+  .data-table td {
+    padding: 20px 24px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .data-table td:first-child {
+    padding-left: 32px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 1px;
+  }
+
+  .data-table tbody tr {
+    transition: background 0.15s;
+  }
+
+  .data-table tbody tr:hover {
+    background: var(--bg3);
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Number formatting */
+  .positive { color: var(--green); }
+  .negative { color: var(--red); }
+  .neutral { color: var(--muted2); }
+
+  /* Loading state */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 12, 15, 0.95);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    gap: 16px;
+  }
+
+  .loading-overlay.active {
+    display: flex;
+  }
+
+  .loading-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 3px;
+    color: var(--green);
+  }
+
+  .loading-subtext {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    letter-spacing: 2px;
+  }
+
+  .loading-bar {
+    width: 200px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .loading-bar-fill {
+    height: 100%;
+    background: var(--green);
+    width: 0%;
+    animation: loadingProgress 2s ease-in-out infinite;
+    border-radius: 2px;
+  }
+
+  @keyframes loadingProgress {
+    0% { width: 0%; }
+    50% { width: 70%; }
+    100% { width: 100%; }
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 80px 24px;
+    text-align: center;
+    color: var(--muted2);
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-state-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 10000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .toast.error {
+    border-color: var(--red);
+    background: var(--red-dim);
+    color: var(--red);
+  }
+
+  .toast.success {
+    border-color: var(--green);
+    background: var(--green-dim);
+    color: var(--green);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .data-table th,
+    .data-table td {
+      padding: 12px 16px;
+      font-size: 12px;
+    }
+
+    .data-table th:first-child,
+    .data-table td:first-child {
+      padding-left: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-text">SCREENER PREMARKET</div>
+  <div class="loading-subtext">CARGANDO DATOS...</div>
+  <div class="loading-bar">
+    <div class="loading-bar-fill"></div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div>
+      <a class="back-btn" href="proyecto_bitacora_home.html">← Inicio</a>
+      <div class="logo-area">
+        <h1>SCREENER <span>PREMARKET</span></h1>
+        <p>☠ Live Market Scanner · v1.0</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="last-updated" id="lastUpdated">Nunca actualizado</div>
+      <button class="refresh-btn" id="refreshBtn" onclick="fetchData()">
+        🔄 Actualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- High of the Day Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-title">High of the Day</div>
+      <div class="table-badge" id="stockCount">0 stocks</div>
+    </div>
+    <div id="tableContainer">
+      <!-- Table will be inserted here -->
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA FETCHING ─────────────────────────────────────────────────────────────
+let stockData = [];
+
+// Función para obtener datos - VERSIÓN CON DATOS SIMULADOS
+async function fetchData() {
+  const btn = document.getElementById('refreshBtn');
+  const overlay = document.getElementById('loadingOverlay');
+  
+  btn.disabled = true;
+  overlay.classList.add('active');
+  
+  try {
+    // Simular delay de carga
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // DATOS SIMULADOS - basados en tu screenshot
+    stockData = [
+      {
+        symbol: 'ANNA',
+        price: 6.31,
+        change: 66.49,
+        float: '9.53M',
+        volume: '115.43M',
+        spr: 0.16,
+        time: '01:00:00'
+      },
+      {
+        symbol: 'CURV',
+        price: 1.53,
+        change: 22.4,
+        float: '32.76M',
+        volume: '23.79M',
+        spr: 4.67,
+        time: '00:59:55'
+      },
+      {
+        symbol: 'ARTL',
+        price: 8.4,
+        change: 17.32,
+        float: '2.11M',
+        volume: '12.02M',
+        spr: 2.44,
+        time: '01:00:00'
+      },
+      {
+        symbol: 'UVIX',
+        price: 8.83,
+        change: 13.35,
+        float: '0',
+        volume: '60.63M',
+        spr: 1.37,
+        time: '00:59:55'
+      },
+      {
+        symbol: 'VG',
+        price: 15.89,
+        change: 11.2,
+        float: '477.35M',
+        volume: '68.13M',
+        spr: 0.19,
+        time: '00:59:58'
+      },
+      {
+        symbol: 'UVXY',
+        price: 51.93,
+        change: 10.45,
+        float: '0',
+        volume: '8.96M',
+        spr: 1.04,
+        time: '00:59:53'
+      },
+      {
+        symbol: 'DRMA',
+        price: 1.31,
+        change: 8.26,
+        float: '498.53K',
+        volume: '39.59M',
+        spr: 5.38,
+        time: '00:59:54'
+      },
+      {
+        symbol: 'SOXS',
+        price: 39.81,
+        change: 6.69,
+        float: '0',
+        volume: '43.19M',
+        spr: 0.28,
+        time: '00:59:51'
+      }
+    ];
+    
+    renderTable();
+    updateLastUpdated();
+    showToast('✓ Datos actualizados correctamente', 'success');
+    
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    showToast('⚠ Error al cargar los datos', 'error');
+  } finally {
+    btn.disabled = false;
+    overlay.classList.remove('active');
+  }
+}
+
+// Función para renderizar la tabla
+function renderTable() {
+  const container = document.getElementById('tableContainer');
+  const stockCount = document.getElementById('stockCount');
+  
+  if (!stockData.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <div class="empty-state-text">No hay datos disponibles. Haz clic en Actualizar.</div>
+      </div>
+    `;
+    stockCount.textContent = '0 stocks';
+    return;
+  }
+  
+  stockCount.textContent = `${stockData.length} stocks`;
+  
+  const tableHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Price</th>
+          <th>Change(%)</th>
+          <th>Float</th>
+          <th>Volume</th>
+          <th>Spr(%)</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${stockData.map(stock => `
+          <tr>
+            <td>${stock.symbol}</td>
+            <td>$${stock.price.toFixed(2)}</td>
+            <td class="positive">${stock.change.toFixed(2)}%</td>
+            <td class="${stock.float === '0' ? 'neutral' : 'negative'}">${stock.float}</td>
+            <td class="${parseFloat(stock.volume) > 50 ? 'negative' : 'positive'}">${stock.volume}</td>
+            <td class="${stock.spr < 1 ? 'positive' : 'negative'}">${stock.spr.toFixed(2)}</td>
+            <td class="neutral">${stock.time}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  
+  container.innerHTML = tableHTML;
+}
+
+// Actualizar timestamp
+function updateLastUpdated() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  document.getElementById('lastUpdated').textContent = `Actualizado · ${timeStr}`;
+}
+
+// Toast notification
+function showToast(message, type = '') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast ' + type;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ── AUTO-REFRESH ──────────────────────────────────────────────────────────────
+// Actualizar cada 30 segundos automáticamente
+let autoRefreshInterval;
+
+function startAutoRefresh() {
+  autoRefreshInterval = setInterval(() => {
+    fetchData();
+  }, 30000); // 30 segundos
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+// Cargar datos iniciales
+document.addEventListener('DOMContentLoaded', () => {
+  fetchData();
+  // startAutoRefresh(); // Descomentar para activar auto-refresh
+});
+</script>
+
+</body>
+</html>

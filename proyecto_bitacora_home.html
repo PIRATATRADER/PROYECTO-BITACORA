@@ -160,19 +160,6 @@ body::before {
   transform: translateY(-6px) scale(1.02);
 }
 
-/* Left column: DATA spans full height */
-.col-left {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Right column: Capital Tracker + Profits Net stacked */
-.col-right {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
 /* ── CARDS ── */
 .mode-card {
   background: var(--bg2);
@@ -213,12 +200,10 @@ body::before {
   box-shadow: 0 12px 40px rgba(0,0,0,0.4);
 }
 
-.card-data    { --card-accent: var(--green); }
-.card-bitacora{ --card-accent: var(--gold); }
-.card-profits { --card-accent: var(--blue); }
-
-/* DATA card fills full left column */
-.card-data { flex: 1; }
+.card-data      { --card-accent: var(--blue); }
+.card-bitacora  { --card-accent: var(--gold); }
+.card-profits   { --card-accent: var(--green); }
+.card-screener  { --card-accent: var(--purple); }
 
 .card-icon {
   font-size: 32px;
@@ -318,7 +303,7 @@ body::before {
 
 .profits-table tr.total-row td {
   border-top: 1px solid var(--border);
-  color: var(--blue);
+  color: var(--green);
   font-weight: 500;
   padding-top: 8px;
 }
@@ -327,13 +312,13 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(0,188,212,0.1);
-  border: 1px solid rgba(0,188,212,0.25);
+  background: rgba(0,230,118,0.1);
+  border: 1px solid rgba(0,230,118,0.25);
   border-radius: 8px;
   padding: 4px 10px;
   font-family: 'DM Mono', monospace;
   font-size: 10px;
-  color: var(--blue);
+  color: var(--green);
   letter-spacing: 1px;
 }
 
@@ -391,94 +376,103 @@ body::before {
 
     <div class="cards-grid">
 
-    <!-- COLUMNA IZQUIERDA: DATA -->
-    <div class="col-left">
-      <div class="mode-card card-data" onclick="openDash('data')" id="cardData">
-        <div class="card-icon">📊</div>
-        <div>
-          <div class="card-label">Módulo</div>
-          <div class="card-title">DATA</div>
-        </div>
-        <div class="card-desc">Trading basado en datos. Small caps con análisis de fundamentales, float, insiders y setups definidos.</div>
-        <div class="card-stats" id="statsData">
-          <div class="card-stat"><div class="card-stat-val" id="dataTrades">—</div><div class="card-stat-label">Trades</div></div>
-          <div class="card-stat"><div class="card-stat-val" id="dataWR">—</div><div class="card-stat-label">Win Rate</div></div>
-          <div class="card-stat"><div class="card-stat-val" id="dataPNL">—</div><div class="card-stat-label">PNL Total</div></div>
-        </div>
-        <div class="card-arrow">Entrar al dashboard →</div>
+    <!-- TARJETA 1: DATA (Superior Izquierda) -->
+    <div class="mode-card card-data" onclick="openDash('data')" id="cardData">
+      <div class="card-icon">📊</div>
+      <div>
+        <div class="card-label">Módulo</div>
+        <div class="card-title">DATA</div>
       </div>
+      <div class="card-desc">Trading basado en datos. Small caps con análisis de fundamentales, float, insiders y setups definidos.</div>
+      <div class="card-stats" id="statsData">
+        <div class="card-stat"><div class="card-stat-val" id="dataTrades">—</div><div class="card-stat-label">Trades</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="dataWR">—</div><div class="card-stat-label">Win Rate</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="dataPNL">—</div><div class="card-stat-label">PNL Total</div></div>
+      </div>
+      <div class="card-arrow">Entrar al dashboard →</div>
     </div>
 
-    <!-- COLUMNA DERECHA: Capital Tracker + Profits Net -->
-    <div class="col-right">
+    <!-- TARJETA 2: CAPITAL TRACKER (Superior Derecha) -->
+    <div class="mode-card card-bitacora" onclick="openDash('bitacora')" id="cardBitacora">
+      <div class="card-icon">📈</div>
+      <div>
+        <div class="card-label">Módulo</div>
+        <div class="card-title">CAPITAL TRACKER</div>
+      </div>
+      <div class="card-desc">Seguimiento diario de capital 2026. Targets, PNL por sesión y progreso hacia el objetivo anual.</div>
+      <div class="card-stats">
+        <div class="card-stat"><div class="card-stat-val" id="bitacoraDias" style="color:var(--gold)">—</div><div class="card-stat-label">Sesiones</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="bitacoraPNL" style="color:var(--gold)">—</div><div class="card-stat-label">PNL Año</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="bitacoraWR" style="color:var(--gold)">—</div><div class="card-stat-label">Win Rate</div></div>
+      </div>
+      <div class="card-arrow">Abrir tracker →</div>
+    </div>
 
-      <!-- CAPITAL TRACKER -->
-      <div class="mode-card card-bitacora" onclick="openDash('bitacora')" id="cardBitacora">
-        <div class="card-icon">📈</div>
+    <!-- TARJETA 3: SCREENER PREMARKET (Inferior Izquierda) -->
+    <div class="mode-card card-screener" onclick="window.location.href='screener_premarket.html'" style="cursor:pointer;">
+      <div class="card-icon">🔍</div>
+      <div>
+        <div class="card-label">Scanner</div>
+        <div class="card-title">SCREENER PREMARKET</div>
+      </div>
+      <div class="card-desc">Escaneo en vivo de acciones en premarket. High of the Day con datos actualizados en tiempo real.</div>
+      <div class="card-stats">
+        <div class="card-stat"><div class="card-stat-val" style="color:var(--purple)">LIVE</div><div class="card-stat-label">Estado</div></div>
+        <div class="card-stat"><div class="card-stat-val" style="color:var(--purple)">30s</div><div class="card-stat-label">Auto-Refresh</div></div>
+        <div class="card-stat"><div class="card-stat-val" style="color:var(--purple)">High ↑</div><div class="card-stat-label">Filtro</div></div>
+      </div>
+      <div class="card-arrow">Ver scanner →</div>
+    </div>
+
+    <!-- TARJETA 4: PROFITS NET (Inferior Derecha) -->
+    <div class="mode-card card-profits" onclick="window.location.href='profits_net.html'" style="cursor:pointer;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div>
-          <div class="card-label">Módulo</div>
-          <div class="card-title">CAPITAL TRACKER</div>
+          <div class="card-label">Historial Broker</div>
+          <div class="card-title">PROFITS NET</div>
         </div>
-        <div class="card-desc">Seguimiento diario de capital 2026. Targets, PNL por sesión y progreso hacia el objetivo anual.</div>
-        <div class="card-stats">
-          <div class="card-stat"><div class="card-stat-val" id="bitacoraDias" style="color:var(--gold)">—</div><div class="card-stat-label">Sesiones</div></div>
-          <div class="card-stat"><div class="card-stat-val" id="bitacoraPNL" style="color:var(--gold)">—</div><div class="card-stat-label">PNL Año</div></div>
-          <div class="card-stat"><div class="card-stat-val" id="bitacoraWR" style="color:var(--gold)">—</div><div class="card-stat-label">Win Rate</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="profitsYearBadges">
+          <div class="profits-badge">⟳ Cargando...</div>
         </div>
-        <div class="card-arrow">Abrir tracker →</div>
       </div>
+      <div class="card-desc">Resultados reales del broker por año. Gross P&L, fees, ECN rebates y resultado neto ajustado.</div>
 
-      <!-- PROFITS NET -->
-      <div class="mode-card card-profits" onclick="window.location.href='profits_net.html'" style="cursor:pointer;">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-          <div>
-            <div class="card-label">Historial Broker</div>
-            <div class="card-title">PROFITS NET</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="profitsYearBadges">
-            <div class="profits-badge">⟳ Cargando...</div>
-          </div>
+      <table class="profits-table" id="profitsTable">
+        <thead>
+          <tr>
+            <th>Año</th>
+            <th>Días</th>
+            <th>Gross</th>
+            <th>Fees</th>
+            <th>Adj Net</th>
+            <th>WR</th>
+          </tr>
+        </thead>
+        <tbody id="profitsBody">
+          <tr><td colspan="6" style="color:var(--muted2);padding:10px 6px;text-align:center;font-size:10px;letter-spacing:1px;">⟳ Cargando datos...</td></tr>
+        </tbody>
+      </table>
+
+      <div class="card-stats" style="padding-top:12px;border-top:1px solid var(--border);gap:16px;">
+        <div class="card-stat">
+          <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalNet">—</div>
+          <div class="card-stat-label">Net Total</div>
         </div>
-        <div class="card-desc">Resultados reales del broker por año. Gross P&amp;L, fees, ECN rebates y resultado neto ajustado.</div>
-
-        <table class="profits-table" id="profitsTable">
-          <thead>
-            <tr>
-              <th>Año</th>
-              <th>Días</th>
-              <th>Gross</th>
-              <th>Fees</th>
-              <th>Adj Net</th>
-              <th>WR</th>
-            </tr>
-          </thead>
-          <tbody id="profitsBody">
-            <tr><td colspan="6" style="color:var(--muted2);padding:10px 6px;text-align:center;font-size:10px;letter-spacing:1px;">⟳ Cargando datos...</td></tr>
-          </tbody>
-        </table>
-
-        <div class="card-stats" style="padding-top:12px;border-top:1px solid var(--border);gap:16px;">
-          <div class="card-stat">
-            <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalNet">—</div>
-            <div class="card-stat-label">Net Total</div>
-          </div>
-          <div class="card-stat">
-            <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalDias">—</div>
-            <div class="card-stat-label">Días Trading</div>
-          </div>
-          <div class="card-stat">
-            <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalOrders">—</div>
-            <div class="card-stat-label">Órdenes</div>
-          </div>
-          <div class="card-stat">
-            <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalWR">—</div>
-            <div class="card-stat-label">WR Global</div>
-          </div>
+        <div class="card-stat">
+          <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalDias">—</div>
+          <div class="card-stat-label">Días Trading</div>
         </div>
-        <div class="card-arrow">Ver detalle completo →</div>
+        <div class="card-stat">
+          <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalOrders">—</div>
+          <div class="card-stat-label">Órdenes</div>
+        </div>
+        <div class="card-stat">
+          <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalWR">—</div>
+          <div class="card-stat-label">WR Global</div>
+        </div>
       </div>
-
-    </div><!-- /col-right -->
+      <div class="card-arrow">Ver detalle completo →</div>
+    </div>
 
     </div><!-- /cards-grid -->
 
@@ -710,12 +704,12 @@ const profitsCache = {};
 function openDash(mode) {
   if (mode === 'data') {
     window.location.href = 'proyecto_data.html';
+  } else if (mode === 'bitacora') {
+    window.location.href = 'capital_tracker.html';
   } else if (mode === 'disc') {
     window.location.href = 'discrecional_dashboard.html';
   } else if (mode === 'analysis') {
     window.location.href = 'trades_analysis_dashboard.html';
-  } else {
-    window.location.href = 'capital_tracker.html';
   }
 }
 </script>
