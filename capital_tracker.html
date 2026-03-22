@@ -182,6 +182,11 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     white-space: nowrap;
   }
 
+  /* ── DOUBLE LINE SEPARATOR ── */
+  .tr-separator {
+    border-bottom: 3px double var(--text) !important;
+  }
+
 </style>
 </head>
 <body>
@@ -433,9 +438,15 @@ function fd(n) {
 }
 
 // Calc derived columns from SOD
-function calc(sod) {
+function calc(sod, date) {
   if (!sod||sod<=0) return {};
   const ml = sod*0.05;
+  
+  // Determinar si es antes o después del 23/03/2026
+  // Fechas antes del 23/03/2026 usan porcentajes antiguos
+  // Fechas desde 23/03/2026 en adelante usan porcentajes nuevos
+  const useNewPercentages = date && date >= '23/03/2026';
+  
   return {
     ml,                    // Max Loss 5%
     rt: ml/5,              // Risk Trade = MaxLoss/5 = 1% SOD
@@ -443,9 +454,9 @@ function calc(sod) {
     t3: sod*0.03,          // Target 3%
     t5: sod*0.05,          // Target 5%
     sd: sod*0.05,          // Setup DATA 5%
-    sa: sod*0.12,          // Setup A 12%
-    sb: sod*0.10,          // Setup B 10%
-    sc: sod*0.08,          // Setup C 8%
+    sa: useNewPercentages ? sod*0.125 : sod*0.12,  // Setup A: 12.5% nuevo, 12% antiguo
+    sb: useNewPercentages ? sod*0.105 : sod*0.10,  // Setup B: 10.5% nuevo, 10% antiguo
+    sc: useNewPercentages ? sod*0.085 : sod*0.08,  // Setup C: 8.5% nuevo, 8% antiguo
   };
 }
 
@@ -485,7 +496,7 @@ function renderMain() {
     const k=dk(d), row=D[k]||{};
     const sod=pd(row.startOfDay);
     if (sod&&!firstSOD) firstSOD=sod;
-    const c=calc(sod);
+    const c=calc(sod, d);  // Pasar la fecha para determinar qué porcentajes usar
     const pnl=pd(row.pnlDay);
     if (pnl!==null){ pnlTotal+=pnl; pnl>0?wins++:losses++; }
     const sh=pd(row.shares); if(sh) shTotal+=sh;
@@ -500,8 +511,11 @@ function renderMain() {
     if(rNum!==null){ rSum+=rNum; rCount++; }
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
+    
+    // Add separator class for 20/03/2026 to mark where changes will start
+    const separatorClass = d === '20/03/2026' ? ' tr-separator' : '';
 
-    rows+=`<tr>
+    rows+=`<tr${separatorClass ? ` class="${separatorClass.trim()}"` : ''}>
       <td>${d}</td>
       <td class="ed" data-k="${k}" data-f="startOfDay">${sod?fd(sod):''}</td>
       <td class="cr">${c.ml?fd(c.ml):''}</td>
@@ -1147,7 +1161,7 @@ function renderStats() {
     const pnl = pd(row.pnlDay);
     const sod = pd(row.startOfDay);
     if (pnl !== null && sod) {
-      const c = calc(sod);
+      const c = calc(sod, d);
       const riskTrade = c.rt;
       if (riskTrade) {
         const rValue = pnl / riskTrade;
@@ -1245,7 +1259,7 @@ function renderStats() {
     const pnl = pd(row.pnlDay);
     const sod = pd(row.startOfDay);
     if (score !== null && pnl !== null && sod) {
-      const c = calc(sod);
+      const c = calc(sod, d);
       const riskTrade = c.rt;
       if (riskTrade) {
         const rValue = pnl / riskTrade;
