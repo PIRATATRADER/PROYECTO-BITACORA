@@ -172,7 +172,7 @@
   /* KPI Grid */
   .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: 1fr 1fr 1.44fr 0.64fr;
     gap: 16px;
     margin-bottom: 32px;
   }
@@ -255,6 +255,20 @@
     transform: translateY(16px);
   }
 
+  /* Reduce padding and scale for row 1 cards */
+  .chart-card {
+    overflow: hidden;
+  }
+  
+  .stat-rows {
+    transform: scale(0.85);
+    transform-origin: top left;
+  }
+  
+  #runnerRows, #newsBars {
+    width: 100%;
+  }
+
   .chart-card:nth-child(1) { animation-delay: 0.5s; }
   .chart-card:nth-child(2) { animation-delay: 0.6s; }
   .chart-card:nth-child(3) { animation-delay: 0.7s; }
@@ -266,6 +280,7 @@
     text-transform: uppercase;
     color: #2d6a9f;
     margin-bottom: 20px;
+    text-align: center;
   }
 
   /* Donut chart */
@@ -273,13 +288,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: 15px;
     height: 100%;
+    transform: scale(0.85) translateY(-15%);
+    transform-origin: center center;
+    padding: 0;
   }
 
-  .donut-svg { flex-shrink: 0; }
+  .donut-svg { 
+    flex-shrink: 0; 
+  }
 
-  .donut-legend { flex: 1; }
+  .donut-legend { 
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 
   .legend-item {
     display: flex;
@@ -332,13 +357,13 @@
     min-width: 0;
   }
 
-  #setupCard .bar-chart, #countryCard .bar-chart, #finalCard .bar-chart, #exitCard .bar-chart, #finalBars .bar-chart, #runnerRows {
+  #setupCard .bar-chart, #countryCard .bar-chart, #finalCard .bar-chart, #exitCard .bar-chart, #finalBars .bar-chart, #runnerRows, #newsCard .bar-chart {
     display: flex;
     flex-direction: column;
     gap: 0;
   }
 
-  #setupCard .setup-header, #countryCard .setup-header, #finalCard .setup-header, #exitCard .setup-header, #finalBars .setup-header, #runnerRows .setup-header {
+  #setupCard .setup-header, #countryCard .setup-header, #finalCard .setup-header, #exitCard .setup-header, #finalBars .setup-header, #runnerRows .setup-header, #newsCard .setup-header {
     display: grid;
     grid-template-columns: 120px 80px 55px 65px 65px 100px;
     gap: 10px;
@@ -347,7 +372,14 @@
     margin-bottom: 2px;
   }
 
-  #setupCard .setup-header span, #countryCard .setup-header span, #finalCard .setup-header span, #exitCard .setup-header span, #finalBars .setup-header span, #runnerRows .setup-header span {
+  /* Runner Stats — columnas proporcionales al ancho de la tarjeta */
+  #runnerRows .setup-header {
+    grid-template-columns: 1.28fr 1.12fr 0.8fr 1fr 0.9fr 1.6fr;
+    gap: 3px;
+    padding: 6px 4px 8px;
+  }
+
+  #setupCard .setup-header span, #countryCard .setup-header span, #finalCard .setup-header span, #exitCard .setup-header span, #finalBars .setup-header span, #runnerRows .setup-header, #newsCard .setup-header span {
     font-family: 'DM Mono', monospace;
     font-size: 9px;
     letter-spacing: 1.5px;
@@ -356,10 +388,10 @@
     text-align: center;
   }
 
-  #setupCard .setup-header span:first-child, #countryCard .setup-header span:first-child, #finalCard .setup-header span:first-child, #exitCard .setup-header span:first-child, #finalBars .setup-header span:first-child, #runnerRows .setup-header span:first-child { text-align: left; }
-  #setupCard .setup-header span:nth-child(2), #countryCard .setup-header span:nth-child(2), #finalCard .setup-header span:nth-child(2), #exitCard .setup-header span:nth-child(2), #finalBars .setup-header span:nth-child(2), #runnerRows .setup-header span:nth-child(2) { text-align: left; }
+  /* All header spans centered globally */
+  .setup-header span { text-align: center !important; }
 
-  #setupCard .setup-row, #countryCard .setup-row, #finalCard .setup-row, #exitCard .setup-row, #finalBars .setup-row, #runnerRows .setup-row {
+  #setupCard .setup-row, #countryCard .setup-row, #finalCard .setup-row, #exitCard .setup-row, #finalBars .setup-row, #runnerRows .setup-row, #newsCard .setup-row {
     display: grid;
     grid-template-columns: 120px 80px 55px 65px 65px 100px;
     gap: 10px;
@@ -369,18 +401,66 @@
     transition: background 0.15s;
   }
 
-  #setupCard .setup-row:hover, #countryCard .setup-row:hover, #finalCard .setup-row:hover, #exitCard .setup-row:hover, #finalBars .setup-row:hover, #runnerRows .setup-row:hover { background: var(--bg3); }
+  /* Runner Stats — columnas proporcionales al ancho de la tarjeta */
+  #runnerRows .setup-row {
+    grid-template-columns: 1.28fr 1.12fr 0.8fr 1fr 0.9fr 1.6fr;
+    gap: 3px;
+    padding: 5px 4px;
+  }
+  #runnerRows .setup-name {
+    font-size: 10px;
+  }
+  #runnerRows .setup-stat {
+    font-size: 10px;
+  }
+  #runnerRows .tw, #runnerRows .tl, #runnerRows .tp {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  #runnerRows .badge-share, #runnerRows .badge-wr-g, #runnerRows .badge-wr-y, #runnerRows .badge-wr-r {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
 
-  #setupCard .setup-name, #countryCard .setup-name, #finalCard .setup-name, #exitCard .setup-name, #finalBars .setup-name, #runnerRows .setup-name {
+  /* News — columnas proporcionales al ancho reducido de la tarjeta */
+  #newsCard .setup-header {
+    grid-template-columns: 1.2fr 1.1fr 0.7fr 0.9fr 0.8fr 1.5fr;
+    gap: 3px;
+    padding: 6px 4px 8px;
+  }
+  #newsCard .setup-row {
+    grid-template-columns: 1.2fr 1.1fr 0.7fr 0.9fr 0.8fr 1.5fr;
+    gap: 3px;
+    padding: 5px 4px;
+  }
+  #newsCard .setup-name {
+    font-size: 10px;
+  }
+  #newsCard .setup-stat {
+    font-size: 10px;
+  }
+  #newsCard .tw, #newsCard .tl, #newsCard .tp {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  #newsCard .badge-share, #newsCard .badge-wr-g, #newsCard .badge-wr-y, #newsCard .badge-wr-r {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+
+  #setupCard .setup-row:hover, #countryCard .setup-row:hover, #finalCard .setup-row:hover, #exitCard .setup-row:hover, #finalBars .setup-row:hover, #runnerRows .setup-row, #newsCard .setup-row:hover { background: var(--bg3); }
+
+  #setupCard .setup-name, #countryCard .setup-name, #finalCard .setup-name, #exitCard .setup-name, #finalBars .setup-name, #runnerRows .setup-name, #newsCard .setup-name {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
     color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
   }
 
-  #setupCard .setup-bar-wrap, #countryCard .setup-bar-wrap, #finalCard .setup-bar-wrap, #exitCard .setup-bar-wrap, #finalBars .setup-bar-wrap, #runnerRows .setup-bar-wrap {
+  #setupCard .setup-bar-wrap, #countryCard .setup-bar-wrap, #finalCard .setup-bar-wrap, #exitCard .setup-bar-wrap, #finalBars .setup-bar-wrap, #runnerRows .setup-bar-wrap, #newsCard .setup-bar-wrap {
     display: flex;
     align-items: center;
     height: 5px;
@@ -389,20 +469,20 @@
     overflow: hidden;
   }
 
-  #setupCard .setup-bar-fill, #countryCard .setup-bar-fill, #finalCard .setup-bar-fill, #exitCard .setup-bar-fill, #finalBars .setup-bar-fill, #runnerRows .setup-bar-fill {
+  #setupCard .setup-bar-fill, #countryCard .setup-bar-fill, #finalCard .setup-bar-fill, #exitCard .setup-bar-fill, #finalBars .setup-bar-fill, #runnerRows .setup-bar-fill, #newsCard .setup-bar-fill {
     height: 100%;
     border-radius: 3px;
     transition: width 1s cubic-bezier(0.4,0,0.2,1);
   }
 
-  #setupCard .setup-stat, #countryCard .setup-stat, #finalCard .setup-stat, #exitCard .setup-stat, #finalBars .setup-stat, #runnerRows .setup-stat {
+  #setupCard .setup-stat, #countryCard .setup-stat, #finalCard .setup-stat, #exitCard .setup-stat, #finalBars .setup-stat, #runnerRows .setup-stat, #newsCard .setup-stat {
     font-family: 'DM Mono', monospace;
     font-size: 12px;
     font-weight: 500;
     text-align: center;
   }
 
-  #setupCard .setup-trades, #countryCard .setup-trades, #finalCard .setup-trades, #exitCard .setup-trades, #finalBars .setup-trades, #runnerRows .setup-trades {
+  #setupCard .setup-trades, #countryCard .setup-trades, #finalCard .setup-trades, #exitCard .setup-trades, #finalBars .setup-trades, #runnerRows .setup-trades, #newsCard .setup-trades {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -411,9 +491,9 @@
     font-size: 11px;
   }
 
-  #setupCard .tw, #countryCard .tw, #finalCard .tw, #exitCard .tw, #finalBars .tw, #runnerRows .tw { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; }
-  #setupCard .tl, #countryCard .tl, #finalCard .tl, #exitCard .tl, #finalBars .tl, #runnerRows .tl { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; }
-  #setupCard .tp, #countryCard .tp, #finalCard .tp, #exitCard .tp, #finalBars .tp, #runnerRows .tp { color: #448aff; background: #448aff14; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tw, #countryCard .tw, #finalCard .tw, #exitCard .tw, #finalBars .tw, #runnerRows .tw, #newsCard .tw { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tl, #countryCard .tl, #finalCard .tl, #exitCard .tl, #finalBars .tl, #runnerRows .tl, #newsCard .tl { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tp, #countryCard .tp, #finalCard .tp, #exitCard .tp, #finalBars .tp, #runnerRows .tp, #newsCard .tp { color: #448aff; background: #448aff14; padding: 1px 6px; border-radius: 4px; }
   .badge-wr-g { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
   .badge-wr-y { color: #ffd600; background: #ffd60014; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
   .badge-wr-r { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
@@ -476,6 +556,7 @@
     text-transform: uppercase;
     color: #2d6a9f;
     margin-bottom: 20px;
+    text-align: center;
   }
 
   table {
@@ -1327,8 +1408,8 @@
         </div>
       </div>
 
-      <!-- Fila 1: Win/Loss + Estadísticas generales + Runner Stats -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:stretch;">
+      <!-- Fila 1: Win/Loss + Estadísticas generales + Runner Stats + News -->
+      <div style="display:grid;grid-template-columns:0.56fr 0.56fr 1.125fr 1.375fr;gap:16px;align-items:stretch;max-width:1800px;max-height:225px;">
         <div class="chart-card">
           <div class="chart-title">Win / Loss ratio</div>
           <div class="donut-wrap">
@@ -1365,6 +1446,10 @@
         <div class="chart-card">
           <div class="chart-title" style="margin-bottom:14px;">Runner Stats</div>
           <div class="exit-rows" id="runnerRows"><div class="exit-empty">Sin datos de runner aún</div></div>
+        </div>
+        <div class="chart-card" id="newsCard">
+          <div class="chart-title">News</div>
+          <div class="bar-chart" id="newsBars"><div class="empty-hint">Sin datos</div></div>
         </div>
       </div>
 
@@ -2265,6 +2350,7 @@ function render() {
   // Setup bars with % of total
   renderSetupBars('setupBars',   closedTrades, closedTrades.length, 'setup');
   renderSetupBars('countryBars', closedTrades, closedTrades.length, 'pais');
+  renderSetupBars('newsBars',    closedTrades, closedTrades.length, 'noticia');
   renderFinalCard(closedTrades);
   // Exit Strategy card
   renderExitCard(closedTrades);
@@ -2307,7 +2393,12 @@ function renderSortableTable(containerId, groups, totalCount, colLabel) {
   if (!el) return;
   const st       = _sortState[containerId];
   const isCols   = containerId === 'countryBars';
-  const gridCols = isCols ? '110px 100px 60px 72px 72px 120px' : '180px 120px 70px 80px 80px 130px';
+  const isNewsT  = containerId === 'newsBars';
+  const isRunner = containerId === 'runnerRows';
+  const gridCols = isCols   ? '110px 100px 60px 72px 72px 120px'
+                 : isNewsT  ? '1.2fr 1.1fr 0.7fr 0.9fr 0.8fr 1.5fr'
+                 : isRunner ? '1.28fr 1.12fr 0.8fr 1fr 0.9fr 1.6fr'
+                 :            '180px 120px 70px 80px 80px 130px';
   const label    = colLabel || 'Setup';
 
   const allEntries = Object.entries(groups);
@@ -2360,8 +2451,8 @@ function renderSortableTable(containerId, groups, totalCount, colLabel) {
   }).join('');
 
   el.innerHTML = '<div class="setup-header" style="grid-template-columns:' + gridCols + ';">'
-    + th('name', label, 'text-align:left;')
-    + th('wr', 'Acierto', 'text-align:left;')
+    + th('name', label, '')
+    + th('wr', 'Acierto', '')
     + th('wr', 'WR %', '')
     + th('pnl', 'PNL $', '')
     + th('share', '% Total', '')
@@ -2375,9 +2466,21 @@ function renderSetupBars(containerId, closedTrades, totalCount, key) {
   const field   = key || 'setup';
   const isSetup = containerId === 'setupBars';
   const isPais  = containerId === 'countryBars';
+  const isNews  = containerId === 'newsBars';
   const groups  = {};
   closedTrades.forEach(function(t) {
-    const k = (t[field] || 'N/A').trim() || 'N/A';
+    let k = (t[field] || 'N/A').trim() || 'N/A';
+    // Normalizar valores de noticia
+    if (isNews) {
+      const lowerK = k.toLowerCase();
+      if (lowerK === 'si' || lowerK === 'sí' || lowerK === 'yes') {
+        k = 'CON NOTICIA';
+      } else if (lowerK === 'no') {
+        k = 'SIN NOTICIA';
+      } else {
+        k = 'SIN NOTICIA'; // Por defecto cualquier otro valor es sin noticia
+      }
+    }
     if (!groups[k]) groups[k] = { pnl: 0, pct: 0, count: 0, wins: 0 };
     groups[k].pnl   += (t.pnl || 0);
     groups[k].pct   += (t.pct || 0);
@@ -2385,8 +2488,8 @@ function renderSetupBars(containerId, closedTrades, totalCount, key) {
     if ((t.pnl || 0) > 0) groups[k].wins += 1;
   });
 
-  if (isSetup || isPais) {
-    const label = isSetup ? 'Setup' : 'País';
+  if (isSetup || isPais || isNews) {
+    const label = isSetup ? 'Setup' : isPais ? 'País' : 'News';
     _cachedGroups[containerId] = { groups: groups, totalCount: totalCount, label: label };
     if (!_sortState[containerId]) _sortState[containerId] = { col: 'share', dir: 1, _default: true };
     renderSortableTable(containerId, groups, totalCount, label);
