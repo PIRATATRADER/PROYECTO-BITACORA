@@ -118,7 +118,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .stats-title span{color:var(--gold);}
 .stats-month-sel{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 13px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);color:var(--muted2);cursor:pointer;}
 .stats-month-sel.on{background:#f5a62315;border-color:var(--gold);color:var(--gold);}
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
 @media(max-width:768px){.stats-grid{grid-template-columns:1fr;}}
 .stats-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;min-height:520px;}
 .stats-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--gold));}
@@ -265,6 +265,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
+          <th style="text-align:center;color:var(--gold)">Score Auto</th>
         </tr></thead>
         <tbody id="mb"></tbody>
       </table>
@@ -470,6 +471,63 @@ function renderTabs() {
 }
 function sw(i){ month=i; renderTabs(); renderAll(); }
 
+// ── SCORE AUTOMÁTICO 1-10 ────────────────────────────────────────────────────
+// Factores: R conseguida, % Day vs SOD, Targets superados, Max Loss respetado, HTB vs PNL
+function calcScore(pnl, sod, htb) {
+  if (pnl === null || sod === null || sod <= 0) return null;
+  let score = 5; // base neutra
+
+  const rt       = sod * 0.01;   // Risk Trade = 1% SOD
+  const r        = rt > 0 ? pnl / rt : 0;
+  const pctDay   = (pnl / sod) * 100;
+  const maxLoss  = sod * 0.05;
+
+  // ── Factor 1: R conseguida (peso alto) ──
+  if      (r >= 4)   score += 3;
+  else if (r >= 2)   score += 2;
+  else if (r >= 1)   score += 1;
+  else if (r >= 0)   score += 0;
+  else if (r >= -1)  score -= 1;
+  else if (r >= -2)  score -= 2;
+  else               score -= 3;
+
+  // ── Factor 2: % Day vs SOD ──
+  if      (pctDay >= 5)  score += 1.5;
+  else if (pctDay >= 3)  score += 1;
+  else if (pctDay >= 1)  score += 0.5;
+  else if (pctDay >= 0)  score += 0;
+  else if (pctDay >= -3) score -= 0.5;
+  else                   score -= 1;
+
+  // ── Factor 3: Targets superados ──
+  if      (pnl >= sod * 0.05) score += 1.5; // superó T5
+  else if (pnl >= sod * 0.03) score += 1;   // superó T3
+  else if (pnl >= sod * 0.01) score += 0.5; // superó T1
+
+  // ── Factor 4: Max Loss respetado (penalización dura) ──
+  if (pnl < 0 && Math.abs(pnl) >= maxLoss) score -= 2;
+
+  // ── Factor 5: HTB vs PNL (coste de oportunidad) ──
+  const htbAmt = htb || 0;
+  if (htbAmt > 0 && pnl > 0) {
+    const htbPct = htbAmt / pnl;
+    if      (htbPct > 0.5)  score -= 1;
+    else if (htbPct > 0.25) score -= 0.5;
+  }
+
+  // Clamp 1-10
+  return Math.min(10, Math.max(1, Math.round(score * 10) / 10));
+}
+
+function scoreColor(s) {
+  if (s === null) return 'var(--muted)';
+  if (s >= 8)  return '#00e676';
+  if (s >= 6)  return '#6effa3';
+  if (s >= 5)  return '#ffd600';
+  if (s >= 3)  return '#ff8a8a';
+  return '#ff3d57';
+}
+
 // ── MAIN TABLE ────────────────────────────────────────────────────────────────
 function renderMain() {
   const m = MONTHS[month];
@@ -483,7 +541,7 @@ function renderMain() {
     // Check if this day is a holiday
     const hol = HOLIDAYS[d];
     if (hol) {
-      const colCount = 15; // total columns in table
+      const colCount = 16; // total columns in table
       rows += `<tr class="tr-holiday">
         <td>${d}</td>
         <td colspan="${colCount - 1}" style="text-align:left;padding-left:12px">
@@ -511,6 +569,12 @@ function renderMain() {
     if(rNum!==null){ rSum+=rNum; rCount++; }
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
+
+    // Score automático
+    const autoScore = calcScore(pnl, sod, htb);
+    const scoreCell = autoScore !== null
+      ? `<span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${scoreColor(autoScore)}">${autoScore.toFixed(1)}</span>`
+      : '';
     
     // Add separator class for 20/03/2026 to mark where changes will start
     const separatorClass = d === '20/03/2026' ? ' tr-separator' : '';
@@ -533,6 +597,7 @@ function renderMain() {
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
+      <td style="text-align:center">${scoreCell}</td>
     </tr>`;
   });
 
@@ -562,6 +627,7 @@ function renderMain() {
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
+    <td style="text-align:center"></td>
   </tr>`;
 
   document.getElementById('mb').innerHTML = rows;
@@ -981,6 +1047,26 @@ function renderStats() {
     }
   }
 
+  // Score automático promedio del mes
+  const scoreVals = m.days.map(d => {
+    const row = D[dk(d)] || {};
+    const pnl = pd(row.pnlDay);
+    const sod = pd(row.startOfDay);
+    const htb = pd(row.htb) || 0;
+    return calcScore(pnl, sod, htb);
+  }).filter(s => s !== null);
+  const avgAutoScore = scoreVals.length ? (scoreVals.reduce((a,b)=>a+b,0) / scoreVals.length) : null;
+  const avgScoreWins  = m.days.map(d => {
+    const row = D[dk(d)] || {}; const pnl = pd(row.pnlDay); const sod = pd(row.startOfDay); const htb = pd(row.htb)||0;
+    return pnl > 0 ? calcScore(pnl, sod, htb) : null;
+  }).filter(s => s !== null);
+  const avgScoreLosses = m.days.map(d => {
+    const row = D[dk(d)] || {}; const pnl = pd(row.pnlDay); const sod = pd(row.startOfDay); const htb = pd(row.htb)||0;
+    return pnl !== null && pnl <= 0 ? calcScore(pnl, sod, htb) : null;
+  }).filter(s => s !== null);
+  const avgSW = avgScoreWins.length   ? (avgScoreWins.reduce((a,b)=>a+b,0)   / avgScoreWins.length).toFixed(1)   : null;
+  const avgSL = avgScoreLosses.length ? (avgScoreLosses.reduce((a,b)=>a+b,0) / avgScoreLosses.length).toFixed(1) : null;
+
   document.getElementById('stGrid').innerHTML = `
     <div class="stat-box"><div class="stat-box-l">Días operados</div><div class="stat-box-v">${tot}</div></div>
     <div class="stat-box"><div class="stat-box-l">Win Rate</div><div class="stat-box-v" style="color:var(--${wr>=50?'green':'red'})">${tot ? wr + '%' : '—'}</div></div>
@@ -990,6 +1076,13 @@ function renderStats() {
     <div class="stat-box"><div class="stat-box-l">Ratio R/R</div><div class="stat-box-v" style="font-size:18px">${rr ? rr + ':1' : '—'}</div></div>
     <div class="stat-box"><div class="stat-box-l">Avg Win</div><div class="stat-box-v" style="color:var(--green);font-size:16px">${avgWin ? fd(avgWin) : '—'}</div></div>
     <div class="stat-box"><div class="stat-box-l">Avg Loss</div><div class="stat-box-v" style="color:var(--red);font-size:16px">${avgLoss ? fd(avgLoss) : '—'}</div></div>
+    <div class="stat-box" style="border:1px solid ${avgAutoScore>=7?'var(--green)':avgAutoScore>=5?'var(--yellow)':'var(--red)'}44">
+      <div class="stat-box-l">Score Auto (mes)</div>
+      <div class="stat-box-v" style="color:${scoreColor(avgAutoScore)};font-size:22px">${avgAutoScore ? avgAutoScore.toFixed(1) : '—'}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">
+        W: <span style="color:var(--green)">${avgSW ?? '—'}</span> &nbsp; L: <span style="color:var(--red)">${avgSL ?? '—'}</span>
+      </div>
+    </div>
     <div class="stat-box" style="grid-column:1/-1;background:var(--bg2);border:1px solid ${expectancy!==null&&expectancy>=0?'var(--green)':'var(--red)'};border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div class="stat-box-l" style="font-size:10px;letter-spacing:2px;margin-bottom:4px">EXPECTANCY <span style="opacity:.5;font-size:9px">(WR × AvgWin) − (LR × |AvgLoss|)</span></div>
@@ -1251,104 +1344,776 @@ function renderStats() {
     `;
   }
 
-  // ── Tarjeta 7: Calidad de Entrada ──
-  const tradesWithScore = [];
-  m.days.forEach(d => {
-    const row = D[dk(d)] || {};
-    const score = row.scoreEntrada ? parseInt(row.scoreEntrada) : null;
-    const pnl = pd(row.pnlDay);
-    const sod = pd(row.startOfDay);
-    if (score !== null && pnl !== null && sod) {
-      const c = calc(sod, d);
-      const riskTrade = c.rt;
-      if (riskTrade) {
-        const rValue = pnl / riskTrade;
-        tradesWithScore.push({ trade: d, score, pnl: rValue });
-      }
-    }
-  });
-
-  if (tradesWithScore.length === 0) {
-    document.getElementById('stCalidadEntrada').innerHTML = noDayData;
+  // ── Tarjeta 7: Consistencia y Rachas ──
+  if (rows.length === 0) {
+    document.getElementById('stRachas').innerHTML = noDayData;
   } else {
-    // Calcular promedio de score para wins y losses
-    const scoreWins = tradesWithScore.filter(t => t.pnl > 0);
-    const scoreLosses = tradesWithScore.filter(t => t.pnl < 0);
-    
-    const avgScoreWin = scoreWins.length > 0
-      ? (scoreWins.reduce((sum, t) => sum + t.score, 0) / scoreWins.length).toFixed(1)
-      : '—';
-    
-    const avgScoreLoss = scoreLosses.length > 0
-      ? (scoreLosses.reduce((sum, t) => sum + t.score, 0) / scoreLosses.length).toFixed(1)
-      : '—';
+    // — Racha ganadora más larga —
+    let maxStreak = 0, curStreak = 0, bestStreakDays = [], curDays = [];
+    rows.forEach(x => {
+      if (x.p > 0) {
+        curStreak++; curDays.push(x.d);
+        if (curStreak > maxStreak) { maxStreak = curStreak; bestStreakDays = [...curDays]; }
+      } else { curStreak = 0; curDays = []; }
+    });
 
-    // Insight sobre calidad de entrada
-    let entryInsight = '';
-    const avgWinScore = parseFloat(avgScoreWin);
-    const avgLossScore = parseFloat(avgScoreLoss);
-    
-    if (!isNaN(avgWinScore) && !isNaN(avgLossScore)) {
-      if (avgLossScore < 5) {
-        entryInsight = 'Todo lo <5 pierde → problema NO es estrategia, es ejecución';
-      } else if (avgWinScore >= 7 && avgLossScore < 7) {
-        entryInsight = 'Calidad alta en wins, baja en losses → mejorar paciencia';
-      } else if (avgWinScore < 7 && avgLossScore < 7) {
-        entryInsight = 'Scores bajos generales → revisar criterios de entrada';
-      } else if (avgWinScore >= 7 && avgLossScore >= 7) {
-        entryInsight = 'Buena calidad en ambos → el problema puede ser gestión de salida';
-      }
+    // — Racha perdedora más larga —
+    let maxLoss = 0, curLoss = 0, worstStreakDays = [], curLossDays = [];
+    rows.forEach(x => {
+      if (x.p < 0) {
+        curLoss++; curLossDays.push(x.d);
+        if (curLoss > maxLoss) { maxLoss = curLoss; worstStreakDays = [...curLossDays]; }
+      } else { curLoss = 0; curLossDays = []; }
+    });
+
+    // — Días consecutivos sin pérdida (actual, desde el último día negativo) —
+    let sinPerdida = 0;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i].p >= 0) sinPerdida++;
+      else break;
     }
 
-    // Crear tabla de trades individuales con score
-    const scoresTable = tradesWithScore
-      .sort((a, b) => b.pnl - a.pnl)
-      .slice(0, 10)
-      .map(t => `
-        <tr>
-          <td style="padding:6px 0;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;">${t.trade}</td>
-          <td style="padding:6px 0;text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);">${t.score}</td>
-          <td style="padding:6px 0;text-align:center;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${t.pnl >= 0 ? 'var(--green)' : 'var(--red)'};">${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(1)}R</td>
-        </tr>
-      `).join('');
+    // — % semanas cerradas en positivo —
+    // Agrupar días del mes en semanas (lunes-viernes)
+    const semanas = {};
+    m.days.forEach(d => {
+      const row = D[dk(d)] || {};
+      const p = pd(row.pnlDay);
+      if (p === null) return;
+      // Parsear fecha dd/mm/yyyy
+      const parts = d.split('/');
+      const date = new Date(parts[2], parts[1]-1, parts[0]);
+      // Número de semana dentro del mes (1-based, agrupando por lunes)
+      const dayOfWeek = date.getDay(); // 0=dom, 1=lun...
+      const monday = new Date(date);
+      monday.setDate(date.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+      const wk = monday.toISOString().slice(0,10);
+      if (!semanas[wk]) semanas[wk] = 0;
+      semanas[wk] += p;
+    });
+    const semanasArr = Object.values(semanas);
+    const semanasPos = semanasArr.filter(s => s > 0).length;
+    const semanasPct = semanasArr.length ? Math.round(semanasPos / semanasArr.length * 100) : null;
+    const semanaColor = semanasPct === null ? 'var(--muted2)' : semanasPct >= 60 ? 'var(--green)' : semanasPct >= 40 ? 'var(--yellow)' : 'var(--red)';
 
-    document.getElementById('stCalidadEntrada').innerHTML = `
-      <div style="font-family:'DM Mono',monospace;font-size:11px;margin-bottom:12px;color:var(--muted2)">
-        <strong style="color:var(--text)">📊 Ejemplo:</strong>
-      </div>
-      <table style="width:100%;margin-bottom:16px;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:1px solid var(--border);">
-            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Trade</th>
-            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Score Entrada</th>
-            <th style="text-align:center;padding:6px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Resultado</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${scoresTable}
-        </tbody>
-      </table>
-      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">Score Promedio Wins:</span>
-          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--green);">${avgScoreWin}</span>
+    // — Insights —
+    const streakInsight = maxStreak >= 5 ? '🔥 Excelente consistencia ganadora' 
+      : maxStreak >= 3 ? '✅ Buena racha ganadora'
+      : maxStreak >= 1 ? '⚠️ Rachas cortas — buscar consistencia'
+      : '';
+    const lossInsight = maxLoss >= 4 ? '❌ Racha perdedora preocupante — revisar reglas'
+      : maxLoss >= 2 ? '⚠️ Controlar drawdown en días malos'
+      : maxLoss <= 1 ? '✅ Pérdidas bien contenidas'
+      : '';
+
+    document.getElementById('stRachas').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div class="stat-box" style="border:1px solid var(--green)22">
+          <div class="stat-box-l">Racha ganadora</div>
+          <div class="stat-box-v" style="color:var(--green)">${maxStreak} días</div>
+          ${bestStreakDays.length ? `<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${bestStreakDays[0]} → ${bestStreakDays[bestStreakDays.length-1]}</div>` : ''}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">Score Promedio Losses:</span>
-          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--red);">${avgScoreLoss}</span>
+        <div class="stat-box" style="border:1px solid var(--red)22">
+          <div class="stat-box-l">Racha perdedora</div>
+          <div class="stat-box-v" style="color:var(--red)">${maxLoss} días</div>
+          ${worstStreakDays.length ? `<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${worstStreakDays[0]} → ${worstStreakDays[worstStreakDays.length-1]}</div>` : ''}
+        </div>
+        <div class="stat-box" style="border:1px solid var(--cyan)22">
+          <div class="stat-box-l">Sin pérdida (actual)</div>
+          <div class="stat-box-v" style="color:var(--cyan)">${sinPerdida} días</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">racha activa</div>
+        </div>
+        <div class="stat-box" style="border:1px solid ${semanaColor}22">
+          <div class="stat-box-l">Semanas en positivo</div>
+          <div class="stat-box-v" style="color:${semanaColor}">${semanasPct !== null ? semanasPct + '%' : '—'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${semanasPos} / ${semanasArr.length} semanas</div>
         </div>
       </div>
-      ${entryInsight ? `
-      <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:12px;">
+      ${streakInsight || lossInsight ? `
+      <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:4px;">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-          <span>👉</span><strong style="color:var(--blue)">Insight:</strong>
+          <span>👉</span><strong style="color:var(--gold)">Insights:</strong>
         </div>
-        <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:1.8;">
-          <li>${entryInsight}</li>
+        <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:2;">
+          ${streakInsight ? `<li>${streakInsight}</li>` : ''}
+          ${lossInsight ? `<li>${lossInsight}</li>` : ''}
+        </ul>
+      </div>` : ''}
+    `;
+  }
+
+  // ── Tarjeta 9: Capital y Riesgo ──
+  if (rows.length === 0) {
+    document.getElementById('stCapRiesgo').innerHTML = noDayData;
+  } else {
+    // Reconstruir capital acumulado día a día
+    let runningCap = null;
+    let peakCap = null;
+    let maxDD = 0, maxDDFrom = null, maxDDTo = null;
+    let capMax = null, capMaxDay = null;
+    let capMin = null, capMinDay = null;
+    let maxLossHits = 0;
+    let htbAcum = 0, htbDays = 0;
+    let pnlBruto = 0;
+
+    m.days.forEach(d => {
+      const row = D[dk(d)] || {};
+      const sod  = pd(row.startOfDay);
+      const pnl  = pd(row.pnlDay);
+      const htb  = pd(row.htb) || 0;
+      if (htb > 0) { htbAcum += htb; htbDays++; }
+      if (pnl !== null) pnlBruto += pnl;
+
+      if (sod === null) return;
+
+      // Capital al cierre del día = SOD + PNL - HTB
+      const cap = sod + (pnl || 0) - htb;
+      if (runningCap === null) runningCap = cap;
+      else runningCap = cap;
+
+      // Máximo y mínimo capital
+      if (capMax === null || cap > capMax) { capMax = cap; capMaxDay = d; }
+      if (capMin === null || cap < capMin) { capMin = cap; capMinDay = d; }
+
+      // Peak para drawdown
+      if (peakCap === null || cap > peakCap) peakCap = cap;
+      const dd = peakCap > 0 ? ((peakCap - cap) / peakCap) * 100 : 0;
+      if (dd > maxDD) { maxDD = dd; maxDDTo = d; }
+
+      // Días que tocaron Max Loss (PNL <= -5% SOD)
+      const maxLossThresh = sod * 0.05;
+      if (pnl !== null && Math.abs(pnl) >= maxLossThresh && pnl < 0) maxLossHits++;
+    });
+
+    const htbPctPnl = pnlBruto > 0 ? ((htbAcum / pnlBruto) * 100).toFixed(1) : null;
+    const htbAvg = htbDays > 0 ? htbAcum / htbDays : null;
+    const ddColor = maxDD >= 10 ? 'var(--red)' : maxDD >= 5 ? 'var(--yellow)' : 'var(--green)';
+    const maxLossColor = maxLossHits >= 3 ? 'var(--red)' : maxLossHits >= 1 ? 'var(--yellow)' : 'var(--green)';
+
+    // Insights
+    const ddInsight = maxDD >= 10 ? '❌ Drawdown elevado — revisar gestión de pérdidas'
+      : maxDD >= 5  ? '⚠️ Drawdown moderado — vigilar'
+      : '✅ Drawdown controlado';
+    const htbInsight = htbPctPnl !== null && parseFloat(htbPctPnl) > 20
+      ? '⚠️ HTB consume más del 20% del PNL bruto'
+      : htbPctPnl !== null ? '✅ Coste HTB asumible' : '';
+    const mlInsight = maxLossHits >= 3 ? '❌ Se alcanzó el Max Loss en ' + maxLossHits + ' días — revisar disciplina'
+      : maxLossHits >= 1 ? '⚠️ Max Loss alcanzado ' + maxLossHits + ' vez/veces'
+      : '✅ Nunca se tocó el Max Loss';
+
+    document.getElementById('stCapRiesgo').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+
+        <div class="stat-box" style="border:1px solid ${ddColor}22">
+          <div class="stat-box-l">Drawdown máximo</div>
+          <div class="stat-box-v" style="color:${ddColor};font-size:20px">${maxDD.toFixed(1)}%</div>
+          ${maxDDTo ? `<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">hasta ${maxDDTo}</div>` : ''}
+        </div>
+
+        <div class="stat-box" style="border:1px solid ${maxLossColor}22">
+          <div class="stat-box-l">Días en Max Loss</div>
+          <div class="stat-box-v" style="color:${maxLossColor}">${maxLossHits}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">≥ 5% SOD perdido</div>
+        </div>
+
+        <div class="stat-box" style="border:1px solid var(--green)22">
+          <div class="stat-box-l">Capital máximo</div>
+          <div class="stat-box-v" style="color:var(--green);font-size:16px">${capMax ? fd(capMax) : '—'}</div>
+          ${capMaxDay ? `<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${capMaxDay}</div>` : ''}
+        </div>
+
+        <div class="stat-box" style="border:1px solid var(--red)22">
+          <div class="stat-box-l">Capital mínimo</div>
+          <div class="stat-box-v" style="color:var(--red);font-size:16px">${capMin ? fd(capMin) : '—'}</div>
+          ${capMinDay ? `<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${capMinDay}</div>` : ''}
+        </div>
+
+        <div class="stat-box" style="border:1px solid var(--gold)22">
+          <div class="stat-box-l">HTB acumulado</div>
+          <div class="stat-box-v" style="color:var(--gold);font-size:16px">${htbAcum > 0 ? fd(htbAcum) : '—'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${htbDays} días con HTB</div>
+        </div>
+
+        <div class="stat-box" style="border:1px solid var(--cyan)22">
+          <div class="stat-box-l">HTB vs PNL bruto</div>
+          <div class="stat-box-v" style="color:var(--cyan);font-size:16px">${htbPctPnl !== null ? htbPctPnl + '%' : '—'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">avg ${htbAvg ? fd(htbAvg) + '/día' : '—'}</div>
+        </div>
+
+      </div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-top:4px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span>👉</span><strong style="color:var(--gold)">Insights:</strong>
+        </div>
+        <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:2;">
+          <li>${ddInsight}</li>
+          <li>${mlInsight}</li>
+          ${htbInsight ? `<li>${htbInsight}</li>` : ''}
         </ul>
       </div>
-      ` : ''}
     `;
+  }
+
+  // ── Tarjeta 10: R y Gestión ──
+  if (rows.length === 0) {
+    document.getElementById('stRGestion').innerHTML = noDayData;
+  } else {
+    // Calcular R de cada día: PNL / RiskTrade (1% SOD)
+    const rRows = m.days.map(d => {
+      const row = D[dk(d)] || {};
+      const sod = pd(row.startOfDay);
+      const pnl = pd(row.pnlDay);
+      if (sod === null || pnl === null) return null;
+      const rt = sod * 0.01;
+      return { d, pnl, r: pnl / rt, sod };
+    }).filter(x => x !== null);
+
+    if (rRows.length === 0) {
+      document.getElementById('stRGestion').innerHTML = noDayData;
+      return;
+    }
+
+    // R acumulada total
+    const rAcum = rRows.reduce((s, x) => s + x.r, 0);
+    const rAcumColor = rAcum >= 0 ? 'var(--green)' : 'var(--red)';
+
+    // Mejor y peor R
+    const bestR  = rRows.reduce((a, b) => b.r > a.r ? b : a);
+    const worstR = rRows.reduce((a, b) => b.r < a.r ? b : a);
+
+    // Distribución por tramos de R
+    const tramos = [
+      { label: '> +3R',        count: 0, color: '#00e676' },
+      { label: '+1R a +3R',    count: 0, color: '#6effa3' },
+      { label: '0 a +1R',      count: 0, color: '#b2ffce' },
+      { label: '-1R a 0',      count: 0, color: '#ff8a8a' },
+      { label: '< -1R',        count: 0, color: '#ff3d57' },
+    ];
+    rRows.forEach(x => {
+      if      (x.r > 3)              tramos[0].count++;
+      else if (x.r > 1)              tramos[1].count++;
+      else if (x.r >= 0)             tramos[2].count++;
+      else if (x.r >= -1)            tramos[3].count++;
+      else                           tramos[4].count++;
+    });
+    const maxTramo = Math.max(...tramos.map(t => t.count), 1);
+
+    // % días que superaron cada target (1%, 3%, 5% del SOD)
+    const hitT1 = rRows.filter(x => x.pnl >= x.sod * 0.01).length;
+    const hitT3 = rRows.filter(x => x.pnl >= x.sod * 0.03).length;
+    const hitT5 = rRows.filter(x => x.pnl >= x.sod * 0.05).length;
+    const pctT1 = Math.round(hitT1 / rRows.length * 100);
+    const pctT3 = Math.round(hitT3 / rRows.length * 100);
+    const pctT5 = Math.round(hitT5 / rRows.length * 100);
+
+    // Insights
+    const rAcumInsight = rAcum >= 5  ? '✅ Excelente acumulación de R'
+      : rAcum >= 2  ? '✅ Buena gestión — R positiva'
+      : rAcum >= 0  ? '⚠️ R marginal — mejorar selección'
+      : '❌ R negativa — revisar gestión';
+    const distInsight = tramos[0].count + tramos[1].count > tramos[3].count + tramos[4].count
+      ? '✅ Más días por encima de +1R que por debajo de -1R'
+      : '⚠️ Más días perdedores grandes que ganadores grandes';
+    const targetInsight = pctT3 >= 40
+      ? '🔥 Alcanzas el Target 3% frecuentemente'
+      : pctT1 >= 60 ? '✅ Superas el Target 1% la mayoría de días ganadores'
+      : '';
+
+    document.getElementById('stRGestion').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div class="stat-box" style="border:1px solid ${rAcumColor}22">
+          <div class="stat-box-l">R acumulada</div>
+          <div class="stat-box-v" style="color:${rAcumColor};font-size:22px">${rAcum >= 0 ? '+' : ''}${rAcum.toFixed(2)}R</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${rRows.length} días con SOD</div>
+        </div>
+        <div class="stat-box" style="grid-row:span 2;padding:10px 12px;">
+          <div class="stat-box-l" style="margin-bottom:10px;">Distribución R</div>
+          ${tramos.map(t => `
+            <div style="margin-bottom:6px;">
+              <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:2px;">
+                <span style="color:${t.color}">${t.label}</span>
+                <span style="color:var(--text)">${t.count}d</span>
+              </div>
+              <div style="height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${Math.round(t.count/maxTramo*100)}%;background:${t.color};border-radius:3px;transition:width .8s ease;"></div>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div class="stat-box" style="border:1px solid var(--green)22">
+          <div class="stat-box-l">Mejor día</div>
+          <div class="stat-box-v" style="color:var(--green);font-size:16px">+${bestR.r.toFixed(2)}R</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${bestR.d}</div>
+        </div>
+        <div class="stat-box" style="border:1px solid var(--red)22">
+          <div class="stat-box-l">Peor día</div>
+          <div class="stat-box-v" style="color:var(--red);font-size:16px">${worstR.r.toFixed(2)}R</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${worstR.d}</div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">% Días que superaron cada target</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green)">${pctT1}%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">Target 1%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">${hitT1}/${rRows.length} días</div>
+          </div>
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold)">${pctT3}%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">Target 3%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">${hitT3}/${rRows.length} días</div>
+          </div>
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--cyan)">${pctT5}%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">Target 5%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">${hitT5}/${rRows.length} días</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg3);border-radius:8px;padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span>👉</span><strong style="color:var(--gold)">Insights:</strong>
+        </div>
+        <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:2;">
+          <li>${rAcumInsight}</li>
+          <li>${distInsight}</li>
+          ${targetInsight ? `<li>${targetInsight}</li>` : ''}
+        </ul>
+      </div>
+    `;
+  }
+
+  // ── Tarjeta 10: Shares y HTB ──
+  const sharesRows = m.days.map(d => {
+    const row  = D[dk(d)] || {};
+    const pnl  = pd(row.pnlDay);
+    const sh   = pd(row.shares);
+    const htb  = pd(row.htb) || 0;
+    const sod  = pd(row.startOfDay);
+    if (pnl === null && sh === null) return null;
+    return { d, pnl, sh, htb, sod };
+  }).filter(x => x !== null);
+
+  if (sharesRows.length === 0) {
+    document.getElementById('stSharesHTB').innerHTML = `<span style="font-size:12px;color:var(--muted2)">Sin datos — rellena las columnas Shares y HTB en la tabla principal</span>`;
+  } else {
+    // ── Shares ──
+    const shRows   = sharesRows.filter(x => x.sh !== null && x.pnl !== null);
+    const shTotal  = shRows.reduce((s, x) => s + x.sh, 0);
+    const shAvg    = shRows.length ? shTotal / shRows.length : null;
+    const shMax    = shRows.length ? shRows.reduce((a, b) => b.sh > a.sh ? b : a) : null;
+    const shMin    = shRows.length ? shRows.reduce((a, b) => b.sh < a.sh ? b : a) : null;
+
+    // Correlación shares vs PNL: días con más shares que la media → ¿mejor PNL?
+    const shMed = shAvg || 0;
+    const shHighPnl = shRows.filter(x => x.sh >= shMed).map(x => x.pnl);
+    const shLowPnl  = shRows.filter(x => x.sh <  shMed).map(x => x.pnl);
+    const avgHighSh = shHighPnl.length ? shHighPnl.reduce((a,b)=>a+b,0) / shHighPnl.length : null;
+    const avgLowSh  = shLowPnl.length  ? shLowPnl.reduce((a,b)=>a+b,0)  / shLowPnl.length  : null;
+
+    // ── HTB ──
+    const htbRows  = sharesRows.filter(x => x.htb > 0);
+    const htbTotal = htbRows.reduce((s, x) => s + x.htb, 0);
+    const htbAvg   = htbRows.length ? htbTotal / htbRows.length : null;
+    const htbMax   = htbRows.length ? htbRows.reduce((a, b) => b.htb > a.htb ? b : a) : null;
+    const pnlBruto = sharesRows.filter(x => x.pnl !== null).reduce((s,x) => s + x.pnl, 0);
+    const htbPct   = pnlBruto > 0 ? (htbTotal / pnlBruto * 100) : null;
+
+    // HTB por día — top 5 más caros
+    const htbSorted = [...htbRows].sort((a,b) => b.htb - a.htb).slice(0, 5);
+
+    // Insights
+    const corrInsight = avgHighSh !== null && avgLowSh !== null
+      ? avgHighSh > avgLowSh
+        ? `✅ Los días con más shares generan mejor PNL (${fd(avgHighSh)} vs ${fd(avgLowSh)})`
+        : `⚠️ Los días con menos shares generan mejor PNL (${fd(avgLowSh)} vs ${fd(avgHighSh)})`
+      : '';
+    const htbInsight = htbPct !== null
+      ? htbPct > 25 ? `❌ HTB consume el ${htbPct.toFixed(1)}% del PNL bruto — muy elevado`
+        : htbPct > 10 ? `⚠️ HTB consume el ${htbPct.toFixed(1)}% del PNL bruto — vigilar`
+        : `✅ HTB asumible: ${htbPct.toFixed(1)}% del PNL bruto`
+      : '';
+
+    document.getElementById('stSharesHTB').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div class="stat-box" style="border:1px solid var(--blue)22">
+          <div class="stat-box-l">Shares totales</div>
+          <div class="stat-box-v" style="color:var(--blue);font-size:18px">${shTotal > 0 ? shTotal.toLocaleString('en-US') : '—'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${shRows.length} días operados</div>
+        </div>
+        <div class="stat-box" style="border:1px solid var(--blue)22">
+          <div class="stat-box-l">Media shares/día</div>
+          <div class="stat-box-v" style="color:var(--blue);font-size:18px">${shAvg ? Math.round(shAvg).toLocaleString('en-US') : '—'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">shares por sesión</div>
+        </div>
+        <div class="stat-box" style="border:1px solid var(--green)22">
+          <div class="stat-box-l">Día más volumen</div>
+          <div class="stat-box-v" style="color:var(--green);font-size:15px">${shMax ? shMax.sh.toLocaleString('en-US') : '—'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${shMax ? shMax.d : ''}</div>
+        </div>
+        <div class="stat-box" style="border:1px solid var(--muted)22">
+          <div class="stat-box-l">Día menos volumen</div>
+          <div class="stat-box-v" style="color:var(--muted2);font-size:15px">${shMin ? shMin.sh.toLocaleString('en-US') : '—'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${shMin ? shMin.d : ''}</div>
+        </div>
+      </div>
+
+      ${htbTotal > 0 ? `
+      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#ff6b9d;margin-bottom:8px;">HTB del mes</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;margin-bottom:10px;">
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#ff6b9d">${fd(htbTotal)}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">Total HTB</div>
+          </div>
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#ff6b9d">${htbAvg ? fd(htbAvg) : '—'}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">Media/día HTB</div>
+          </div>
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${htbPct > 15 ? 'var(--red)' : 'var(--yellow)'}">${htbPct !== null ? htbPct.toFixed(1)+'%' : '—'}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">% PNL bruto</div>
+          </div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Top días más caros</div>
+        ${htbSorted.map(x => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);">
+            <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2)">${x.d}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:#ff6b9d">${fd(x.htb)}</span>
+          </div>`).join('')}
+      </div>` : ''}
+
+      <div style="background:var(--bg3);border-radius:8px;padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span>👉</span><strong style="color:var(--gold)">Insights:</strong>
+        </div>
+        <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:2;">
+          ${corrInsight ? `<li>${corrInsight}</li>` : ''}
+          ${htbInsight  ? `<li>${htbInsight}</li>`  : ''}
+          ${!corrInsight && !htbInsight ? '<li>Sin datos suficientes para generar insights</li>' : ''}
+        </ul>
+      </div>
+    `;
+  }
+
+  // ── Tarjeta 13: Evolución del Capital ──
+  {
+    // Construir serie de capital día a día
+    const equityPoints = [];
+    let som = null;
+
+    m.days.forEach(d => {
+      const row = D[dk(d)] || {};
+      const sod = pd(row.startOfDay);
+      const pnl = pd(row.pnlDay);
+      const htb = pd(row.htb) || 0;
+      if (sod !== null && som === null) som = sod;
+      if (sod !== null && pnl !== null) {
+        equityPoints.push({ d, cap: sod + pnl - htb, pnl, sod });
+      }
+    });
+
+    if (equityPoints.length < 2 || som === null) {
+      document.getElementById('stEquity').innerHTML = `<span style="font-size:12px;color:var(--muted2)">Necesitas al menos 2 días con datos para ver la curva</span>`;
+    } else {
+      // Targets compuestos
+      const t1pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.01, i+1) }));
+      const t2pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.02, i+1) }));
+      const t3pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.03, i+1) }));
+
+      // Rango Y
+      const allVals = [
+        ...equityPoints.map(p => p.cap),
+        ...t3pts.map(p => p.v),
+        som
+      ];
+      const yMin = Math.min(...allVals) * 0.995;
+      const yMax = Math.max(...allVals) * 1.005;
+
+      // SVG dimensions
+      const W = 700, H = 260, padL = 68, padR = 16, padT = 20, padB = 36;
+      const cW = W - padL - padR;
+      const cH = H - padT - padB;
+      const n  = equityPoints.length;
+
+      const xPos = i => padL + (i / (n - 1)) * cW;
+      const yPos = v => padT + cH - ((v - yMin) / (yMax - yMin)) * cH;
+
+      // Helper: polyline points string
+      const pts = arr => arr.map((p, i) => `${xPos(i).toFixed(1)},${yPos(p.v ?? p.cap).toFixed(1)}`).join(' ');
+
+      // Equity line path (filled area)
+      const eqPts = equityPoints.map((p, i) => ({ v: p.cap }));
+      const linePts = equityPoints.map((p, i) => `${xPos(i).toFixed(1)},${yPos(p.cap).toFixed(1)}`).join(' ');
+      const areaPath = `M ${xPos(0).toFixed(1)},${yPos(equityPoints[0].cap).toFixed(1)} `
+        + equityPoints.map((p, i) => `L ${xPos(i).toFixed(1)},${yPos(p.cap).toFixed(1)}`).join(' ')
+        + ` L ${xPos(n-1).toFixed(1)},${(padT+cH).toFixed(1)} L ${padL},${(padT+cH).toFixed(1)} Z`;
+
+      // Y axis labels (4 ticks)
+      const yTicks = [0, 1, 2, 3].map(i => yMin + (yMax - yMin) * i / 3);
+
+      // X axis labels — mostrar máx 6
+      const step = Math.ceil(n / 6);
+      const xLabels = equityPoints.filter((_, i) => i % step === 0 || i === n-1);
+
+      // Color de la equity (verde si termina por encima del inicio, rojo si no)
+      const finalCap  = equityPoints[equityPoints.length-1].cap;
+      const eqColor   = finalCap >= som ? '#00e676' : '#ff3d57';
+      const eqColorD  = finalCap >= som ? '#00e67640' : '#ff3d5740';
+
+      // KPIs resumen
+      const capInicio = som;
+      const capFinal  = finalCap;
+      const ganancia  = capFinal - capInicio;
+      const ganPct    = ((ganancia / capInicio) * 100).toFixed(2);
+      const ganColor  = ganancia >= 0 ? 'var(--green)' : 'var(--red)';
+
+      // ¿Está la equity por encima de t1/t2/t3 al final?
+      const lastT1 = t1pts[t1pts.length-1].v;
+      const lastT2 = t2pts[t2pts.length-1].v;
+      const lastT3 = t3pts[t3pts.length-1].v;
+      const beatsT1 = capFinal >= lastT1;
+      const beatsT2 = capFinal >= lastT2;
+      const beatsT3 = capFinal >= lastT3;
+
+      const perfInsight = beatsT3 ? '🔥 Por encima del target +3% compuesto — rendimiento excepcional'
+        : beatsT2 ? '✅ Por encima del target +2% compuesto'
+        : beatsT1 ? '⚠️ Por encima del +1% pero sin alcanzar el +2%'
+        : ganancia >= 0 ? '⚠️ Capital en positivo pero por debajo del target mínimo (+1%)'
+        : '❌ Capital por debajo del inicio del mes';
+
+      document.getElementById('stEquity').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+          <div class="stat-box">
+            <div class="stat-box-l">Inicio mes</div>
+            <div class="stat-box-v" style="font-size:16px;color:var(--muted2)">${fd(capInicio)}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-l">Capital actual</div>
+            <div class="stat-box-v" style="font-size:16px;color:${eqColor}">${fd(capFinal)}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-l">Ganancia neta</div>
+            <div class="stat-box-v" style="font-size:16px;color:${ganColor}">${ganancia>=0?'+':''}${fd(ganancia)}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-l">Rendimiento</div>
+            <div class="stat-box-v" style="font-size:16px;color:${ganColor}">${ganancia>=0?'+':''}${ganPct}%</div>
+          </div>
+        </div>
+
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;margin-bottom:10px;" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${eqColor}" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="${eqColor}" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Grid lines -->
+          ${yTicks.map(v => `
+            <line x1="${padL}" y1="${yPos(v).toFixed(1)}" x2="${W-padR}" y2="${yPos(v).toFixed(1)}"
+              stroke="#1e2530" stroke-width="1"/>
+            <text x="${padL-6}" y="${(yPos(v)+4).toFixed(1)}"
+              font-family="DM Mono,monospace" font-size="9" fill="#4a5568" text-anchor="end">
+              ${fd(v)}
+            </text>`).join('')}
+
+          <!-- Línea inicio (SOD inicial) -->
+          <line x1="${padL}" y1="${yPos(som).toFixed(1)}" x2="${W-padR}" y2="${yPos(som).toFixed(1)}"
+            stroke="#4a5568" stroke-width="1" stroke-dasharray="4,3"/>
+
+          <!-- Target +1% compuesto -->
+          <polyline points="${pts(t1pts)}" fill="none" stroke="#00e676" stroke-width="1"
+            stroke-dasharray="3,3" opacity="0.5"/>
+
+          <!-- Target +2% compuesto -->
+          <polyline points="${pts(t2pts)}" fill="none" stroke="#ffd600" stroke-width="1"
+            stroke-dasharray="3,3" opacity="0.5"/>
+
+          <!-- Target +3% compuesto -->
+          <polyline points="${pts(t3pts)}" fill="none" stroke="#00b0ff" stroke-width="1"
+            stroke-dasharray="3,3" opacity="0.5"/>
+
+          <!-- Área equity -->
+          <path d="${areaPath}" fill="url(#eqGrad)"/>
+
+          <!-- Línea equity -->
+          <polyline points="${linePts}" fill="none" stroke="${eqColor}" stroke-width="2.5"
+            stroke-linejoin="round" stroke-linecap="round"/>
+
+          <!-- Puntos equity -->
+          ${equityPoints.map((p, i) => `
+            <circle cx="${xPos(i).toFixed(1)}" cy="${yPos(p.cap).toFixed(1)}" r="3"
+              fill="${p.pnl >= 0 ? '#00e676' : '#ff3d57'}" stroke="#0a0c0f" stroke-width="1.5"/>`).join('')}
+
+          <!-- X axis labels -->
+          ${xLabels.map(p => {
+            const i = equityPoints.indexOf(p);
+            return `<text x="${xPos(i).toFixed(1)}" y="${(padT+cH+16).toFixed(1)}"
+              font-family="DM Mono,monospace" font-size="8" fill="#4a5568" text-anchor="middle">
+              ${p.d.slice(0,5)}
+            </text>`;
+          }).join('')}
+        </svg>
+
+        <!-- Leyenda -->
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:12px;padding:0 4px;">
+          <span><span style="display:inline-block;width:16px;height:2px;background:${eqColor};vertical-align:middle;margin-right:4px;border-radius:1px"></span>Capital real</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#00e676;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #00e676"></span>+1%/día</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#ffd600;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #ffd600"></span>+2%/día</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#00b0ff;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #00b0ff"></span>+3%/día</span>
+          <span><span style="color:var(--green)">●</span> día ganador &nbsp;<span style="color:var(--red)">●</span> día perdedor</span>
+        </div>
+
+        <div style="background:var(--bg3);border-radius:8px;padding:12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <span>👉</span><strong style="color:var(--gold)">Insight:</strong>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:1.8;padding-left:4px;">
+            ${perfInsight}
+            <div style="margin-top:6px;font-size:10px;color:var(--muted2);">
+              Targets al cierre →
+              <span style="color:${beatsT1?'var(--green)':'var(--red)'}">+1% ${beatsT1?'✓':'✗'}</span> &nbsp;
+              <span style="color:${beatsT2?'var(--yellow)':'var(--red)'}">+2% ${beatsT2?'✓':'✗'}</span> &nbsp;
+              <span style="color:${beatsT3?'var(--cyan)':'var(--red)'}">+3% ${beatsT3?'✓':'✗'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // ── Tarjeta 14: Rendimiento Semanal ──
+  {
+    // Agrupar días del mes en semanas (lunes a viernes)
+    const semanas = {};
+    m.days.forEach(d => {
+      const row  = D[dk(d)] || {};
+      const pnl  = pd(row.pnlDay);
+      const sod  = pd(row.startOfDay);
+      const htb  = pd(row.htb) || 0;
+      // Parsear fecha dd/mm/yyyy
+      const pts  = d.split('/');
+      const date = new Date(pts[2], pts[1]-1, pts[0]);
+      const dow  = date.getDay(); // 0=dom, 1=lun...
+      // Lunes de esa semana
+      const mon  = new Date(date);
+      mon.setDate(date.getDate() - (dow === 0 ? 6 : dow - 1));
+      const wk   = mon.toISOString().slice(0,10);
+      if (!semanas[wk]) semanas[wk] = { days: [], pnl: 0, wins: 0, losses: 0, sodFirst: null, htb: 0, scores: [] };
+      semanas[wk].days.push(d);
+      if (pnl !== null) {
+        semanas[wk].pnl += pnl;
+        pnl > 0 ? semanas[wk].wins++ : semanas[wk].losses++;
+      }
+      if (sod !== null && semanas[wk].sodFirst === null) semanas[wk].sodFirst = sod;
+      semanas[wk].htb += htb;
+      const sc = calcScore(pnl, sod, htb);
+      if (sc !== null) semanas[wk].scores.push(sc);
+    });
+
+    const semanasArr = Object.entries(semanas).sort((a,b) => a[0].localeCompare(b[0]));
+
+    if (semanasArr.length === 0) {
+      document.getElementById('stSemanal').innerHTML = `<span style="font-size:12px;color:var(--muted2)">Sin datos</span>`;
+    } else {
+      // Win rate semanal
+      const semanasPos = semanasArr.filter(([,s]) => s.pnl > 0).length;
+      const semWR      = Math.round(semanasPos / semanasArr.length * 100);
+      const semWRColor = semWR >= 60 ? 'var(--green)' : semWR >= 40 ? 'var(--yellow)' : 'var(--red)';
+
+      // Mejor y peor semana
+      const bestWk  = semanasArr.reduce((a,b) => b[1].pnl > a[1].pnl ? b : a);
+      const worstWk = semanasArr.reduce((a,b) => b[1].pnl < a[1].pnl ? b : a);
+
+      // PNL total acumulado semanal para mini-chart
+      const pnlMax = Math.max(...semanasArr.map(([,s]) => Math.abs(s.pnl)), 1);
+
+      // Formato fecha semana "DD/MM → DD/MM"
+      const fmtWk = ([wk, s]) => {
+        const d0 = s.days[0];
+        const d1 = s.days[s.days.length-1];
+        return `${d0.slice(0,5)} → ${d1.slice(0,5)}`;
+      };
+
+      // Insights
+      const bestPct  = bestWk[1].sodFirst  ? ((bestWk[1].pnl  / bestWk[1].sodFirst)  * 100).toFixed(2) : null;
+      const worstPct = worstWk[1].sodFirst ? ((worstWk[1].pnl / worstWk[1].sodFirst) * 100).toFixed(2) : null;
+      const wrInsight = semWR >= 75 ? '🔥 Excelente consistencia semanal'
+        : semWR >= 50 ? '✅ Más semanas ganadoras que perdedoras'
+        : semWR >= 25 ? '⚠️ Más semanas perdedoras — revisar enfoque'
+        : '❌ Semanas mayoritariamente negativas';
+      const bestInsight = bestPct ? `📈 Mejor semana: +${bestPct}% (${fmtWk(bestWk)})` : '';
+
+      document.getElementById('stSemanal').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">
+          <div class="stat-box">
+            <div class="stat-box-l">Semanas operadas</div>
+            <div class="stat-box-v">${semanasArr.length}</div>
+          </div>
+          <div class="stat-box" style="border:1px solid ${semWRColor}22">
+            <div class="stat-box-l">Win Rate semanal</div>
+            <div class="stat-box-v" style="color:${semWRColor}">${semWR}%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${semanasPos}W / ${semanasArr.length - semanasPos}L</div>
+          </div>
+          <div class="stat-box" style="border:1px solid var(--green)22">
+            <div class="stat-box-l">Mejor semana</div>
+            <div class="stat-box-v" style="color:var(--green);font-size:16px">${bestWk[1].pnl >= 0 ? '+' : ''}${fd(bestWk[1].pnl)}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${fmtWk(bestWk)}</div>
+          </div>
+          <div class="stat-box" style="border:1px solid var(--red)22">
+            <div class="stat-box-l">Peor semana</div>
+            <div class="stat-box-v" style="color:var(--red);font-size:16px">${worstWk[1].pnl >= 0 ? '+' : ''}${fd(worstWk[1].pnl)}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px">${fmtWk(worstWk)}</div>
+          </div>
+        </div>
+
+        <!-- Tabla semanal detallada -->
+        <div style="background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:12px;">
+          <div style="display:grid;grid-template-columns:1.8fr 0.6fr 0.6fr 0.6fr 1fr 1fr 1fr 1fr;padding:7px 12px;border-bottom:1px solid var(--border);">
+            ${['Semana','Días','W','L','PNL','% SOD','HTB','Score'].map(h =>
+              `<span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:center">${h}</span>`
+            ).join('')}
+          </div>
+          ${semanasArr.map(([wk, s]) => {
+            const tot  = s.wins + s.losses;
+            const pct  = s.sodFirst && tot > 0 ? ((s.pnl / s.sodFirst)*100).toFixed(2)+'%' : '—';
+            const pCol = s.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+            const avgSc = s.scores.length ? (s.scores.reduce((a,b)=>a+b,0)/s.scores.length).toFixed(1) : '—';
+            const barW  = Math.round(Math.abs(s.pnl) / pnlMax * 100);
+            return `
+            <div style="display:grid;grid-template-columns:1.8fr 0.6fr 0.6fr 0.6fr 1fr 1fr 1fr 1fr;padding:8px 12px;border-bottom:1px solid #0c1015;align-items:center;transition:background .1s" onmouseover="this.style.background='#131820'" onmouseout="this.style.background=''">
+              <div>
+                <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2)">${fmtWk([wk,s])}</div>
+                <div style="height:4px;background:var(--bg2);border-radius:2px;margin-top:4px;overflow:hidden;">
+                  <div style="height:100%;width:${barW}%;background:${pCol};border-radius:2px;transition:width .6s ease;"></div>
+                </div>
+              </div>
+              <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center">${tot}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green);text-align:center">${s.wins}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--red);text-align:center">${s.losses}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${pCol};text-align:center">${s.pnl>=0?'+':''}${fd(s.pnl)}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:11px;color:${pCol};text-align:center">${pct}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:11px;color:#ff6b9d;text-align:center">${s.htb > 0 ? fd(s.htb) : '—'}</span>
+              <span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${scoreColor(parseFloat(avgSc))};text-align:center">${avgSc}</span>
+            </div>`;
+          }).join('')}
+        </div>
+
+        <div style="background:var(--bg3);border-radius:8px;padding:12px;">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <span>👉</span><strong style="color:var(--gold)">Insights:</strong>
+          </div>
+          <ul style="margin:0;padding-left:18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:2;">
+            <li>${wrInsight}</li>
+            ${bestInsight ? `<li>${bestInsight}</li>` : ''}
+          </ul>
+        </div>
+      `;
+    }
   }
 }
 
@@ -1414,10 +2179,35 @@ function renderAll(){ renderMain(); renderObj(); renderYear(); }
         <div class="stats-card-title">⏱️ Timing</div>
         <div id="stTiming"></div>
       </div>
-      <!-- Tarjeta 7: Calidad de Entrada -->
-      <div class="stats-card" style="--ac:var(--blue)">
-        <div class="stats-card-title">🎯 Calidad de Entrada</div>
-        <div id="stCalidadEntrada"></div>
+      <!-- Tarjeta 7: Consistencia y Rachas -->
+      <div class="stats-card" style="--ac:var(--green)">
+        <div class="stats-card-title">🔥 Consistencia y Rachas</div>
+        <div id="stRachas"></div>
+      </div>
+      <!-- Tarjeta 8: Capital y Riesgo -->
+      <div class="stats-card" style="--ac:var(--red)">
+        <div class="stats-card-title">🛡️ Capital y Riesgo</div>
+        <div id="stCapRiesgo"></div>
+      </div>
+      <!-- Tarjeta 9: R y Gestión -->
+      <div class="stats-card" style="--ac:var(--cyan)">
+        <div class="stats-card-title">⚡ R y Gestión</div>
+        <div id="stRGestion"></div>
+      </div>
+      <!-- Tarjeta 10: Shares y HTB -->
+      <div class="stats-card" style="--ac:#ff6b9d">
+        <div class="stats-card-title">📊 Shares y HTB</div>
+        <div id="stSharesHTB"></div>
+      </div>
+      <!-- Tarjeta 11: Evolución del Capital -->
+      <div class="stats-card" style="--ac:var(--blue);grid-column:span 2">
+        <div class="stats-card-title">📈 Evolución del Capital</div>
+        <div id="stEquity"></div>
+      </div>
+      <!-- Tarjeta 12: Rendimiento Semanal -->
+      <div class="stats-card" style="--ac:var(--yellow);grid-column:span 4">
+        <div class="stats-card-title">📅 Rendimiento Semanal</div>
+        <div id="stSemanal"></div>
       </div>
     </div>
   </div>
