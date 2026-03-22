@@ -357,13 +357,13 @@
     min-width: 0;
   }
 
-  #setupCard .bar-chart, #countryCard .bar-chart, #finalCard .bar-chart, #exitCard .bar-chart, #finalBars .bar-chart, #runnerRows, #newsCard .bar-chart {
+  #setupCard .bar-chart, #countryCard .bar-chart, #finalCard .bar-chart, #exitCard .bar-chart, #finalBars .bar-chart, #runnerRows, #newsCard .bar-chart, #dilCard .bar-chart {
     display: flex;
     flex-direction: column;
     gap: 0;
   }
 
-  #setupCard .setup-header, #countryCard .setup-header, #finalCard .setup-header, #exitCard .setup-header, #finalBars .setup-header, #runnerRows .setup-header, #newsCard .setup-header {
+  #setupCard .setup-header, #countryCard .setup-header, #finalCard .setup-header, #exitCard .setup-header, #finalBars .setup-header, #runnerRows .setup-header, #newsCard .setup-header, #dilCard .setup-header {
     display: grid;
     grid-template-columns: 120px 80px 55px 65px 65px 100px;
     gap: 10px;
@@ -379,7 +379,7 @@
     padding: 6px 4px 8px;
   }
 
-  #setupCard .setup-header span, #countryCard .setup-header span, #finalCard .setup-header span, #exitCard .setup-header span, #finalBars .setup-header span, #runnerRows .setup-header, #newsCard .setup-header span {
+  #setupCard .setup-header span, #countryCard .setup-header span, #finalCard .setup-header span, #exitCard .setup-header span, #finalBars .setup-header span, #runnerRows .setup-header, #newsCard .setup-header span, #dilCard .setup-header span {
     font-family: 'DM Mono', monospace;
     font-size: 9px;
     letter-spacing: 1.5px;
@@ -391,7 +391,7 @@
   /* All header spans centered globally */
   .setup-header span { text-align: center !important; }
 
-  #setupCard .setup-row, #countryCard .setup-row, #finalCard .setup-row, #exitCard .setup-row, #finalBars .setup-row, #runnerRows .setup-row, #newsCard .setup-row {
+  #setupCard .setup-row, #countryCard .setup-row, #finalCard .setup-row, #exitCard .setup-row, #finalBars .setup-row, #runnerRows .setup-row, #newsCard .setup-row, #dilCard .setup-row {
     display: grid;
     grid-template-columns: 120px 80px 55px 65px 65px 100px;
     gap: 10px;
@@ -448,9 +448,25 @@
     padding: 1px 4px;
   }
 
-  #setupCard .setup-row:hover, #countryCard .setup-row:hover, #finalCard .setup-row:hover, #exitCard .setup-row:hover, #finalBars .setup-row:hover, #runnerRows .setup-row, #newsCard .setup-row:hover { background: var(--bg3); }
+  /* Dilución — columnas proporcionales */
+  #dilCard .setup-header {
+    grid-template-columns: 1.6fr 1.2fr 0.8fr 1fr 0.9fr 1.5fr;
+    gap: 3px;
+    padding: 6px 4px 8px;
+  }
+  #dilCard .setup-row {
+    grid-template-columns: 1.6fr 1.2fr 0.8fr 1fr 0.9fr 1.5fr;
+    gap: 3px;
+    padding: 5px 4px;
+  }
+  #dilCard .setup-name { font-size: 10px; }
+  #dilCard .setup-stat { font-size: 10px; }
+  #dilCard .tw, #dilCard .tl, #dilCard .tp { font-size: 9px; padding: 1px 4px; }
+  #dilCard .badge-share, #dilCard .badge-wr-g, #dilCard .badge-wr-y, #dilCard .badge-wr-r { font-size: 9px; padding: 1px 4px; }
 
-  #setupCard .setup-name, #countryCard .setup-name, #finalCard .setup-name, #exitCard .setup-name, #finalBars .setup-name, #runnerRows .setup-name, #newsCard .setup-name {
+  #setupCard .setup-row:hover, #countryCard .setup-row:hover, #finalCard .setup-row:hover, #exitCard .setup-row:hover, #finalBars .setup-row:hover, #runnerRows .setup-row, #newsCard .setup-row:hover, #dilCard .setup-row:hover { background: var(--bg3); }
+
+  #setupCard .setup-name, #countryCard .setup-name, #finalCard .setup-name, #exitCard .setup-name, #finalBars .setup-name, #runnerRows .setup-name, #newsCard .setup-name, #dilCard .setup-name {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
     color: var(--text);
@@ -460,7 +476,7 @@
     text-align: center;
   }
 
-  #setupCard .setup-bar-wrap, #countryCard .setup-bar-wrap, #finalCard .setup-bar-wrap, #exitCard .setup-bar-wrap, #finalBars .setup-bar-wrap, #runnerRows .setup-bar-wrap, #newsCard .setup-bar-wrap {
+  #setupCard .setup-bar-wrap, #countryCard .setup-bar-wrap, #finalCard .setup-bar-wrap, #exitCard .setup-bar-wrap, #finalBars .setup-bar-wrap, #runnerRows .setup-bar-wrap, #newsCard .setup-bar-wrap, #dilCard .setup-bar-wrap {
     display: flex;
     align-items: center;
     height: 5px;
@@ -469,20 +485,20 @@
     overflow: hidden;
   }
 
-  #setupCard .setup-bar-fill, #countryCard .setup-bar-fill, #finalCard .setup-bar-fill, #exitCard .setup-bar-fill, #finalBars .setup-bar-fill, #runnerRows .setup-bar-fill, #newsCard .setup-bar-fill {
+  #setupCard .setup-bar-fill, #countryCard .setup-bar-fill, #finalCard .setup-bar-fill, #exitCard .setup-bar-fill, #finalBars .setup-bar-fill, #runnerRows .setup-bar-fill, #newsCard .setup-bar-fill, #dilCard .setup-bar-fill {
     height: 100%;
     border-radius: 3px;
     transition: width 1s cubic-bezier(0.4,0,0.2,1);
   }
 
-  #setupCard .setup-stat, #countryCard .setup-stat, #finalCard .setup-stat, #exitCard .setup-stat, #finalBars .setup-stat, #runnerRows .setup-stat, #newsCard .setup-stat {
+  #setupCard .setup-stat, #countryCard .setup-stat, #finalCard .setup-stat, #exitCard .setup-stat, #finalBars .setup-stat, #runnerRows .setup-stat, #newsCard .setup-stat, #dilCard .setup-stat {
     font-family: 'DM Mono', monospace;
     font-size: 12px;
     font-weight: 500;
     text-align: center;
   }
 
-  #setupCard .setup-trades, #countryCard .setup-trades, #finalCard .setup-trades, #exitCard .setup-trades, #finalBars .setup-trades, #runnerRows .setup-trades, #newsCard .setup-trades {
+  #setupCard .setup-trades, #countryCard .setup-trades, #finalCard .setup-trades, #exitCard .setup-trades, #finalBars .setup-trades, #runnerRows .setup-trades, #newsCard .setup-trades, #dilCard .setup-trades {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -491,9 +507,9 @@
     font-size: 11px;
   }
 
-  #setupCard .tw, #countryCard .tw, #finalCard .tw, #exitCard .tw, #finalBars .tw, #runnerRows .tw, #newsCard .tw { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; }
-  #setupCard .tl, #countryCard .tl, #finalCard .tl, #exitCard .tl, #finalBars .tl, #runnerRows .tl, #newsCard .tl { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; }
-  #setupCard .tp, #countryCard .tp, #finalCard .tp, #exitCard .tp, #finalBars .tp, #runnerRows .tp, #newsCard .tp { color: #448aff; background: #448aff14; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tw, #countryCard .tw, #finalCard .tw, #exitCard .tw, #finalBars .tw, #runnerRows .tw, #newsCard .tw, #dilCard .tw { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tl, #countryCard .tl, #finalCard .tl, #exitCard .tl, #finalBars .tl, #runnerRows .tl, #newsCard .tl, #dilCard .tl { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tp, #countryCard .tp, #finalCard .tp, #exitCard .tp, #finalBars .tp, #runnerRows .tp, #newsCard .tp, #dilCard .tp { color: #448aff; background: #448aff14; padding: 1px 6px; border-radius: 4px; }
   .badge-wr-g { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
   .badge-wr-y { color: #ffd600; background: #ffd60014; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
   .badge-wr-r { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
@@ -1477,6 +1493,14 @@
         </div>
       </div>
 
+      <!-- Fila 4: Dilución -->
+      <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+        <div class="chart-card" id="dilCard">
+          <div class="chart-title">Estadística por Dilución</div>
+          <div class="bar-chart" id="dilRows"><div class="empty-hint">Sin datos</div></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -2355,6 +2379,7 @@ function render() {
   // Exit Strategy card
   renderExitCard(closedTrades);
   renderRunnerCard(closedTrades);
+  renderDilCard(closedTrades);
 
   // Table
   renderTradesTable();
@@ -2395,9 +2420,11 @@ function renderSortableTable(containerId, groups, totalCount, colLabel) {
   const isCols   = containerId === 'countryBars';
   const isNewsT  = containerId === 'newsBars';
   const isRunner = containerId === 'runnerRows';
+  const isDil    = containerId === 'dilRows';
   const gridCols = isCols   ? '110px 100px 60px 72px 72px 120px'
                  : isNewsT  ? '1.2fr 1.1fr 0.7fr 0.9fr 0.8fr 1.5fr'
                  : isRunner ? '1.28fr 1.12fr 0.8fr 1fr 0.9fr 1.6fr'
+                 : isDil    ? '1.6fr 1.2fr 0.8fr 1fr 0.9fr 1.5fr'
                  :            '180px 120px 70px 80px 80px 130px';
   const label    = colLabel || 'Setup';
 
@@ -2564,6 +2591,27 @@ function renderRunnerCard(closedTrades) {
   _cachedGroups['runnerRows'] = { groups: groups, totalCount: totalCount, label: 'Runner' };
   if (!_sortState['runnerRows']) _sortState['runnerRows'] = { col: 'share', dir: 1, _default: true };
   renderSortableTable('runnerRows', groups, totalCount, 'Runner');
+}
+
+function renderDilCard(closedTrades) {
+  const groups = {};
+  closedTrades.forEach(function(t) {
+    const raw = (t.dilucion || '').trim();
+    if (!raw) return;
+    // Puede ser múltiple (ej: "S-1 OFFERING, WARRANTS")
+    const items = raw.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    items.forEach(function(k) {
+      if (!groups[k]) groups[k] = { pnl: 0, pct: 0, count: 0, wins: 0 };
+      groups[k].pnl   += (t.pnl || 0);
+      groups[k].pct   += (t.pct || 0);
+      groups[k].count += 1;
+      if ((t.pnl || 0) > 0) groups[k].wins += 1;
+    });
+  });
+  const totalCount = closedTrades.length;
+  _cachedGroups['dilRows'] = { groups: groups, totalCount: totalCount, label: 'Dilución' };
+  if (!_sortState['dilRows']) _sortState['dilRows'] = { col: 'share', dir: 1, _default: true };
+  renderSortableTable('dilRows', groups, totalCount, 'Dilución');
 }
 
 // ── Upload events ─────────────────────────────────────────────────────────────
