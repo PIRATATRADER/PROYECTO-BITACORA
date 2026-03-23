@@ -1094,6 +1094,12 @@
     color: var(--text);
   }
 
+  #ff_cash.cash-positive {
+    color: var(--green);
+    border-color: var(--green);
+    font-weight: 600;
+  }
+
   .form-select-wrap {
     position: relative;
   }
@@ -1643,11 +1649,9 @@
           <div class="form-select-wrap">
             <select class="form-select" id="ff_setup">
               <option value="">— Seleccionar —</option>
-              <option>SETUP A</option>
-              <option>SETUP B</option>
-              <option>SETUP C</option>
-              <option>SETUP D</option>
-              <option>SETUP E</option>
+              <option>SETUP A ($400 - $500)</option>
+              <option>SETUP B ($300 - $400)</option>
+              <option>SETUP C ($200 - $300)</option>
               <option value="__custom__">Otro (escribir)</option>
             </select>
           </div>
@@ -1778,13 +1782,26 @@
         </div>
         <div class="form-field">
           <label class="form-label">Cash Need</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_cash">
-              <option value="">— Seleccionar —</option>
-              <option>LOW</option>
-              <option>MEDIUM</option>
-              <option>HIGH</option>
-            </select>
+          <!-- Hidden real select keeps compatibility with all existing form logic -->
+          <select id="ff_cash" style="display:none">
+            <option value="">— Seleccionar —</option>
+            <option>LOW</option>
+            <option>MEDIUM</option>
+            <option>HIGH</option>
+            <option value="CASH POSITIVE">CASH POSITIVE</option>
+          </select>
+          <div id="ff_cash_custom" style="position:relative;">
+            <div id="ff_cash_display" onclick="toggleCashDropdown()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 32px 9px 12px;cursor:pointer;user-select:none;transition:border-color .15s;position:relative;">
+              — Seleccionar —
+              <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;font-size:12px;">▾</span>
+            </div>
+            <div id="ff_cash_list" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg3);border:1px solid var(--border);border-radius:8px;z-index:999;overflow:hidden;box-shadow:0 8px 24px #0008;">
+              <div onclick="setCashValue('')"       style="padding:9px 12px;font-size:13px;color:var(--muted);cursor:pointer;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">— Seleccionar —</div>
+              <div onclick="setCashValue('LOW')"    style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">LOW</div>
+              <div onclick="setCashValue('MEDIUM')" style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">MEDIUM</div>
+              <div onclick="setCashValue('HIGH')"   style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">HIGH</div>
+              <div onclick="setCashValue('CASH POSITIVE')" style="padding:9px 12px;font-size:13px;color:#00e676;font-weight:700;cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:.5px;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">● CASH POSITIVE</div>
+            </div>
           </div>
         </div>
         <div class="form-field">
@@ -1836,12 +1853,11 @@
               <option>OPEN</option>
               <option>MID-DAY</option>
               <option>POST-MARKET</option>
-              <option>SE DIO LA VUELTA</option>
             </select>
           </div>
         </div>
         <div class="form-field">
-          <label class="form-label">Final</label>
+          <label class="form-label">Closed</label>
           <div class="form-select-wrap">
             <select class="form-select" id="ff_final">
               <option value="">— Seleccionar —</option>
@@ -2796,6 +2812,7 @@ function openAddTradeModal() {
 
   document.getElementById('addTradeModal').classList.add('open');
   document.body.style.overflow = 'hidden';
+  setCashValue('');
   setTimeout(() => document.getElementById('ff_stock').focus(), 300);
 }
 
@@ -2820,6 +2837,45 @@ function handleCustomSelect(selectId, wrapId) {
 handleCustomSelect('ff_setup', 'ff_setup_custom_wrap');
 handleCustomSelect('ff_play',  'ff_play_custom_wrap');
 handleCustomSelect('ff_pais',  'ff_pais_custom_wrap');
+
+const cashSel = document.getElementById('ff_cash');
+const updateCashStyle = () => cashSel.classList.toggle('cash-positive', cashSel.value === 'CASH POSITIVE');
+cashSel.addEventListener('change', updateCashStyle);
+
+function toggleCashDropdown() {
+  const list = document.getElementById('ff_cash_list');
+  list.style.display = list.style.display === 'none' ? 'block' : 'none';
+}
+function setCashValue(val) {
+  const sel = document.getElementById('ff_cash');
+  const display = document.getElementById('ff_cash_display');
+  sel.value = val;
+  if (val === 'CASH POSITIVE') {
+    display.style.color = '#00e676';
+    display.style.fontWeight = '700';
+    display.style.borderColor = '#00e676';
+    display.style.fontFamily = "'DM Mono', monospace";
+    display.childNodes[0].textContent = '● CASH POSITIVE ';
+  } else {
+    display.style.color = val ? 'var(--text)' : 'var(--muted)';
+    display.style.fontWeight = '';
+    display.style.borderColor = '';
+    display.style.fontFamily = '';
+    display.childNodes[0].textContent = val || '— Seleccionar — ';
+  }
+  document.getElementById('ff_cash_list').style.display = 'none';
+}
+// Sync custom display when editing an existing trade
+const _origOpenEdit = openEditTradeModal;
+openEditTradeModal = function(t) {
+  _origOpenEdit(t);
+  setTimeout(() => setCashValue(document.getElementById('ff_cash').value), 0);
+};
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  if (!document.getElementById('ff_cash_custom').contains(e.target))
+    document.getElementById('ff_cash_list').style.display = 'none';
+});
 
 
 // ── Edit Trade ────────────────────────────────────────────────────────────────
