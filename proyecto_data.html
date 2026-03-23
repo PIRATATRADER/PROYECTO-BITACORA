@@ -357,13 +357,13 @@
     min-width: 0;
   }
 
-  #setupCard .bar-chart, #countryCard .bar-chart, #finalCard .bar-chart, #exitCard .bar-chart, #finalBars .bar-chart, #runnerRows, #newsCard .bar-chart {
+  #setupCard .bar-chart, #countryCard .bar-chart, #finalCard .bar-chart, #exitCard .bar-chart, #finalBars .bar-chart, #runnerRows, #cashCard .bar-chart, #newsCard .bar-chart {
     display: flex;
     flex-direction: column;
     gap: 0;
   }
 
-  #setupCard .setup-header, #countryCard .setup-header, #finalCard .setup-header, #exitCard .setup-header, #finalBars .setup-header, #runnerRows .setup-header, #newsCard .setup-header {
+  #setupCard .setup-header, #countryCard .setup-header, #finalCard .setup-header, #exitCard .setup-header, #finalBars .setup-header, #runnerRows .setup-header, #cashCard .setup-header, #newsCard .setup-header {
     display: grid;
     grid-template-columns: 120px 80px 55px 65px 65px 100px;
     gap: 10px;
@@ -372,6 +372,9 @@
     margin-bottom: 2px;
   }
 
+  #setupCard .setup-header { grid-template-columns: 3fr 1fr 0.6fr 0.8fr 0.7fr 1.1fr; gap: 4px; }
+  #countryCard .setup-header, #cashCard .setup-header { grid-template-columns: 90px 70px 46px 58px 52px 90px; gap: 4px; }
+
   /* Runner Stats — columnas proporcionales al ancho de la tarjeta */
   #runnerRows .setup-header {
     grid-template-columns: 1.28fr 1.12fr 0.8fr 1fr 0.9fr 1.6fr;
@@ -379,7 +382,15 @@
     padding: 6px 4px 8px;
   }
 
-  #setupCard .setup-header span, #countryCard .setup-header span, #finalCard .setup-header span, #exitCard .setup-header span, #finalBars .setup-header span, #runnerRows .setup-header, #newsCard .setup-header span {
+  /* Fila 2 — fuente reducida para caber en 3 columnas */
+  #setupCard .setup-name, #countryCard .setup-name, #cashCard .setup-name { font-size: 10px; }
+  #setupCard .setup-stat, #countryCard .setup-stat, #cashCard .setup-stat { font-size: 10px; }
+  #setupCard .tw, #setupCard .tl, #setupCard .tp,
+  #countryCard .tw, #countryCard .tl, #countryCard .tp,
+  #cashCard .tw, #cashCard .tl, #cashCard .tp { font-size: 9px; padding: 1px 4px; }
+  #setupCard .badge-share, #countryCard .badge-share, #cashCard .badge-share { font-size: 9px; padding: 1px 4px; }
+
+  #setupCard .setup-header span, #countryCard .setup-header span, #finalCard .setup-header span, #exitCard .setup-header span, #finalBars .setup-header span, #runnerRows .setup-header, #cashCard .setup-header span, #newsCard .setup-header span {
     font-family: 'DM Mono', monospace;
     font-size: 9px;
     letter-spacing: 1.5px;
@@ -391,7 +402,7 @@
   /* All header spans centered globally */
   .setup-header span { text-align: center !important; }
 
-  #setupCard .setup-row, #countryCard .setup-row, #finalCard .setup-row, #exitCard .setup-row, #finalBars .setup-row, #runnerRows .setup-row, #newsCard .setup-row {
+  #setupCard .setup-row, #countryCard .setup-row, #finalCard .setup-row, #exitCard .setup-row, #finalBars .setup-row, #runnerRows .setup-row, #cashCard .setup-row, #newsCard .setup-row {
     display: grid;
     grid-template-columns: 120px 80px 55px 65px 65px 100px;
     gap: 10px;
@@ -400,6 +411,9 @@
     border-radius: 6px;
     transition: background 0.15s;
   }
+
+  #setupCard .setup-row { grid-template-columns: 3fr 1fr 0.6fr 0.8fr 0.7fr 1.1fr; gap: 4px; padding: 6px 6px; }
+  #countryCard .setup-row, #cashCard .setup-row { grid-template-columns: 90px 70px 46px 58px 52px 90px; gap: 4px; padding: 6px 6px; }
 
   /* Runner Stats — columnas proporcionales al ancho de la tarjeta */
   #runnerRows .setup-row {
@@ -423,34 +437,34 @@
   }
 
   /* News — columnas proporcionales al ancho reducido de la tarjeta */
-  #newsCard .setup-header {
+  #cashCard .setup-header, #newsCard .setup-header {
     grid-template-columns: 1.2fr 1.1fr 0.7fr 0.9fr 0.8fr 1.5fr;
     gap: 3px;
     padding: 6px 4px 8px;
   }
-  #newsCard .setup-row {
+  #cashCard .setup-row, #newsCard .setup-row {
     grid-template-columns: 1.2fr 1.1fr 0.7fr 0.9fr 0.8fr 1.5fr;
     gap: 3px;
     padding: 5px 4px;
   }
-  #newsCard .setup-name {
+  #cashCard .setup-name, #newsCard .setup-name {
     font-size: 10px;
   }
-  #newsCard .setup-stat {
+  #cashCard .setup-stat, #newsCard .setup-stat {
     font-size: 10px;
   }
-  #newsCard .tw, #newsCard .tl, #newsCard .tp {
+  #cashCard .tw, #cashCard .tl, #cashCard .tp, #newsCard .tw, #newsCard .tl, #newsCard .tp {
     font-size: 9px;
     padding: 1px 4px;
   }
-  #newsCard .badge-share, #newsCard .badge-wr-g, #newsCard .badge-wr-y, #newsCard .badge-wr-r {
+  #cashCard .badge-share, #cashCard .badge-wr-g, #cashCard .badge-wr-y, #cashCard .badge-wr-r, #newsCard .badge-share, #newsCard .badge-wr-g, #newsCard .badge-wr-y, #newsCard .badge-wr-r {
     font-size: 9px;
     padding: 1px 4px;
   }
 
-  #setupCard .setup-row:hover, #countryCard .setup-row:hover, #finalCard .setup-row:hover, #exitCard .setup-row:hover, #finalBars .setup-row:hover, #runnerRows .setup-row, #newsCard .setup-row:hover { background: var(--bg3); }
+  #setupCard .setup-row:hover, #countryCard .setup-row:hover, #finalCard .setup-row:hover, #exitCard .setup-row:hover, #finalBars .setup-row:hover, #runnerRows .setup-row, #cashCard .setup-row:hover, #newsCard .setup-row:hover { background: var(--bg3); }
 
-  #setupCard .setup-name, #countryCard .setup-name, #finalCard .setup-name, #exitCard .setup-name, #finalBars .setup-name, #runnerRows .setup-name, #newsCard .setup-name {
+  #setupCard .setup-name, #countryCard .setup-name, #finalCard .setup-name, #exitCard .setup-name, #finalBars .setup-name, #runnerRows .setup-name, #cashCard .setup-name, #newsCard .setup-name {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
     color: var(--text);
@@ -460,7 +474,7 @@
     text-align: center;
   }
 
-  #setupCard .setup-bar-wrap, #countryCard .setup-bar-wrap, #finalCard .setup-bar-wrap, #exitCard .setup-bar-wrap, #finalBars .setup-bar-wrap, #runnerRows .setup-bar-wrap, #newsCard .setup-bar-wrap {
+  #setupCard .setup-bar-wrap, #countryCard .setup-bar-wrap, #finalCard .setup-bar-wrap, #exitCard .setup-bar-wrap, #finalBars .setup-bar-wrap, #runnerRows .setup-bar-wrap, #cashCard .setup-bar-wrap, #newsCard .setup-bar-wrap {
     display: flex;
     align-items: center;
     height: 5px;
@@ -469,20 +483,20 @@
     overflow: hidden;
   }
 
-  #setupCard .setup-bar-fill, #countryCard .setup-bar-fill, #finalCard .setup-bar-fill, #exitCard .setup-bar-fill, #finalBars .setup-bar-fill, #runnerRows .setup-bar-fill, #newsCard .setup-bar-fill {
+  #setupCard .setup-bar-fill, #countryCard .setup-bar-fill, #finalCard .setup-bar-fill, #exitCard .setup-bar-fill, #finalBars .setup-bar-fill, #runnerRows .setup-bar-fill, #cashCard .setup-bar-fill, #newsCard .setup-bar-fill {
     height: 100%;
     border-radius: 3px;
     transition: width 1s cubic-bezier(0.4,0,0.2,1);
   }
 
-  #setupCard .setup-stat, #countryCard .setup-stat, #finalCard .setup-stat, #exitCard .setup-stat, #finalBars .setup-stat, #runnerRows .setup-stat, #newsCard .setup-stat {
+  #setupCard .setup-stat, #countryCard .setup-stat, #finalCard .setup-stat, #exitCard .setup-stat, #finalBars .setup-stat, #runnerRows .setup-stat, #cashCard .setup-stat, #newsCard .setup-stat {
     font-family: 'DM Mono', monospace;
     font-size: 12px;
     font-weight: 500;
     text-align: center;
   }
 
-  #setupCard .setup-trades, #countryCard .setup-trades, #finalCard .setup-trades, #exitCard .setup-trades, #finalBars .setup-trades, #runnerRows .setup-trades, #newsCard .setup-trades {
+  #setupCard .setup-trades, #countryCard .setup-trades, #finalCard .setup-trades, #exitCard .setup-trades, #finalBars .setup-trades, #runnerRows .setup-trades, #cashCard .setup-trades, #newsCard .setup-trades {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -491,9 +505,9 @@
     font-size: 11px;
   }
 
-  #setupCard .tw, #countryCard .tw, #finalCard .tw, #exitCard .tw, #finalBars .tw, #runnerRows .tw, #newsCard .tw { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; }
-  #setupCard .tl, #countryCard .tl, #finalCard .tl, #exitCard .tl, #finalBars .tl, #runnerRows .tl, #newsCard .tl { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; }
-  #setupCard .tp, #countryCard .tp, #finalCard .tp, #exitCard .tp, #finalBars .tp, #runnerRows .tp, #newsCard .tp { color: #448aff; background: #448aff14; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tw, #countryCard .tw, #finalCard .tw, #exitCard .tw, #finalBars .tw, #runnerRows .tw, #cashCard .tw, #newsCard .tw { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tl, #countryCard .tl, #finalCard .tl, #exitCard .tl, #finalBars .tl, #runnerRows .tl, #cashCard .tl, #newsCard .tl { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; }
+  #setupCard .tp, #countryCard .tp, #finalCard .tp, #exitCard .tp, #finalBars .tp, #runnerRows .tp, #cashCard .tp, #newsCard .tp { color: #448aff; background: #448aff14; padding: 1px 6px; border-radius: 4px; }
   .badge-wr-g { color: #00e676; background: #00e67614; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
   .badge-wr-y { color: #ffd600; background: #ffd60014; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
   .badge-wr-r { color: #ff3d57; background: #ff3d5714; padding: 1px 6px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; }
@@ -1459,8 +1473,8 @@
         </div>
       </div>
 
-      <!-- Fila 2: Setup + País -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;">
+      <!-- Fila 2: Setup + País + Cash Need -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:stretch;">
         <div class="chart-card" id="setupCard">
           <div class="chart-title">Rendimiento por Setup</div>
           <div class="bar-chart" id="setupBars"><div class="empty-hint">Sin datos</div></div>
@@ -1468,6 +1482,10 @@
         <div class="chart-card" id="countryCard">
           <div class="chart-title">Rendimiento por País</div>
           <div class="bar-chart" id="countryBars"><div class="empty-hint">Sin datos</div></div>
+        </div>
+        <div class="chart-card" id="cashCard">
+          <div class="chart-title">Rendimiento por Cash Need</div>
+          <div class="bar-chart" id="cashBars"><div class="empty-hint">Sin datos</div></div>
         </div>
       </div>
 
@@ -1807,6 +1825,10 @@
         <div class="form-field">
           <label class="form-label">Dilución</label>
           <div id="ff_dilucion" style="display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;max-height:240px;overflow-y:auto;">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:2px;">
+              <input type="checkbox" value="NO TIENE DILUCION" style="cursor:pointer;width:16px;height:16px;accent-color:#00e676;">
+              <span style="color:#00e676;font-weight:700;">● NO TIENE DILUCION</span>
+            </label>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;">
               <input type="checkbox" value="S-1 OFFERING" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);">
               <span style="color:var(--text);">S-1 OFFERING</span>
@@ -2366,6 +2388,7 @@ function render() {
   // Setup bars with % of total
   renderSetupBars('setupBars',   closedTrades, closedTrades.length, 'setup');
   renderSetupBars('countryBars', closedTrades, closedTrades.length, 'pais');
+  renderSetupBars('cashBars',    closedTrades, closedTrades.length, 'cash');
   renderSetupBars('newsBars',    closedTrades, closedTrades.length, 'noticia');
   renderFinalCard(closedTrades);
   // Exit Strategy card
@@ -2408,10 +2431,12 @@ function renderSortableTable(containerId, groups, totalCount, colLabel) {
   const el = document.getElementById(containerId);
   if (!el) return;
   const st       = _sortState[containerId];
-  const isCols   = containerId === 'countryBars';
+  const isCols   = containerId === 'countryBars' || containerId === 'cashBars';
+  const isSetupT = containerId === 'setupBars';
   const isNewsT  = containerId === 'newsBars';
   const isRunner = containerId === 'runnerRows';
-  const gridCols = isCols   ? '110px 100px 60px 72px 72px 120px'
+  const gridCols = isSetupT ? '3fr 1fr 0.6fr 0.8fr 0.7fr 1.1fr'
+                 : isCols   ? '90px 70px 46px 58px 52px 90px'
                  : isNewsT  ? '1.2fr 1.1fr 0.7fr 0.9fr 0.8fr 1.5fr'
                  : isRunner ? '1.28fr 1.12fr 0.8fr 1fr 0.9fr 1.6fr'
                  :            '180px 120px 70px 80px 80px 130px';
@@ -2483,6 +2508,7 @@ function renderSetupBars(containerId, closedTrades, totalCount, key) {
   const isSetup = containerId === 'setupBars';
   const isPais  = containerId === 'countryBars';
   const isNews  = containerId === 'newsBars';
+  const isCash  = containerId === 'cashBars';
   const groups  = {};
   closedTrades.forEach(function(t) {
     let k = (t[field] || 'N/A').trim() || 'N/A';
@@ -2504,8 +2530,8 @@ function renderSetupBars(containerId, closedTrades, totalCount, key) {
     if ((t.pnl || 0) > 0) groups[k].wins += 1;
   });
 
-  if (isSetup || isPais || isNews) {
-    const label = isSetup ? 'Setup' : isPais ? 'País' : 'News';
+  if (isSetup || isPais || isNews || isCash) {
+    const label = isSetup ? 'Setup' : isPais ? 'País' : isCash ? 'Cash Need' : 'News';
     _cachedGroups[containerId] = { groups: groups, totalCount: totalCount, label: label };
     if (!_sortState[containerId]) _sortState[containerId] = { col: 'share', dir: 1, _default: true };
     renderSortableTable(containerId, groups, totalCount, label);
