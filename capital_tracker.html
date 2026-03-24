@@ -150,6 +150,60 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .prog-t{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;}
 .prog-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold),#ffcc02);transition:width 1s ease;}
 
+/* Trade image cell */
+.trade-thumb-wrap{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
+.trade-add-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:6px;border:1px dashed var(--border);
+  background:transparent;color:var(--muted);font-size:16px;cursor:pointer;
+  transition:all .15s;line-height:1;
+}
+.trade-add-btn:hover{border-color:var(--gold);color:var(--gold);background:#f5a62310;}
+.trade-thumb{
+  width:32px;height:32px;object-fit:cover;border-radius:5px;cursor:pointer;
+  border:1px solid var(--border);transition:border-color .15s;display:block;
+}
+.trade-thumb:hover{border-color:var(--gold);}
+
+/* Hover floating preview */
+#tradeHoverPreview{
+  display:none;position:fixed;z-index:500;pointer-events:none;
+  border-radius:10px;overflow:hidden;
+  border:2px solid var(--border);
+  box-shadow:0 8px 40px rgba(0,0,0,.8);
+  background:var(--bg);
+}
+#tradeHoverPreview img{display:block;max-width:520px;max-height:360px;object-fit:contain;}
+
+/* Trade modal */
+#tradeModal{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+}
+#tradeModal.open{display:flex;}
+#tradeModal .modal-box{
+  position:relative;max-width:90vw;max-height:90vh;
+  border-radius:14px;overflow:hidden;border:1px solid var(--border);
+  background:var(--bg2);
+}
+#tradeModal img{display:block;max-width:90vw;max-height:85vh;object-fit:contain;}
+#tradeModal .modal-close{
+  position:absolute;top:10px;right:10px;width:30px;height:30px;
+  border-radius:50%;background:rgba(0,0,0,.7);border:1px solid var(--border);
+  color:var(--text);font-size:18px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+#tradeModal .modal-close:hover{background:var(--red);border-color:var(--red);}
+#tradeModal .modal-del{
+  position:absolute;bottom:12px;right:12px;
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;
+  padding:5px 12px;border-radius:7px;border:1px solid var(--red);
+  background:transparent;color:var(--red);cursor:pointer;transition:all .15s;
+}
+#tradeModal .modal-del:hover{background:var(--red);color:#fff;}
+
 /* Toast */
 .toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--gold);
   color:var(--gold);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;
@@ -265,6 +319,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>% Day</th>
           <th>R</th>
           <th style="text-align:center;color:var(--gold)">Score Auto</th>
+          <th style="text-align:center;color:var(--muted2)">Trades</th>
         </tr></thead>
         <tbody id="mb"></tbody>
       </table>
@@ -541,7 +596,7 @@ function renderMain() {
     // Check if this day is a holiday
     const hol = HOLIDAYS[d];
     if (hol) {
-      const colCount = 16; // total columns in table
+      const colCount = 17; // total columns in table
       rows += `<tr class="tr-holiday">
         <td>${d}</td>
         <td colspan="${colCount - 1}" style="text-align:left;padding-left:12px">
@@ -598,6 +653,9 @@ function renderMain() {
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
       <td style="text-align:center">${scoreCell}</td>
+      <td style="text-align:center;padding:4px;" class="trade-img-cell" data-key="trade_img_${month}_${k}">
+        <div class="trade-thumb-wrap" data-key="trade_img_${month}_${k}"></div>
+      </td>
     </tr>`;
   });
 
@@ -627,6 +685,7 @@ function renderMain() {
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
     <td style="text-align:center">${scoreCount>0?`<span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${scoreColor(scoreSum/scoreCount)}">${(scoreSum/scoreCount).toFixed(1)}</span>`:''}</td>
+    <td></td>
   </tr>`;
 
   document.getElementById('mb').innerHTML = rows;
@@ -2429,7 +2488,105 @@ function renderStats() {
   }
 }
 
-function renderAll(){ renderMain(); renderObj(); renderYear(); }
+function renderAll(){ renderMain(); renderObj(); renderYear(); initTradeImgs(); }
+
+let _tradeModalKey = null;
+
+function initTradeImgs() {
+  document.querySelectorAll('.trade-thumb-wrap').forEach(wrap => {
+    renderTradeCell(wrap, wrap.dataset.key);
+  });
+}
+
+function renderTradeCell(wrap, key) {
+  const img = localStorage.getItem(key);
+  if (img) {
+    wrap.innerHTML = `<img class="trade-thumb" src="${img}" alt="trade" data-key="${key}" onclick="openTradeModal('${key}')" onmouseenter="showTradePreview(event,'${key}')" onmouseleave="hideTradePreview()">`;
+  } else {
+    wrap.innerHTML = `<button class="trade-add-btn" title="Añadir captura" onclick="uploadTradeImg('${key}')">+</button>`;
+  }
+}
+
+function uploadTradeImg(key) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      localStorage.setItem(key, ev.target.result);
+      document.querySelectorAll(`.trade-thumb-wrap[data-key="${key}"]`).forEach(w => renderTradeCell(w, key));
+      showToast('✓ Captura guardada');
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+
+
+function showTradePreview(e, key) {
+  const img = localStorage.getItem(key);
+  if (!img) return;
+  const preview = document.getElementById('tradeHoverPreview');
+  const pImg = document.getElementById('tradeHoverImg');
+  pImg.src = img;
+  preview.style.display = 'block';
+  positionTradePreview(e);
+}
+
+function positionTradePreview(e) {
+  const preview = document.getElementById('tradeHoverPreview');
+  if (preview.style.display === 'none') return;
+  const pw = 524, ph = 364;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let x = e.clientX + 16, y = e.clientY - ph / 2;
+  if (x + pw > vw) x = e.clientX - pw - 16;
+  if (y < 8) y = 8;
+  if (y + ph > vh - 8) y = vh - ph - 8;
+  preview.style.left = x + 'px';
+  preview.style.top  = y + 'px';
+}
+
+function hideTradePreview() {
+  document.getElementById('tradeHoverPreview').style.display = 'none';
+}
+
+function openTradeModal(key) {
+  const img = localStorage.getItem(key);
+  if (!img) return;
+  _tradeModalKey = key;
+  document.getElementById('tradeModalImg').src = img;
+  document.getElementById('tradeModal').classList.add('open');
+  hideTradePreview();
+}
+
+function closeTradeModal() {
+  document.getElementById('tradeModal').classList.remove('open');
+  document.getElementById('tradeModalImg').src = '';
+  _tradeModalKey = null;
+}
+
+function deleteTradeImg() {
+  if (!_tradeModalKey) return;
+  if (!confirm('¿Eliminar esta captura y sus datos IA?')) return;
+  localStorage.removeItem(_tradeModalKey);
+  document.querySelectorAll(`.trade-thumb-wrap[data-key="${_tradeModalKey}"]`).forEach(w => renderTradeCell(w, _tradeModalKey));
+  closeTradeModal();
+  showToast('Captura eliminada');
+}
+
+// Attach modal and preview listeners once DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('tradeModal').addEventListener('click', function(e){
+    if (e.target === this) closeTradeModal();
+  });
+  document.addEventListener('mousemove', e => {
+    if (document.getElementById('tradeHoverPreview').style.display !== 'none') positionTradePreview(e);
+  });
+});
 
 // ── INICIALIZACIÓN ───────────────────────────────────────────────────────────
 // 1) Carga datos desde Firebase (o localStorage si offline)
@@ -2544,6 +2701,18 @@ function renderAll(){ renderMain(); renderObj(); renderYear(); }
       <div id="calendarPNL" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--green);margin-left:auto;">$0</div>
     </div>
     <div id="calendarGrid"></div>
+  </div>
+</div>
+
+<!-- ═══════ TRADE IMAGE HOVER PREVIEW ═══════ -->
+<div id="tradeHoverPreview"><img id="tradeHoverImg" src="" alt=""></div>
+
+<!-- ═══════ TRADE IMAGE MODAL ═══════ -->
+<div id="tradeModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeTradeModal()">✕</button>
+    <img id="tradeModalImg" src="" alt="Trade screenshot">
+    <button class="modal-del" onclick="deleteTradeImg()">🗑 Eliminar imagen</button>
   </div>
 </div>
 
