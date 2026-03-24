@@ -2487,6 +2487,7 @@ function renderStats() {
     }
   }
   renderAIAnalysis(statsMonth);
+  renderRPerSymbol(statsMonth);
 }
 
 // ── ANÁLISIS IA (datos inyectados manualmente) ────────────────────────────────
@@ -2494,12 +2495,8 @@ function renderAIAnalysis(monthIdx) {
   const mi = monthIdx !== undefined ? monthIdx : month;
   const el = document.getElementById('stAIAnalysis');
   if (!el) return;
-
-  // Collect all injected days for this month
   const days = [];
   let allTrades = [], htbTotal = 0;
-
-  // Scan localStorage for keys matching this month
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key || !key.startsWith(`ai_day_${mi}_`)) continue;
@@ -2507,107 +2504,89 @@ function renderAIAnalysis(monthIdx) {
       const data = JSON.parse(localStorage.getItem(key));
       const trades = data.trades || [];
       if (!trades.length) continue;
-      const dayPnl  = trades.reduce((s,t) => s+(t.pnl||0), 0);
-      const dayR    = trades.reduce((s,t) => s+(t.realR||0), 0);
-      const dayWins = trades.filter(t => t.pnl > 0).length;
-      const dayHtb  = data.summary?.htbCost || 0;
+      const dayPnl = trades.reduce((s,t)=>s+(t.pnl||0),0);
+      const dayR   = trades.reduce((s,t)=>s+(t.realR||0),0);
+      const dayHtb = data.summary?.htbCost||0;
       htbTotal += dayHtb;
-      trades.forEach(t => allTrades.push({...t, date: data.date}));
-      days.push({ date: data.date, trades, pnl: dayPnl, r: dayR, htb: dayHtb,
-                  wins: dayWins, wr: Math.round(dayWins/trades.length*100) });
-    } catch(e) {}
+      trades.forEach(t=>allTrades.push({...t,date:data.date}));
+      days.push({date:data.date,trades,pnl:dayPnl,r:dayR,htb:dayHtb,
+                 wins:trades.filter(t=>t.pnl>0).length,
+                 wr:Math.round(trades.filter(t=>t.pnl>0).length/trades.length*100)});
+    } catch(e){}
   }
-
-  // Sort days chronologically
-  days.sort((a,b) => a.date.split('/').reverse().join('').localeCompare(b.date.split('/').reverse().join('')));
-
-  if (!days.length) {
-    el.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;padding:30px 0">
-      Sin datos todavía — mándame tu PNL en el chat y lo analizo e inyecto aquí
-    </div>`;
+  days.sort((a,b)=>a.date.split('/').reverse().join('').localeCompare(b.date.split('/').reverse().join('')));
+  if (!days.length){
+    el.innerHTML=`<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;padding:30px 0">Sin datos todavía</div>`;
     return;
   }
-
-  // Global totals
-  const longs  = allTrades.filter(t => t.direction === 'long');
-  const shorts = allTrades.filter(t => t.direction === 'short');
-  const pnlL   = longs.reduce((s,t)  => s+(t.pnl||0), 0);
-  const pnlS   = shorts.reduce((s,t) => s+(t.pnl||0), 0);
-  const pnlAll = pnlL + pnlS;
-  const wrL    = longs.length  ? Math.round(longs.filter(t=>t.pnl>0).length/longs.length*100) : 0;
-  const wrS    = shorts.length ? Math.round(shorts.filter(t=>t.pnl>0).length/shorts.length*100) : 0;
-  const wrAll  = allTrades.length ? Math.round(allTrades.filter(t=>t.pnl>0).length/allTrades.length*100) : 0;
-  const rAll   = allTrades.reduce((s,t) => s+(t.realR||0), 0);
-  const bestT  = [...allTrades].sort((a,b)=>b.pnl-a.pnl)[0];
-  const worstT = [...allTrades].sort((a,b)=>a.pnl-b.pnl)[0];
-
-  // By symbol
-  const bySym = {};
-  allTrades.forEach(t => {
-    if (!t.symbol) return;
-    const s = t.symbol.toUpperCase();
-    if (!bySym[s]) bySym[s] = { n:0, pnl:0, r:0, w:0, longs:0, shorts:0 };
-    bySym[s].n++; bySym[s].pnl += t.pnl||0; bySym[s].r += t.realR||0;
-    if (t.pnl > 0) bySym[s].w++;
-    if (t.direction === 'long') bySym[s].longs++; else bySym[s].shorts++;
+  const longs=allTrades.filter(t=>t.direction==='long');
+  const shorts=allTrades.filter(t=>t.direction==='short');
+  const pnlL=longs.reduce((s,t)=>s+(t.pnl||0),0);
+  const pnlS=shorts.reduce((s,t)=>s+(t.pnl||0),0);
+  const pnlAll=pnlL+pnlS;
+  const wrL=longs.length?Math.round(longs.filter(t=>t.pnl>0).length/longs.length*100):0;
+  const wrS=shorts.length?Math.round(shorts.filter(t=>t.pnl>0).length/shorts.length*100):0;
+  const wrAll=allTrades.length?Math.round(allTrades.filter(t=>t.pnl>0).length/allTrades.length*100):0;
+  const rAll=allTrades.reduce((s,t)=>s+(t.realR||0),0);
+  const bestT=[...allTrades].sort((a,b)=>b.pnl-a.pnl)[0];
+  const worstT=[...allTrades].sort((a,b)=>a.pnl-b.pnl)[0];
+  const bySym={};
+  allTrades.forEach(t=>{
+    if(!t.symbol)return;
+    const s=t.symbol.toUpperCase();
+    if(!bySym[s])bySym[s]={n:0,pnl:0,r:0,w:0,longs:0,shorts:0};
+    bySym[s].n++;bySym[s].pnl+=t.pnl||0;bySym[s].r+=t.realR||0;
+    if(t.pnl>0)bySym[s].w++;
+    if(t.direction==='long')bySym[s].longs++;else bySym[s].shorts++;
   });
-
-  const fc = v => v>=0?'var(--green)':'var(--red)';
-  const fm = v => `${v>=0?'+':'−'}$${Math.abs(v).toFixed(2)}`;
-  const fr = v => `${v>=0?'+':''}${v.toFixed(2)}R`;
-
-  const symRows = Object.entries(bySym)
-    .sort((a,b) => b[1].pnl-a[1].pnl)
-    .map(([sym,v]) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-family:'DM Mono',monospace;">
-        <span style="font-size:11px;color:var(--text);font-weight:600;width:52px">${sym}</span>
-        <span style="font-size:9px;color:var(--muted2);width:50px">${v.n} trade${v.n>1?'s':''}</span>
-        <span style="font-size:9px;color:var(--muted2);width:50px">${v.longs}L · ${v.shorts}S</span>
-        <span style="font-size:9px;color:${Math.round(v.w/v.n*100)>=50?'var(--green)':'var(--red)'};width:36px">${Math.round(v.w/v.n*100)}%WR</span>
-        <span style="font-size:10px;color:${v.r>=0?'var(--cyan)':'var(--red)'};width:52px">${fr(v.r)}</span>
-        <span style="font-size:11px;font-weight:600;color:${fc(v.pnl)};margin-left:auto">${fm(v.pnl)}</span>
-      </div>`).join('');
-
-  const dayRows = days.map((day, i) => {
-    const id = `aiday_${mi}_${i}`;
-    const tradeList = day.trades.map(t => `
+  const fc=v=>v>=0?'var(--green)':'var(--red)';
+  const fm=v=>`${v>=0?'+':'−'}$${Math.abs(v).toFixed(2)}`;
+  const fr=v=>`${v>=0?'+':''}${v.toFixed(2)}R`;
+  const symRows=Object.entries(bySym).sort((a,b)=>b[1].pnl-a[1].pnl).map(([sym,v])=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-family:'DM Mono',monospace;">
+      <span style="font-size:11px;color:var(--text);font-weight:600;width:52px">${sym}</span>
+      <span style="font-size:9px;color:var(--muted2);width:50px">${v.n} trade${v.n>1?'s':''}</span>
+      <span style="font-size:9px;color:var(--muted2);width:50px">${v.longs}L · ${v.shorts}S</span>
+      <span style="font-size:9px;color:${Math.round(v.w/v.n*100)>=50?'var(--green)':'var(--red)'};width:36px">${Math.round(v.w/v.n*100)}%WR</span>
+      <span style="font-size:10px;color:${v.r>=0?'var(--cyan)':'var(--red)'};width:52px">${fr(v.r)}</span>
+      <span style="font-size:11px;font-weight:600;color:${fc(v.pnl)};margin-left:auto">${fm(v.pnl)}</span>
+    </div>`).join('');
+  const dayRows=days.map((day,i)=>{
+    const id=`aiday_${mi}_${i}`;
+    const tl=day.trades.map(t=>`
       <div style="display:flex;align-items:center;gap:8px;padding:4px 12px 4px 24px;font-family:'DM Mono',monospace;font-size:10px;border-bottom:1px solid #0c1015;">
         <span style="color:var(--text);font-weight:600;width:50px">${t.symbol||'—'}</span>
         <span style="width:44px;color:${t.direction==='long'?'var(--green)':'var(--red)'}">${t.direction==='long'?'LONG':'SHORT'}</span>
         <span style="width:54px;color:${(t.realR||0)>=0?'var(--cyan)':'var(--red)'}">${fr(t.realR||0)}</span>
         <span style="font-weight:600;color:${fc(t.pnl||0)};margin-left:auto">${fm(t.pnl||0)}</span>
       </div>`).join('');
-
-    const dayBest  = [...day.trades].sort((a,b)=>b.pnl-a.pnl)[0];
-    const dayWorst = [...day.trades].sort((a,b)=>a.pnl-b.pnl)[0];
-
-    return `
-      <div style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden;">
-        <div onclick="toggleAIDay('${id}')" style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--bg3);cursor:pointer;font-family:'DM Mono',monospace;">
-          <span style="font-size:12px;color:var(--gold);font-weight:600;width:90px">${day.date}</span>
-          <span style="font-size:10px;color:var(--muted2);width:52px">${day.trades.length} trades</span>
-          <span style="font-size:10px;color:${day.wr>=50?'var(--green)':'var(--red)'};width:40px">${day.wr}%WR</span>
-          <span style="font-size:10px;color:${day.r>=0?'var(--cyan)':'var(--red)'};width:52px">${fr(day.r)}</span>
-          ${day.htb>0?`<span style="font-size:9px;color:#ff6b9d">−$${day.htb.toFixed(2)} HTB</span>`:''}
-          <span style="font-size:12px;font-weight:600;color:${fc(day.pnl)};margin-left:auto">${fm(day.pnl)}</span>
-          <span id="aidarr_${id}" style="color:var(--muted2);font-size:11px;transition:transform .2s">▼</span>
+    const db=[...day.trades].sort((a,b)=>b.pnl-a.pnl)[0];
+    const dw=[...day.trades].sort((a,b)=>a.pnl-b.pnl)[0];
+    return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden;">
+      <div onclick="toggleAIDay('${id}')" style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--bg3);cursor:pointer;font-family:'DM Mono',monospace;">
+        <span style="font-size:12px;color:var(--gold);font-weight:600;width:90px">${day.date}</span>
+        <span style="font-size:10px;color:var(--muted2);width:52px">${day.trades.length} trades</span>
+        <span style="font-size:10px;color:${day.wr>=50?'var(--green)':'var(--red)'};width:40px">${day.wr}%WR</span>
+        <span style="font-size:10px;color:${day.r>=0?'var(--cyan)':'var(--red)'};width:52px">${fr(day.r)}</span>
+        ${day.htb>0?`<span style="font-size:9px;color:#ff6b9d">−$${day.htb.toFixed(2)} HTB</span>`:''}
+        <span style="font-size:12px;font-weight:600;color:${fc(day.pnl)};margin-left:auto">${fm(day.pnl)}</span>
+        <span id="aidarr_${id}" style="color:var(--muted2);font-size:11px;transition:transform .2s">▼</span>
+      </div>
+      <div id="${id}" style="display:none;">
+        <div style="display:flex;gap:4px;padding:5px 14px 5px 24px;background:var(--bg2);font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;border-bottom:1px solid #0c1015;">
+          <span style="width:50px">SYMBOL</span><span style="width:44px">DIR</span><span style="width:54px">R</span><span style="margin-left:auto">PNL</span>
         </div>
-        <div id="${id}" style="display:none;">
-          <div style="display:flex;gap:4px;padding:5px 14px 5px 24px;background:var(--bg2);font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;border-bottom:1px solid #0c1015;">
-            <span style="width:50px">SYMBOL</span><span style="width:44px">DIR</span><span style="width:54px">R</span><span style="margin-left:auto">PNL</span>
-          </div>
-          ${tradeList}
-          <div style="display:flex;justify-content:space-between;padding:6px 14px;background:var(--bg3);font-family:'DM Mono',monospace;font-size:10px;border-top:1px solid var(--border);">
-            <span style="color:var(--muted2)">L: <span style="color:var(--green)">${day.trades.filter(t=>t.direction==='long').length}</span></span>
-            <span style="color:var(--muted2)">S: <span style="color:var(--red)">${day.trades.filter(t=>t.direction==='short').length}</span></span>
-            <span style="color:var(--muted2)">Mejor: <span style="color:var(--green)">${dayBest?.symbol} ${fm(dayBest?.pnl||0)}</span></span>
-            <span style="color:var(--muted2)">Peor: <span style="color:var(--red)">${dayWorst?.symbol} ${fm(dayWorst?.pnl||0)}</span></span>
-          </div>
+        ${tl}
+        <div style="display:flex;justify-content:space-between;padding:6px 14px;background:var(--bg3);font-family:'DM Mono',monospace;font-size:10px;border-top:1px solid var(--border);">
+          <span style="color:var(--muted2)">L:<span style="color:var(--green)">${day.trades.filter(t=>t.direction==='long').length}</span></span>
+          <span style="color:var(--muted2)">S:<span style="color:var(--red)">${day.trades.filter(t=>t.direction==='short').length}</span></span>
+          <span style="color:var(--muted2)">Mejor:<span style="color:var(--green)">${db?.symbol} ${fm(db?.pnl||0)}</span></span>
+          <span style="color:var(--muted2)">Peor:<span style="color:var(--red)">${dw?.symbol} ${fm(dw?.pnl||0)}</span></span>
         </div>
-      </div>`;
+      </div>
+    </div>`;
   }).join('');
-
-  el.innerHTML = `
+  el.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
       <div style="background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.2);border-radius:10px;padding:14px;text-align:center;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--green);letter-spacing:2px">LONG</div>
@@ -2615,7 +2594,6 @@ function renderAIAnalysis(monthIdx) {
         <div style="display:flex;justify-content:space-around;margin-top:8px;">
           <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">TRADES</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px">${longs.length}</div></div>
           <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">WIN RATE</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${wrL>=50?'var(--green)':'var(--red)'}">${wrL}%</div></div>
-          <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">AVG</div><div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${fc(pnlL)}">${longs.length?fm(pnlL/longs.length):'—'}</div></div>
         </div>
       </div>
       <div style="background:rgba(255,61,87,.07);border:1px solid rgba(255,61,87,.2);border-radius:10px;padding:14px;text-align:center;">
@@ -2624,7 +2602,6 @@ function renderAIAnalysis(monthIdx) {
         <div style="display:flex;justify-content:space-around;margin-top:8px;">
           <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">TRADES</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px">${shorts.length}</div></div>
           <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">WIN RATE</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${wrS>=50?'var(--green)':'var(--red)'}">${wrS}%</div></div>
-          <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">AVG</div><div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${fc(pnlS)}">${shorts.length?fm(pnlS/shorts.length):'—'}</div></div>
         </div>
       </div>
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;">
@@ -2644,17 +2621,112 @@ function renderAIAnalysis(monthIdx) {
     <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">${days.length} día${days.length!==1?'s':''} analizado${days.length!==1?'s':''}</div>
     ${dayRows}
     <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin:14px 0 8px">Por símbolo acumulado</div>
-    <div style="max-height:260px;overflow-y:auto;">${symRows}</div>
-  `;
+    <div style="max-height:260px;overflow-y:auto;">${symRows}</div>`;
+}
+function toggleAIDay(id){
+  const el=document.getElementById(id);
+  const arr=document.getElementById('aidarr_'+id);
+  if(!el)return;
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  if(arr)arr.style.transform=open?'rotate(180deg)':'';
 }
 
-function toggleAIDay(id) {
-  const el = document.getElementById(id);
-  const arr = document.getElementById('aidarr_'+id);
+// ── MEDIA R POR SÍMBOLO / DÍA ────────────────────────────────────────────────
+function renderRPerSymbol(monthIdx) {
+  const mi = monthIdx !== undefined ? monthIdx : month;
+  const el = document.getElementById('stRPerSymbol');
   if (!el) return;
-  const open = el.style.display === 'none';
-  el.style.display = open ? 'block' : 'none';
-  if (arr) arr.style.transform = open ? 'rotate(180deg)' : '';
+
+  const dayRows = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith(`ai_day_${mi}_`)) continue;
+    try {
+      const data    = JSON.parse(localStorage.getItem(key));
+      const trades  = data.trades || [];
+      if (!trades.length) continue;
+      const totalR     = trades.reduce((s,t) => s + (t.realR||0), 0);
+      const nSymbols   = new Set(trades.map(t => t.symbol?.toUpperCase()).filter(Boolean)).size;
+      const rPerSymbol = nSymbols > 0 ? totalR / nSymbols : 0;
+      dayRows.push({ date: data.date, totalR, nSymbols, rPerSymbol });
+    } catch(e) {}
+  }
+
+  if (!dayRows.length) {
+    el.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;padding:20px 0">Sin datos todavía</div>`;
+    return;
+  }
+
+  dayRows.sort((a,b) => a.date.split('/').reverse().join('').localeCompare(b.date.split('/').reverse().join('')));
+
+  const avgMonth = dayRows.reduce((s,d) => s + d.rPerSymbol, 0) / dayRows.length;
+  const best     = [...dayRows].sort((a,b) => b.rPerSymbol - a.rPerSymbol)[0];
+  const worst    = [...dayRows].sort((a,b) => a.rPerSymbol - b.rPerSymbol)[0];
+  const maxAbs   = Math.max(...dayRows.map(d => Math.abs(d.rPerSymbol)));
+  const fc       = v => v >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Trend via linear regression
+  const n = dayRows.length;
+  let sx=0,sy=0,sxy=0,sx2=0;
+  dayRows.forEach((d,i)=>{ sx+=i; sy+=d.rPerSymbol; sxy+=i*d.rPerSymbol; sx2+=i*i; });
+  const slope = n>1 ? (n*sxy - sx*sy)/(n*sx2 - sx*sx) : 0;
+  const trendLabel = slope > 0.02 ? '↗ Mejorando' : slope < -0.02 ? '↘ Empeorando' : '→ Estable';
+  const trendCol   = slope > 0.02 ? 'var(--green)' : slope < -0.02 ? 'var(--red)' : 'var(--yellow)';
+
+  const rows = dayRows.map((d, i) => {
+    const prev  = i > 0 ? dayRows[i-1].rPerSymbol : null;
+    const diff  = prev !== null ? d.rPerSymbol - prev : null;
+    const bar   = maxAbs > 0 ? Math.abs(d.rPerSymbol) / maxAbs * 100 : 0;
+    const barC  = d.rPerSymbol >= 0 ? 'rgba(0,230,118,.18)' : 'rgba(255,61,87,.18)';
+    let badge = '';
+    if (diff === null) {
+      badge = `<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">Día 1</span>`;
+    } else {
+      const up = diff > 0;
+      const bc = up ? 'rgba(0,230,118,.1)' : 'rgba(255,61,87,.1)';
+      const tc = up ? 'var(--green)' : diff === 0 ? 'var(--muted2)' : 'var(--red)';
+      badge = `<span style="font-family:'DM Mono',monospace;font-size:9px;color:${tc};background:${bc};border-radius:4px;padding:2px 6px;white-space:nowrap">${up?'▲':'▼'} ${up?'Mejora':'Baja'} ${diff>=0?'+':''}${diff.toFixed(2)}R</span>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-family:'DM Mono',monospace;position:relative;overflow:hidden;">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:${bar}%;background:${barC};pointer-events:none"></div>
+      <span style="font-size:11px;color:var(--gold);font-weight:600;width:80px;position:relative">${d.date}</span>
+      <span style="font-size:10px;color:var(--muted2);width:56px;position:relative">${d.nSymbols} símb.</span>
+      <span style="font-size:10px;color:${fc(d.totalR)};width:60px;position:relative">${d.totalR>=0?'+':''}${d.totalR.toFixed(2)}R</span>
+      <span style="font-size:14px;font-weight:600;color:${fc(d.rPerSymbol)};position:relative">${d.rPerSymbol>=0?'+':''}${d.rPerSymbol.toFixed(2)}R<span style="font-size:9px;color:var(--muted2)">/símb</span></span>
+      <span style="margin-left:auto;position:relative">${badge}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-bottom:14px">
+      Fórmula: <strong style="color:var(--text)">R total del día ÷ nº símbolos distintos</strong> · La flecha muestra si mejoras o empeoras vs el día anterior
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+      <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Media del mes</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${fc(avgMonth)}">${avgMonth>=0?'+':''}${avgMonth.toFixed(2)}R</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:2px">por símbolo / día</div>
+      </div>
+      <div style="background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.2);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Mejor día</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--green)">+${best.rPerSymbol.toFixed(2)}R</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:2px">${best.date} · ${best.nSymbols} símb.</div>
+      </div>
+      <div style="background:rgba(255,61,87,.07);border:1px solid rgba(255,61,87,.2);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Peor día</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--red)">${worst.rPerSymbol.toFixed(2)}R</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:2px">${worst.date} · ${worst.nSymbols} símb.</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">Tendencia</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${trendCol}">${trendLabel}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:2px">${slope>=0?'+':''}${slope.toFixed(3)}R/día</div>
+      </div>
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Evolución día a día</div>
+    ${rows}
+  `;
 }
 
 function renderAll(){ renderMain(); renderObj(); renderYear(); initTradeImgs(); }
@@ -3334,6 +3406,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="stats-card" style="--ac:var(--cyan);grid-column:span 5">
         <div class="stats-card-title">🤖 Análisis IA — Día a Día</div>
         <div id="stAIAnalysis"></div>
+      </div>
+      <!-- Tarjeta 16: Media R por símbolo -->
+      <div class="stats-card" style="--ac:var(--gold);grid-column:span 5">
+        <div class="stats-card-title">📈 Media de R por Símbolo</div>
+        <div id="stRPerSymbol"></div>
       </div>
     </div>
   </div>
