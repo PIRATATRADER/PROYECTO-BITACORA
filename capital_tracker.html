@@ -259,7 +259,6 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="text-align:center">Setup A</th>
           <th style="text-align:center">Setup B</th>
           <th style="text-align:center">Setup C</th>
-          <th>Score Entrada</th>
           <th>Shares</th>
           <th style="color:#ff6b9d">HTB</th>
           <th>PNL Day</th>
@@ -536,6 +535,7 @@ function renderMain() {
   let rows='', pnlTotal=0, shTotal=0, htbTotal=0, wins=0, losses=0, firstSOD=null;
   let sodSum=0, sodCount=0;
   let rSum=0, rCount=0;
+  let scoreSum=0, scoreCount=0;
 
   m.days.forEach(d => {
     // Check if this day is a holiday
@@ -572,6 +572,7 @@ function renderMain() {
 
     // Score automático
     const autoScore = calcScore(pnl, sod, htb);
+    if(autoScore !== null){ scoreSum += autoScore; scoreCount++; }
     const scoreCell = autoScore !== null
       ? `<span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${scoreColor(autoScore)}">${autoScore.toFixed(1)}</span>`
       : '';
@@ -591,7 +592,6 @@ function renderMain() {
       <td style="text-align:center">${c.sa?fd(c.sa):''}</td>
       <td style="text-align:center">${c.sb?fd(c.sb):''}</td>
       <td style="text-align:center">${c.sc?fd(c.sc):''}</td>
-      <td class="ed" data-k="${k}" data-f="scoreEntrada">${row.scoreEntrada||''}</td>
       <td class="ed" data-k="${k}" data-f="shares">${row.shares||''}</td>
       <td class="ed cpink" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
@@ -621,13 +621,12 @@ function renderMain() {
     <td class="cgo" style="text-align:center" title="Promedio Setup A">${avgC.sa?fd(avgC.sa):''}</td>
     <td class="cgo" style="text-align:center" title="Promedio Setup B">${avgC.sb?fd(avgC.sb):''}</td>
     <td class="cgo" style="text-align:center" title="Promedio Setup C">${avgC.sc?fd(avgC.sc):''}</td>
-    <td></td>
     <td>${shTotal>0?shTotal.toLocaleString('en-US'):''}</td>
     <td class="cpink">${htbTotal>0?fd(htbTotal):''}</td>
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
-    <td style="text-align:center"></td>
+    <td style="text-align:center">${scoreCount>0?`<span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${scoreColor(scoreSum/scoreCount)}">${(scoreSum/scoreCount).toFixed(1)}</span>`:''}</td>
   </tr>`;
 
   document.getElementById('mb').innerHTML = rows;
