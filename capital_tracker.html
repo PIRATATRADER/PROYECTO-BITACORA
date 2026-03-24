@@ -2486,6 +2486,175 @@ function renderStats() {
       `;
     }
   }
+  renderAIAnalysis(statsMonth);
+}
+
+// ── ANÁLISIS IA (datos inyectados manualmente) ────────────────────────────────
+function renderAIAnalysis(monthIdx) {
+  const mi = monthIdx !== undefined ? monthIdx : month;
+  const el = document.getElementById('stAIAnalysis');
+  if (!el) return;
+
+  // Collect all injected days for this month
+  const days = [];
+  let allTrades = [], htbTotal = 0;
+
+  // Scan localStorage for keys matching this month
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith(`ai_day_${mi}_`)) continue;
+    try {
+      const data = JSON.parse(localStorage.getItem(key));
+      const trades = data.trades || [];
+      if (!trades.length) continue;
+      const dayPnl  = trades.reduce((s,t) => s+(t.pnl||0), 0);
+      const dayR    = trades.reduce((s,t) => s+(t.realR||0), 0);
+      const dayWins = trades.filter(t => t.pnl > 0).length;
+      const dayHtb  = data.summary?.htbCost || 0;
+      htbTotal += dayHtb;
+      trades.forEach(t => allTrades.push({...t, date: data.date}));
+      days.push({ date: data.date, trades, pnl: dayPnl, r: dayR, htb: dayHtb,
+                  wins: dayWins, wr: Math.round(dayWins/trades.length*100) });
+    } catch(e) {}
+  }
+
+  // Sort days chronologically
+  days.sort((a,b) => a.date.split('/').reverse().join('').localeCompare(b.date.split('/').reverse().join('')));
+
+  if (!days.length) {
+    el.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;padding:30px 0">
+      Sin datos todavía — mándame tu PNL en el chat y lo analizo e inyecto aquí
+    </div>`;
+    return;
+  }
+
+  // Global totals
+  const longs  = allTrades.filter(t => t.direction === 'long');
+  const shorts = allTrades.filter(t => t.direction === 'short');
+  const pnlL   = longs.reduce((s,t)  => s+(t.pnl||0), 0);
+  const pnlS   = shorts.reduce((s,t) => s+(t.pnl||0), 0);
+  const pnlAll = pnlL + pnlS;
+  const wrL    = longs.length  ? Math.round(longs.filter(t=>t.pnl>0).length/longs.length*100) : 0;
+  const wrS    = shorts.length ? Math.round(shorts.filter(t=>t.pnl>0).length/shorts.length*100) : 0;
+  const wrAll  = allTrades.length ? Math.round(allTrades.filter(t=>t.pnl>0).length/allTrades.length*100) : 0;
+  const rAll   = allTrades.reduce((s,t) => s+(t.realR||0), 0);
+  const bestT  = [...allTrades].sort((a,b)=>b.pnl-a.pnl)[0];
+  const worstT = [...allTrades].sort((a,b)=>a.pnl-b.pnl)[0];
+
+  // By symbol
+  const bySym = {};
+  allTrades.forEach(t => {
+    if (!t.symbol) return;
+    const s = t.symbol.toUpperCase();
+    if (!bySym[s]) bySym[s] = { n:0, pnl:0, r:0, w:0, longs:0, shorts:0 };
+    bySym[s].n++; bySym[s].pnl += t.pnl||0; bySym[s].r += t.realR||0;
+    if (t.pnl > 0) bySym[s].w++;
+    if (t.direction === 'long') bySym[s].longs++; else bySym[s].shorts++;
+  });
+
+  const fc = v => v>=0?'var(--green)':'var(--red)';
+  const fm = v => `${v>=0?'+':'−'}$${Math.abs(v).toFixed(2)}`;
+  const fr = v => `${v>=0?'+':''}${v.toFixed(2)}R`;
+
+  const symRows = Object.entries(bySym)
+    .sort((a,b) => b[1].pnl-a[1].pnl)
+    .map(([sym,v]) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-family:'DM Mono',monospace;">
+        <span style="font-size:11px;color:var(--text);font-weight:600;width:52px">${sym}</span>
+        <span style="font-size:9px;color:var(--muted2);width:50px">${v.n} trade${v.n>1?'s':''}</span>
+        <span style="font-size:9px;color:var(--muted2);width:50px">${v.longs}L · ${v.shorts}S</span>
+        <span style="font-size:9px;color:${Math.round(v.w/v.n*100)>=50?'var(--green)':'var(--red)'};width:36px">${Math.round(v.w/v.n*100)}%WR</span>
+        <span style="font-size:10px;color:${v.r>=0?'var(--cyan)':'var(--red)'};width:52px">${fr(v.r)}</span>
+        <span style="font-size:11px;font-weight:600;color:${fc(v.pnl)};margin-left:auto">${fm(v.pnl)}</span>
+      </div>`).join('');
+
+  const dayRows = days.map((day, i) => {
+    const id = `aiday_${mi}_${i}`;
+    const tradeList = day.trades.map(t => `
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 12px 4px 24px;font-family:'DM Mono',monospace;font-size:10px;border-bottom:1px solid #0c1015;">
+        <span style="color:var(--text);font-weight:600;width:50px">${t.symbol||'—'}</span>
+        <span style="width:44px;color:${t.direction==='long'?'var(--green)':'var(--red)'}">${t.direction==='long'?'LONG':'SHORT'}</span>
+        <span style="width:54px;color:${(t.realR||0)>=0?'var(--cyan)':'var(--red)'}">${fr(t.realR||0)}</span>
+        <span style="font-weight:600;color:${fc(t.pnl||0)};margin-left:auto">${fm(t.pnl||0)}</span>
+      </div>`).join('');
+
+    const dayBest  = [...day.trades].sort((a,b)=>b.pnl-a.pnl)[0];
+    const dayWorst = [...day.trades].sort((a,b)=>a.pnl-b.pnl)[0];
+
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden;">
+        <div onclick="toggleAIDay('${id}')" style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--bg3);cursor:pointer;font-family:'DM Mono',monospace;">
+          <span style="font-size:12px;color:var(--gold);font-weight:600;width:90px">${day.date}</span>
+          <span style="font-size:10px;color:var(--muted2);width:52px">${day.trades.length} trades</span>
+          <span style="font-size:10px;color:${day.wr>=50?'var(--green)':'var(--red)'};width:40px">${day.wr}%WR</span>
+          <span style="font-size:10px;color:${day.r>=0?'var(--cyan)':'var(--red)'};width:52px">${fr(day.r)}</span>
+          ${day.htb>0?`<span style="font-size:9px;color:#ff6b9d">−$${day.htb.toFixed(2)} HTB</span>`:''}
+          <span style="font-size:12px;font-weight:600;color:${fc(day.pnl)};margin-left:auto">${fm(day.pnl)}</span>
+          <span id="aidarr_${id}" style="color:var(--muted2);font-size:11px;transition:transform .2s">▼</span>
+        </div>
+        <div id="${id}" style="display:none;">
+          <div style="display:flex;gap:4px;padding:5px 14px 5px 24px;background:var(--bg2);font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;border-bottom:1px solid #0c1015;">
+            <span style="width:50px">SYMBOL</span><span style="width:44px">DIR</span><span style="width:54px">R</span><span style="margin-left:auto">PNL</span>
+          </div>
+          ${tradeList}
+          <div style="display:flex;justify-content:space-between;padding:6px 14px;background:var(--bg3);font-family:'DM Mono',monospace;font-size:10px;border-top:1px solid var(--border);">
+            <span style="color:var(--muted2)">L: <span style="color:var(--green)">${day.trades.filter(t=>t.direction==='long').length}</span></span>
+            <span style="color:var(--muted2)">S: <span style="color:var(--red)">${day.trades.filter(t=>t.direction==='short').length}</span></span>
+            <span style="color:var(--muted2)">Mejor: <span style="color:var(--green)">${dayBest?.symbol} ${fm(dayBest?.pnl||0)}</span></span>
+            <span style="color:var(--muted2)">Peor: <span style="color:var(--red)">${dayWorst?.symbol} ${fm(dayWorst?.pnl||0)}</span></span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div style="background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.2);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--green);letter-spacing:2px">LONG</div>
+        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:${fc(pnlL)};margin:4px 0">${fm(pnlL)}</div>
+        <div style="display:flex;justify-content:space-around;margin-top:8px;">
+          <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">TRADES</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px">${longs.length}</div></div>
+          <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">WIN RATE</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${wrL>=50?'var(--green)':'var(--red)'}">${wrL}%</div></div>
+          <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">AVG</div><div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${fc(pnlL)}">${longs.length?fm(pnlL/longs.length):'—'}</div></div>
+        </div>
+      </div>
+      <div style="background:rgba(255,61,87,.07);border:1px solid rgba(255,61,87,.2);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--red);letter-spacing:2px">SHORT</div>
+        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:${fc(pnlS)};margin:4px 0">${fm(pnlS)}</div>
+        <div style="display:flex;justify-content:space-around;margin-top:8px;">
+          <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">TRADES</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px">${shorts.length}</div></div>
+          <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">WIN RATE</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${wrS>=50?'var(--green)':'var(--red)'}">${wrS}%</div></div>
+          <div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">AVG</div><div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${fc(pnlS)}">${shorts.length?fm(pnlS/shorts.length):'—'}</div></div>
+        </div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--muted2);letter-spacing:2px;margin-bottom:8px">RESUMEN MES</div>
+        <div style="display:flex;flex-direction:column;gap:5px;font-family:'DM Mono',monospace;font-size:11px;">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Días</span><span>${days.length}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Trades</span><span>${allTrades.length}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Win rate</span><span style="color:${wrAll>=50?'var(--green)':'var(--red)'}">${wrAll}%</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">R total</span><span style="color:${rAll>=0?'var(--cyan)':'var(--red)'}">${fr(rAll)}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">HTB</span><span style="color:#ff6b9d">−$${htbTotal.toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:5px;margin-top:2px"><span style="color:var(--muted2)">PNL neto</span><span style="font-weight:600;color:${fc(pnlAll-htbTotal)}">${fm(pnlAll-htbTotal)}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Mejor</span><span style="color:var(--green)">${bestT?.symbol} ${fm(bestT?.pnl||0)}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Peor</span><span style="color:var(--red)">${worstT?.symbol} ${fm(worstT?.pnl||0)}</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">${days.length} día${days.length!==1?'s':''} analizado${days.length!==1?'s':''}</div>
+    ${dayRows}
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin:14px 0 8px">Por símbolo acumulado</div>
+    <div style="max-height:260px;overflow-y:auto;">${symRows}</div>
+  `;
+}
+
+function toggleAIDay(id) {
+  const el = document.getElementById(id);
+  const arr = document.getElementById('aidarr_'+id);
+  if (!el) return;
+  const open = el.style.display === 'none';
+  el.style.display = open ? 'block' : 'none';
+  if (arr) arr.style.transform = open ? 'rotate(180deg)' : '';
 }
 
 function renderAll(){ renderMain(); renderObj(); renderYear(); initTradeImgs(); }
@@ -2588,6 +2757,479 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// ── DATOS IA PRE-INYECTADOS ───────────────────────────────────────────────────
+(function() {
+  // Mes 2 = Marzo. Formato clave: ai_day_<monthIdx>_<YYYY-MM-DD>
+  var days = [
+    {
+      key: 'ai_day_2_2026-03-02',
+      data: {
+        date: '02/03/2026',
+        summary: { totalPnl: 103.38, totalR: 1.47, htbCost: 34.34, totalShares: 39284 },
+        trades: [
+          {symbol:"AERT", pnl:33.72,   realR:0.48,  direction:"short"},
+          {symbol:"BANL", pnl:81.43,   realR:1.15,  direction:"short"},
+          {symbol:"BANL", pnl:-0.00,   realR:0.00,  direction:"long"},
+          {symbol:"BATL", pnl:92.13,   realR:1.31,  direction:"short"},
+          {symbol:"BATL", pnl:2.39,    realR:0.03,  direction:"long"},
+          {symbol:"CISS", pnl:19.28,   realR:0.27,  direction:"short"},
+          {symbol:"CWD",  pnl:14.59,   realR:0.21,  direction:"short"},
+          {symbol:"DLXY", pnl:47.74,   realR:0.68,  direction:"short"},
+          {symbol:"EDHL", pnl:-82.51,  realR:-1.17, direction:"long"},
+          {symbol:"EDHL", pnl:15.96,   realR:0.23,  direction:"short"},
+          {symbol:"GBR",  pnl:16.78,   realR:0.24,  direction:"short"},
+          {symbol:"ICON", pnl:63.41,   realR:0.90,  direction:"long"},
+          {symbol:"INDO", pnl:24.07,   realR:0.34,  direction:"short"},
+          {symbol:"INDP", pnl:19.62,   realR:0.28,  direction:"short"},
+          {symbol:"LNKS", pnl:-16.16,  realR:-0.23, direction:"short"},
+          {symbol:"LYRA", pnl:30.56,   realR:0.43,  direction:"short"},
+          {symbol:"NCT",  pnl:11.10,   realR:0.16,  direction:"long"},
+          {symbol:"ONEG", pnl:54.47,   realR:0.77,  direction:"short"},
+          {symbol:"PLUG", pnl:-5.40,   realR:-0.08, direction:"long"},
+          {symbol:"PLUG", pnl:-5.05,   realR:-0.07, direction:"short"},
+          {symbol:"REI",  pnl:17.73,   realR:0.25,  direction:"short"},
+          {symbol:"REI",  pnl:-0.19,   realR:0.00,  direction:"long"},
+          {symbol:"RPGL", pnl:-15.00,  realR:-0.21, direction:"long"},
+          {symbol:"RPGL", pnl:25.44,   realR:0.36,  direction:"short"},
+          {symbol:"RUBI", pnl:45.72,   realR:0.65,  direction:"short"},
+          {symbol:"RYDE", pnl:35.05,   realR:0.50,  direction:"short"},
+          {symbol:"STAK", pnl:-3.74,   realR:-0.05, direction:"short"},
+          {symbol:"SVRN", pnl:-142.73, realR:-2.02, direction:"short"},
+          {symbol:"TMDE", pnl:-126.85, realR:-1.80, direction:"short"},
+          {symbol:"TMDE", pnl:25.54,   realR:0.36,  direction:"long"},
+          {symbol:"TPET", pnl:-213.91, realR:-3.03, direction:"short"},
+          {symbol:"TURB", pnl:31.87,   realR:0.45,  direction:"short"},
+          {symbol:"TURB", pnl:15.20,   realR:0.22,  direction:"long"},
+          {symbol:"ZBAO", pnl:-8.88,   realR:-0.13, direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-03',
+      data: {
+        date: '03/03/2026',
+        summary: { totalPnl: -357.99, totalR: -5.05, htbCost: 27.58, totalShares: 28012 },
+        trades: [
+          {symbol:"BATL", pnl:32.15,   realR:0.45,  direction:"long"},
+          {symbol:"CCHH", pnl:-21.62,  realR:-0.30, direction:"short"},
+          {symbol:"CISS", pnl:40.82,   realR:0.58,  direction:"short"},
+          {symbol:"CISS", pnl:1.28,    realR:0.02,  direction:"long"},
+          {symbol:"EDSA", pnl:-7.50,   realR:-0.11, direction:"long"},
+          {symbol:"EDSA", pnl:22.12,   realR:0.31,  direction:"short"},
+          {symbol:"EONR", pnl:37.79,   realR:0.53,  direction:"short"},
+          {symbol:"GXAI", pnl:38.34,   realR:0.54,  direction:"short"},
+          {symbol:"HIHO", pnl:1.46,    realR:0.02,  direction:"long"},
+          {symbol:"MOBX", pnl:-698.74, realR:-9.86, direction:"short"},
+          {symbol:"NCI",  pnl:12.49,   realR:0.18,  direction:"short"},
+          {symbol:"NCT",  pnl:9.75,    realR:0.14,  direction:"short"},
+          {symbol:"ONCO", pnl:0.00,    realR:0.00,  direction:"long"},
+          {symbol:"ONCO", pnl:19.69,   realR:0.28,  direction:"short"},
+          {symbol:"RUBI", pnl:39.47,   realR:0.56,  direction:"short"},
+          {symbol:"STAK", pnl:93.21,   realR:1.31,  direction:"short"},
+          {symbol:"SVRN", pnl:27.50,   realR:0.39,  direction:"short"},
+          {symbol:"TMDE", pnl:91.56,   realR:1.29,  direction:"short"},
+          {symbol:"TPET", pnl:-173.70, realR:-2.45, direction:"short"},
+          {symbol:"TURB", pnl:-9.54,   realR:-0.13, direction:"long"},
+          {symbol:"TURB", pnl:85.48,   realR:1.21,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-04',
+      data: {
+        date: '04/03/2026',
+        summary: { totalPnl: 404.23, totalR: 5.70, htbCost: 34.26, totalShares: 51882 },
+        trades: [
+          {symbol:"AIFF", pnl:133.87,  realR:1.89,  direction:"short"},
+          {symbol:"AIFF", pnl:15.60,   realR:0.22,  direction:"long"},
+          {symbol:"ALTO", pnl:4.90,    realR:0.07,  direction:"short"},
+          {symbol:"ASNS", pnl:-16.09,  realR:-0.23, direction:"long"},
+          {symbol:"ASNS", pnl:-59.47,  realR:-0.84, direction:"short"},
+          {symbol:"BJDX", pnl:24.36,   realR:0.34,  direction:"short"},
+          {symbol:"CANF", pnl:-21.34,  realR:-0.30, direction:"long"},
+          {symbol:"CANF", pnl:31.21,   realR:0.44,  direction:"short"},
+          {symbol:"CCHH", pnl:31.20,   realR:0.44,  direction:"short"},
+          {symbol:"CDTG", pnl:74.01,   realR:1.04,  direction:"short"},
+          {symbol:"CXAI", pnl:19.28,   realR:0.27,  direction:"short"},
+          {symbol:"DFSC", pnl:48.26,   realR:0.68,  direction:"short"},
+          {symbol:"DXST", pnl:23.46,   realR:0.33,  direction:"short"},
+          {symbol:"FBGL", pnl:37.49,   realR:0.53,  direction:"short"},
+          {symbol:"GAUZ", pnl:-53.25,  realR:-0.75, direction:"long"},
+          {symbol:"IBO",  pnl:-196.54, realR:-2.77, direction:"short"},
+          {symbol:"JZXN", pnl:81.68,   realR:1.15,  direction:"short"},
+          {symbol:"KIDZ", pnl:30.98,   realR:0.44,  direction:"short"},
+          {symbol:"MOBX", pnl:24.71,   realR:0.35,  direction:"short"},
+          {symbol:"NAGE", pnl:-10.08,  realR:-0.14, direction:"short"},
+          {symbol:"NAGE", pnl:0.11,    realR:0.00,  direction:"long"},
+          {symbol:"STAK", pnl:-0.30,   realR:0.00,  direction:"long"},
+          {symbol:"STAK", pnl:33.71,   realR:0.48,  direction:"short"},
+          {symbol:"TPET", pnl:32.24,   realR:0.45,  direction:"short"},
+          {symbol:"TRNR", pnl:79.80,   realR:1.13,  direction:"short"},
+          {symbol:"TRNR", pnl:0.69,    realR:0.01,  direction:"long"},
+          {symbol:"UPXI", pnl:33.74,   realR:0.48,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-05',
+      data: {
+        date: '05/03/2026',
+        summary: { totalPnl: 604.07, totalR: 8.72, htbCost: 43.77, totalShares: 53686 },
+        trades: [
+          {symbol:"ACCL", pnl:23.79,  realR:0.34,  direction:"short"},
+          {symbol:"AIFF", pnl:11.81,  realR:0.17,  direction:"short"},
+          {symbol:"BHAT", pnl:135.63, realR:1.91,  direction:"short"},
+          {symbol:"BKYI", pnl:32.81,  realR:0.46,  direction:"short"},
+          {symbol:"BNRG", pnl:61.21,  realR:0.88,  direction:"short"},
+          {symbol:"DLXY", pnl:31.09,  realR:0.45,  direction:"short"},
+          {symbol:"DTCK", pnl:21.61,  realR:0.30,  direction:"short"},
+          {symbol:"ELPW", pnl:112.52, realR:1.59,  direction:"short"},
+          {symbol:"GBR",  pnl:-9.97,  realR:-0.14, direction:"short"},
+          {symbol:"GXAI", pnl:39.01,  realR:0.55,  direction:"short"},
+          {symbol:"HTOO", pnl:-8.67,  realR:-0.12, direction:"short"},
+          {symbol:"IBO",  pnl:38.35,  realR:0.54,  direction:"short"},
+          {symbol:"MOBX", pnl:10.00,  realR:0.14,  direction:"short"},
+          {symbol:"QNCX", pnl:59.40,  realR:0.84,  direction:"short"},
+          {symbol:"STAK", pnl:0.99,   realR:0.01,  direction:"short"},
+          {symbol:"TMDE", pnl:0.17,   realR:0.00,  direction:"long"},
+          {symbol:"TMDE", pnl:25.58,  realR:0.36,  direction:"short"},
+          {symbol:"TPET", pnl:6.00,   realR:0.08,  direction:"long"},
+          {symbol:"TPET", pnl:25.68,  realR:0.36,  direction:"short"},
+          {symbol:"TURB", pnl:-9.29,  realR:-0.13, direction:"short"},
+          {symbol:"TURB", pnl:-3.65,  realR:-0.05, direction:"long"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-06',
+      data: {
+        date: '06/03/2026',
+        summary: { totalPnl: 256.58, totalR: 3.45, htbCost: 0, totalShares: 14276 },
+        trades: [
+          {symbol:"HUBC", pnl:29.92,  realR:0.40,  direction:"short"},
+          {symbol:"USO",  pnl:0.12,   realR:0.00,  direction:"short"},
+          {symbol:"TPET", pnl:42.29,  realR:0.57,  direction:"short"},
+          {symbol:"CRE",  pnl:4.63,   realR:0.06,  direction:"short"},
+          {symbol:"IBG",  pnl:31.26,  realR:0.42,  direction:"short"},
+          {symbol:"USEG", pnl:29.67,  realR:0.40,  direction:"short"},
+          {symbol:"PRSO", pnl:3.96,   realR:0.05,  direction:"short"},
+          {symbol:"INDO", pnl:31.63,  realR:0.43,  direction:"short"},
+          {symbol:"TURB", pnl:35.03,  realR:0.47,  direction:"short"},
+          {symbol:"DXST", pnl:39.11,  realR:0.53,  direction:"short"},
+          {symbol:"MOBX", pnl:13.31,  realR:0.18,  direction:"short"},
+          {symbol:"MGRX", pnl:-22.23, realR:-0.30, direction:"short"},
+          {symbol:"COOT", pnl:17.88,  realR:0.24,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-09',
+      data: {
+        date: '09/03/2026',
+        summary: { totalPnl: 430.71, totalR: 5.74, htbCost: 13.56, totalShares: 25780 },
+        trades: [
+          {symbol:"ANTX", pnl:18.77,   realR:0.25,  direction:"long"},
+          {symbol:"ANTX", pnl:70.18,   realR:0.94,  direction:"long"},
+          {symbol:"ASNS", pnl:3.99,    realR:0.05,  direction:"short"},
+          {symbol:"AZI",  pnl:-17.82,  realR:-0.24, direction:"short"},
+          {symbol:"BIYA", pnl:16.14,   realR:0.22,  direction:"short"},
+          {symbol:"BNRG", pnl:24.38,   realR:0.33,  direction:"short"},
+          {symbol:"CAMP", pnl:-109.84, realR:-1.46, direction:"long"},
+          {symbol:"CAMP", pnl:-59.09,  realR:-0.79, direction:"short"},
+          {symbol:"DTCK", pnl:40.23,   realR:0.54,  direction:"short"},
+          {symbol:"DXST", pnl:30.86,   realR:0.41,  direction:"short"},
+          {symbol:"DXST", pnl:0.00,    realR:0.00,  direction:"long"},
+          {symbol:"EDBL", pnl:29.73,   realR:0.40,  direction:"short"},
+          {symbol:"EDSA", pnl:12.58,   realR:0.17,  direction:"short"},
+          {symbol:"GSIW", pnl:18.82,   realR:0.25,  direction:"short"},
+          {symbol:"MDCX", pnl:46.40,   realR:0.62,  direction:"short"},
+          {symbol:"MTEN", pnl:43.47,   realR:0.58,  direction:"short"},
+          {symbol:"OLOX", pnl:10.75,   realR:0.14,  direction:"long"},
+          {symbol:"OLOX", pnl:32.08,   realR:0.43,  direction:"short"},
+          {symbol:"PRSO", pnl:86.95,   realR:1.16,  direction:"short"},
+          {symbol:"RAYA", pnl:-5.00,   realR:-0.07, direction:"long"},
+          {symbol:"SAFX", pnl:55.97,   realR:0.75,  direction:"short"},
+          {symbol:"SCKT", pnl:52.66,   realR:0.70,  direction:"short"},
+          {symbol:"TPET", pnl:28.50,   realR:0.38,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-10',
+      data: {
+        date: '10/03/2026',
+        summary: { totalPnl: 321.37, totalR: 4.28, htbCost: 21.94, totalShares: 26382 },
+        trades: [
+          {symbol:"ACXP", pnl:30.42,  realR:0.41,  direction:"short"},
+          {symbol:"BLND", pnl:4.59,   realR:0.06,  direction:"short"},
+          {symbol:"BRTX", pnl:-54.66, realR:-0.73, direction:"short"},
+          {symbol:"CVGI", pnl:11.18,  realR:0.15,  direction:"long"},
+          {symbol:"DXST", pnl:43.69,  realR:0.58,  direction:"short"},
+          {symbol:"JOB",  pnl:7.20,   realR:0.10,  direction:"short"},
+          {symbol:"KITT", pnl:-7.36,  realR:-0.10, direction:"short"},
+          {symbol:"LHSW", pnl:41.54,  realR:0.55,  direction:"short"},
+          {symbol:"MDCX", pnl:90.91,  realR:1.21,  direction:"short"},
+          {symbol:"MRNO", pnl:26.61,  realR:0.35,  direction:"short"},
+          {symbol:"MTEN", pnl:8.74,   realR:0.12,  direction:"short"},
+          {symbol:"OPTT", pnl:33.26,  realR:0.44,  direction:"short"},
+          {symbol:"PLYX", pnl:35.31,  realR:0.47,  direction:"short"},
+          {symbol:"PLYX", pnl:1.54,   realR:0.02,  direction:"long"},
+          {symbol:"TIVC", pnl:16.58,  realR:0.22,  direction:"short"},
+          {symbol:"YAAS", pnl:16.76,  realR:0.22,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-11',
+      data: {
+        date: '11/03/2026',
+        summary: { totalPnl: 28.29, totalR: 0.38, htbCost: 32.12, totalShares: 16328 },
+        trades: [
+          {symbol:"ACXP", pnl:17.74,   realR:0.24,  direction:"short"},
+          {symbol:"DOMO", pnl:23.40,   realR:0.31,  direction:"short"},
+          {symbol:"DOMO", pnl:2.91,    realR:0.04,  direction:"long"},
+          {symbol:"JOB",  pnl:24.45,   realR:0.33,  direction:"short"},
+          {symbol:"LWLG", pnl:-0.20,   realR:0.00,  direction:"short"},
+          {symbol:"LWLG", pnl:9.14,    realR:0.12,  direction:"long"},
+          {symbol:"SAFX", pnl:-107.32, realR:-1.43, direction:"short"},
+          {symbol:"SOC",  pnl:5.74,    realR:0.08,  direction:"long"},
+          {symbol:"SXTP", pnl:6.58,    realR:0.09,  direction:"long"},
+          {symbol:"SXTP", pnl:31.32,   realR:0.42,  direction:"short"},
+          {symbol:"TURB", pnl:-19.20,  realR:-0.26, direction:"long"},
+          {symbol:"VCIG", pnl:24.83,   realR:0.33,  direction:"short"},
+          {symbol:"WORX", pnl:8.90,    realR:0.12,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-12',
+      data: {
+        date: '12/03/2026',
+        summary: { totalPnl: 425.01, totalR: 5.42, htbCost: 22.57, totalShares: 20200 },
+        trades: [
+          {symbol:"AGRZ", pnl:39.02,   realR:0.52,  direction:"short"},
+          {symbol:"AGRZ", pnl:9.99,    realR:0.13,  direction:"long"},
+          {symbol:"BNRG", pnl:49.77,   realR:0.64,  direction:"short"},
+          {symbol:"CNEY", pnl:22.93,   realR:0.31,  direction:"short"},
+          {symbol:"DTCK", pnl:55.12,   realR:0.70,  direction:"short"},
+          {symbol:"EONR", pnl:19.12,   realR:0.24,  direction:"short"},
+          {symbol:"GMEX", pnl:29.53,   realR:0.39,  direction:"short"},
+          {symbol:"ISPC", pnl:-65.50,  realR:-0.84, direction:"short"},
+          {symbol:"MSS",  pnl:46.84,   realR:0.62,  direction:"short"},
+          {symbol:"NCRA", pnl:-3.40,   realR:-0.05, direction:"long"},
+          {symbol:"NCRA", pnl:127.66,  realR:1.70,  direction:"short"},
+          {symbol:"NXGL", pnl:37.24,   realR:0.50,  direction:"short"},
+          {symbol:"SOAR", pnl:14.73,   realR:0.19,  direction:"short"},
+          {symbol:"TMDE", pnl:34.49,   realR:0.46,  direction:"short"},
+          {symbol:"TOI",  pnl:7.47,    realR:0.10,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-13',
+      data: {
+        date: '13/03/2026',
+        summary: { totalPnl: 94.27, totalR: 1.18, htbCost: 8.50, totalShares: 9120 },
+        trades: [
+          {symbol:"AIFF", pnl:14.03,  realR:0.18,  direction:"short"},
+          {symbol:"CLIK", pnl:-41.04, realR:-0.51, direction:"long"},
+          {symbol:"CODX", pnl:25.57,  realR:0.32,  direction:"short"},
+          {symbol:"EONR", pnl:14.29,  realR:0.18,  direction:"short"},
+          {symbol:"ISPC", pnl:-0.82,  realR:-0.01, direction:"short"},
+          {symbol:"SOWG", pnl:20.32,  realR:0.25,  direction:"short"},
+          {symbol:"VEEE", pnl:6.91,   realR:0.09,  direction:"short"},
+          {symbol:"ZSPC", pnl:55.01,  realR:0.69,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-16',
+      data: {
+        date: '16/03/2026',
+        summary: { totalPnl: 260.89, totalR: 3.26, htbCost: 37.88, totalShares: 27592 },
+        trades: [
+          {symbol:"ABOS", pnl:53.20,   realR:0.67,  direction:"short"},
+          {symbol:"AGRZ", pnl:61.56,   realR:0.77,  direction:"short"},
+          {symbol:"AIRS", pnl:-24.75,  realR:-0.31, direction:"short"},
+          {symbol:"CIIT", pnl:-30.83,  realR:-0.39, direction:"long"},
+          {symbol:"CJMB", pnl:42.26,   realR:0.53,  direction:"short"},
+          {symbol:"CLIK", pnl:21.92,   realR:0.27,  direction:"short"},
+          {symbol:"CTMX", pnl:7.26,    realR:0.09,  direction:"long"},
+          {symbol:"CTMX", pnl:-7.40,   realR:-0.09, direction:"short"},
+          {symbol:"CUE",  pnl:20.29,   realR:0.25,  direction:"short"},
+          {symbol:"CXAI", pnl:4.98,    realR:0.06,  direction:"short"},
+          {symbol:"CYN",  pnl:110.57,  realR:1.38,  direction:"short"},
+          {symbol:"DCGO", pnl:5.05,    realR:0.06,  direction:"short"},
+          {symbol:"HCWB", pnl:0.38,    realR:0.00,  direction:"long"},
+          {symbol:"HCWB", pnl:112.24,  realR:1.40,  direction:"short"},
+          {symbol:"JVA",  pnl:5.50,    realR:0.07,  direction:"short"},
+          {symbol:"KLTR", pnl:41.27,   realR:0.52,  direction:"short"},
+          {symbol:"LIDR", pnl:-24.15,  realR:-0.30, direction:"short"},
+          {symbol:"NCPL", pnl:22.14,   realR:0.28,  direction:"short"},
+          {symbol:"NSRX", pnl:18.24,   realR:0.23,  direction:"short"},
+          {symbol:"ORBS", pnl:34.94,   realR:0.44,  direction:"short"},
+          {symbol:"PRSO", pnl:55.00,   realR:0.69,  direction:"short"},
+          {symbol:"TAOP", pnl:5.00,    realR:0.06,  direction:"short"},
+          {symbol:"TOVX", pnl:11.19,   realR:0.14,  direction:"short"},
+          {symbol:"TURB", pnl:59.94,   realR:0.75,  direction:"short"},
+          {symbol:"TWAV", pnl:18.32,   realR:0.23,  direction:"short"},
+          {symbol:"UPXI", pnl:39.05,   realR:0.49,  direction:"short"},
+          {symbol:"USO",  pnl:6.10,    realR:0.08,  direction:"short"},
+          {symbol:"VEEE", pnl:31.97,   realR:0.40,  direction:"short"},
+          {symbol:"WNW",  pnl:-10.50,  realR:-0.13, direction:"long"},
+          {symbol:"WNW",  pnl:-429.85, realR:-5.37, direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-17',
+      data: {
+        date: '17/03/2026',
+        summary: { totalPnl: 351.57, totalR: 4.39, htbCost: 41.61, totalShares: 31016 },
+        trades: [
+          {symbol:"BIAF", pnl:51.49,   realR:0.64,  direction:"short"},
+          {symbol:"CNEY", pnl:-1.75,   realR:-0.02, direction:"long"},
+          {symbol:"CREG", pnl:101.63,  realR:1.27,  direction:"short"},
+          {symbol:"CYCU", pnl:17.34,   realR:0.22,  direction:"short"},
+          {symbol:"EDSA", pnl:-56.30,  realR:-0.70, direction:"short"},
+          {symbol:"FLYX", pnl:5.96,    realR:0.07,  direction:"short"},
+          {symbol:"IMCC", pnl:48.15,   realR:0.60,  direction:"short"},
+          {symbol:"INLF", pnl:44.54,   realR:0.56,  direction:"short"},
+          {symbol:"ISPC", pnl:27.38,   realR:0.34,  direction:"short"},
+          {symbol:"ISPC", pnl:-0.08,   realR:0.00,  direction:"long"},
+          {symbol:"JTAI", pnl:26.47,   realR:0.33,  direction:"short"},
+          {symbol:"KNDI", pnl:84.79,   realR:1.06,  direction:"short"},
+          {symbol:"LFS",  pnl:21.91,   realR:0.27,  direction:"short"},
+          {symbol:"LNAI", pnl:-110.52, realR:-1.38, direction:"short"},
+          {symbol:"NFE",  pnl:27.91,   realR:0.35,  direction:"short"},
+          {symbol:"NFE",  pnl:0.07,    realR:0.00,  direction:"long"},
+          {symbol:"OCG",  pnl:20.56,   realR:0.26,  direction:"short"},
+          {symbol:"ORIS", pnl:41.67,   realR:0.52,  direction:"short"},
+          {symbol:"PMAX", pnl:59.64,   realR:0.75,  direction:"short"},
+          {symbol:"PMAX", pnl:-0.01,   realR:0.00,  direction:"long"},
+          {symbol:"PSQH", pnl:38.52,   realR:0.48,  direction:"short"},
+          {symbol:"SBEV", pnl:11.42,   realR:0.14,  direction:"short"},
+          {symbol:"SWMR", pnl:8.53,    realR:0.11,  direction:"long"},
+          {symbol:"UCAR", pnl:-130.56, realR:-1.63, direction:"short"},
+          {symbol:"WNW",  pnl:12.81,   realR:0.16,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-18',
+      data: {
+        date: '18/03/2026',
+        summary: { totalPnl: 451.97, totalR: 5.00, htbCost: 53.68, totalShares: 126272 },
+        trades: [
+          {symbol:"AIM",  pnl:-86.68, realR:-0.96, direction:"long"},
+          {symbol:"ARTL", pnl:114.00, realR:1.26,  direction:"short"},
+          {symbol:"ATXG", pnl:48.89,  realR:0.54,  direction:"short"},
+          {symbol:"BURU", pnl:35.62,  realR:0.39,  direction:"short"},
+          {symbol:"CGTL", pnl:13.16,  realR:0.15,  direction:"short"},
+          {symbol:"CISS", pnl:5.93,   realR:0.07,  direction:"short"},
+          {symbol:"CMCT", pnl:55.31,  realR:0.61,  direction:"short"},
+          {symbol:"ENSC", pnl:36.20,  realR:0.40,  direction:"short"},
+          {symbol:"HCAI", pnl:2.13,   realR:0.02,  direction:"short"},
+          {symbol:"HIT",  pnl:17.59,  realR:0.19,  direction:"short"},
+          {symbol:"LBGJ", pnl:-70.90, realR:-0.78, direction:"short"},
+          {symbol:"LOBO", pnl:26.00,  realR:0.29,  direction:"short"},
+          {symbol:"MDAI", pnl:32.21,  realR:0.36,  direction:"short"},
+          {symbol:"ORIS", pnl:38.70,  realR:0.43,  direction:"short"},
+          {symbol:"PDYN", pnl:7.34,   realR:0.08,  direction:"short"},
+          {symbol:"PERF", pnl:-10.32, realR:-0.11, direction:"short"},
+          {symbol:"QCLS", pnl:37.64,  realR:0.42,  direction:"short"},
+          {symbol:"SER",  pnl:-71.37, realR:-0.79, direction:"short"},
+          {symbol:"SRXH", pnl:4.31,   realR:0.05,  direction:"short"},
+          {symbol:"SUNE", pnl:14.39,  realR:0.16,  direction:"short"},
+          {symbol:"SVRN", pnl:35.85,  realR:0.40,  direction:"short"},
+          {symbol:"TMDE", pnl:25.06,  realR:0.28,  direction:"short"},
+          {symbol:"VEEE", pnl:49.55,  realR:0.55,  direction:"short"},
+          {symbol:"VNRX", pnl:-2.82,  realR:-0.03, direction:"short"},
+          {symbol:"YYGH", pnl:94.17,  realR:1.04,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-19',
+      data: {
+        date: '19/03/2026',
+        summary: { totalPnl: 134.53, totalR: 1.46, htbCost: 0, totalShares: 7864 },
+        trades: [
+          {symbol:"LIDR", pnl:8.22,  realR:0.09, direction:"short"},
+          {symbol:"ORIS", pnl:53.55, realR:0.58, direction:"short"},
+          {symbol:"BIAF", pnl:24.75, realR:0.27, direction:"short"},
+          {symbol:"CURV", pnl:42.98, realR:0.47, direction:"short"},
+          {symbol:"DRMA", pnl:3.80,  realR:0.04, direction:"short"},
+          {symbol:"AZTR", pnl:1.23,  realR:0.01, direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-20',
+      data: {
+        date: '20/03/2026',
+        summary: { totalPnl: 568.35, totalR: 6.06, htbCost: 56.42, totalShares: 38112 },
+        trades: [
+          {symbol:"AIM",  pnl:27.93,  realR:0.30,  direction:"short"},
+          {symbol:"ANNA", pnl:78.77,  realR:0.84,  direction:"short"},
+          {symbol:"ARTL", pnl:49.59,  realR:0.53,  direction:"short"},
+          {symbol:"AZTR", pnl:-61.25, realR:-0.65, direction:"short"},
+          {symbol:"BIAF", pnl:53.18,  realR:0.57,  direction:"short"},
+          {symbol:"CODX", pnl:52.74,  realR:0.56,  direction:"short"},
+          {symbol:"CTNT", pnl:27.28,  realR:0.29,  direction:"short"},
+          {symbol:"CURV", pnl:45.57,  realR:0.49,  direction:"short"},
+          {symbol:"DRMA", pnl:-39.43, realR:-0.42, direction:"long"},
+          {symbol:"DRMA", pnl:44.02,  realR:0.47,  direction:"short"},
+          {symbol:"IBO",  pnl:12.30,  realR:0.13,  direction:"short"},
+          {symbol:"JDZG", pnl:46.51,  realR:0.50,  direction:"short"},
+          {symbol:"JEM",  pnl:23.69,  realR:0.25,  direction:"short"},
+          {symbol:"MNDR", pnl:45.62,  realR:0.49,  direction:"short"},
+          {symbol:"ORBS", pnl:31.39,  realR:0.33,  direction:"short"},
+          {symbol:"RDGT", pnl:-0.26,  realR:0.00,  direction:"long"},
+          {symbol:"RDGT", pnl:51.28,  realR:0.55,  direction:"short"},
+          {symbol:"ROMA", pnl:30.96,  realR:0.33,  direction:"short"},
+          {symbol:"RPGL", pnl:12.85,  realR:0.14,  direction:"short"},
+          {symbol:"RPGL", pnl:1.84,   realR:0.02,  direction:"long"},
+          {symbol:"SER",  pnl:15.27,  realR:0.16,  direction:"short"},
+          {symbol:"SUNE", pnl:18.50,  realR:0.20,  direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-23',
+      data: {
+        date: '23/03/2026',
+        summary: { totalPnl: -518.57, totalR: -5.26, htbCost: 39.14, totalShares: 48746 },
+        trades: [
+          {symbol:"ABVE",pnl:21.54,realR:0.22,direction:"short"},
+          {symbol:"AGRZ",pnl:53.88,realR:0.55,direction:"short"},
+          {symbol:"AHMA",pnl:29.88,realR:0.30,direction:"short"},
+          {symbol:"BIAF",pnl:-134.20,realR:-1.36,direction:"short"},
+          {symbol:"FFAI",pnl:10.19,realR:0.10,direction:"short"},
+          {symbol:"GMEX",pnl:77.45,realR:0.79,direction:"short"},
+          {symbol:"GV",pnl:17.08,realR:0.17,direction:"short"},
+          {symbol:"MGRX",pnl:88.41,realR:0.90,direction:"short"},
+          {symbol:"MOBX",pnl:20.18,realR:0.20,direction:"short"},
+          {symbol:"OSRH",pnl:37.50,realR:0.38,direction:"short"},
+          {symbol:"PMAX",pnl:85.58,realR:0.87,direction:"short"},
+          {symbol:"PTLE",pnl:22.11,realR:0.22,direction:"long"},
+          {symbol:"RDGT",pnl:25.26,realR:0.26,direction:"long"},
+          {symbol:"TOVX",pnl:-22.59,realR:-0.23,direction:"short"},
+          {symbol:"UGRO",pnl:-17.15,realR:-0.17,direction:"long"},
+          {symbol:"UGRO",pnl:-970.34,realR:-9.84,direction:"short"},
+          {symbol:"VEEE",pnl:30.48,realR:0.31,direction:"short"},
+          {symbol:"ZYBT",pnl:106.17,realR:1.08,direction:"short"}
+        ]
+      }
+    }
+  ];
+  days.forEach(function(d) {
+    if (!localStorage.getItem(d.key)) {
+      localStorage.setItem(d.key, JSON.stringify(d.data));
+    }
+  });
+})();
+
 // ── INICIALIZACIÓN ───────────────────────────────────────────────────────────
 // 1) Carga datos desde Firebase (o localStorage si offline)
 // 2) Renderiza toda la UI
@@ -2687,6 +3329,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="stats-card" style="--ac:var(--gold);grid-column:span 5">
         <div class="stats-card-title">🧠 Patrones de Comportamiento</div>
         <div id="stPatrones"></div>
+      </div>
+      <!-- Tarjeta 15: Análisis IA -->
+      <div class="stats-card" style="--ac:var(--cyan);grid-column:span 5">
+        <div class="stats-card-title">🤖 Análisis IA — Día a Día</div>
+        <div id="stAIAnalysis"></div>
       </div>
     </div>
   </div>
