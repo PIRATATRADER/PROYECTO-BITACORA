@@ -2643,6 +2643,7 @@ function renderStats() {
   }
   renderAIAnalysis(statsMonth);
   renderRPerSymbol(statsMonth);
+  renderShortSide(statsMonth);
 }
 
 // ── ANÁLISIS IA (datos inyectados manualmente) ────────────────────────────────
@@ -3493,7 +3494,331 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 })();
 
-// ── INICIALIZACIÓN ───────────────────────────────────────────────────────────
+// ── SHORT SIDE STUDY ─────────────────────────────────────────────────────────
+function renderShortSide(monthIdx) {
+  const mi = monthIdx !== undefined ? monthIdx : month;
+  const el = document.getElementById('stShortSide');
+  if (!el) return;
+
+  // ── 1. Recoger todos los trades SHORT de los días del mes ──
+  const allShorts = [];
+  const dayStats  = [];   // {date, shorts, totalR, totalPnl, htb, wr}
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith(`ai_day_${mi}_`)) continue;
+    try {
+      const data   = JSON.parse(localStorage.getItem(key));
+      const trades = (data.trades || []).filter(t => t.symbol !== 'TABLA');
+      const shorts = trades.filter(t => t.direction === 'short');
+      if (!shorts.length) continue;
+      const dayR   = shorts.reduce((s,t) => s + (t.realR||0), 0);
+      const dayPnl = shorts.reduce((s,t) => s + (t.pnl||0), 0);
+      const dayWins= shorts.filter(t => t.pnl > 0).length;
+      shorts.forEach(t => allShorts.push({...t, date: data.date}));
+      dayStats.push({
+        date  : data.date,
+        n     : shorts.length,
+        totalR: dayR,
+        totalPnl: dayPnl,
+        htb   : data.summary?.htbCost || 0,
+        wins  : dayWins,
+        wr    : Math.round(dayWins / shorts.length * 100)
+      });
+    } catch(e){}
+  }
+
+  dayStats.sort((a,b) => a.date.split('/').reverse().join('').localeCompare(b.date.split('/').reverse().join('')));
+
+  if (!allShorts.length) {
+    el.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;padding:30px 0">Sin datos SHORT — añade trades en la columna R Trades</div>`;
+    return;
+  }
+
+  // ── 2. Métricas globales ──
+  const totalR    = allShorts.reduce((s,t) => s + (t.realR||0), 0);
+  const totalPnl  = allShorts.reduce((s,t) => s + (t.pnl||0), 0);
+  const wins      = allShorts.filter(t => t.pnl > 0).length;
+  const wr        = Math.round(wins / allShorts.length * 100);
+  const avgR      = totalR / allShorts.length;
+  const avgPnl    = totalPnl / allShorts.length;
+
+  const winTrades  = allShorts.filter(t => t.pnl > 0);
+  const lossTrades = allShorts.filter(t => t.pnl < 0);
+  const avgWinR    = winTrades.length  ? winTrades.reduce((s,t)=>s+(t.realR||0),0)/winTrades.length  : 0;
+  const avgLossR   = lossTrades.length ? lossTrades.reduce((s,t)=>s+(t.realR||0),0)/lossTrades.length : 0;
+  const rr         = avgLossR !== 0 ? Math.abs(avgWinR / avgLossR).toFixed(2) : '∞';
+
+  const bestDay  = [...dayStats].sort((a,b) => b.totalR - a.totalR)[0];
+  const worstDay = [...dayStats].sort((a,b) => a.totalR - b.totalR)[0];
+  const bestTrade  = [...allShorts].sort((a,b) => b.realR - a.realR)[0];
+  const worstTrade = [...allShorts].sort((a,b) => a.realR - b.realR)[0];
+
+  // ── 3. Media R por símbolo ──
+  const bySym = {};
+  allShorts.forEach(t => {
+    const s = (t.symbol||'—').toUpperCase();
+    if (!bySym[s]) bySym[s] = {n:0, r:0, pnl:0, wins:0, days:new Set()};
+    bySym[s].n++;
+    bySym[s].r    += t.realR||0;
+    bySym[s].pnl  += t.pnl||0;
+    if (t.pnl > 0) bySym[s].wins++;
+    if (t.date) bySym[s].days.add(t.date);
+  });
+  const symArr = Object.entries(bySym).map(([sym,v]) => ({
+    sym,
+    n    : v.n,
+    avgR : v.r / v.n,
+    totalR: v.r,
+    totalPnl: v.pnl,
+    wr   : Math.round(v.wins/v.n*100),
+    days : v.days.size
+  })).sort((a,b) => b.avgR - a.avgR);
+
+  // ── 4. Patrones de mejora ──
+  const topSyms    = symArr.filter(s => s.avgR > 0).slice(0,3);
+  const bottomSyms = symArr.filter(s => s.avgR < 0).slice(-3).reverse();
+
+  // ── 5. Consistencia día a día ──
+  const rPerDay = dayStats.map(d => d.totalR);
+  const positiveDays = dayStats.filter(d => d.totalR > 0).length;
+  const negativeDays = dayStats.filter(d => d.totalR < 0).length;
+
+  // Racha actual
+  let currentStreak = 0, streakType = '';
+  for (let i = dayStats.length - 1; i >= 0; i--) {
+    const pos = dayStats[i].totalR > 0;
+    if (i === dayStats.length - 1) { streakType = pos ? 'win' : 'loss'; currentStreak = 1; }
+    else if ((pos && streakType==='win') || (!pos && streakType==='loss')) currentStreak++;
+    else break;
+  }
+
+  // ── 6. Helpers ──
+  const fc  = v => v >= 0 ? 'var(--green)' : 'var(--red)';
+  const fr  = v => `${v>=0?'+':''}${v.toFixed(2)}R`;
+  const fp  = v => `${v>=0?'+':'−'}$${Math.abs(v).toFixed(2)}`;
+  const bar = (val, max, color) => {
+    const pct = max > 0 ? Math.min(100, Math.abs(val/max)*100) : 0;
+    return `<div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-top:4px;"><div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .8s ease;"></div></div>`;
+  };
+  const maxSymR = Math.max(...symArr.map(s => Math.abs(s.avgR)), 0.01);
+
+  // ── 7. Render ──
+  el.innerHTML = `
+
+  <!-- FILA 1: KPIs globales -->
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px;">
+    ${[
+      { l:'Trades SHORT', v: allShorts.length, c:'var(--text)', big:true },
+      { l:'Win Rate',     v: wr+'%',           c: wr>=55?'var(--green)':wr>=45?'var(--yellow)':'var(--red)', big:true },
+      { l:'R Total',      v: fr(totalR),        c: fc(totalR), big:true },
+      { l:'R Media/trade',v: fr(avgR),          c: fc(avgR),   big:true },
+      { l:'Risk/Reward',  v: rr+'x',            c: parseFloat(rr)>=1?'var(--green)':'var(--red)', big:true },
+      { l:'PNL Bruto',    v: fp(totalPnl),      c: fc(totalPnl), big:true },
+    ].map(k=>`
+      <div style="background:var(--bg3);border-radius:10px;padding:12px 14px;text-align:center;border:1px solid var(--border);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--red);opacity:.4;"></div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">${k.l}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;color:${k.c}">${k.v}</div>
+      </div>`).join('')}
+  </div>
+
+  <!-- FILA 2: Win/Loss breakdown + Días + Racha -->
+  <div style="display:grid;grid-template-columns:2fr 2fr 1fr;gap:12px;margin-bottom:18px;">
+
+    <!-- Win vs Loss en trades -->
+    <div style="background:var(--bg3);border-radius:10px;padding:14px;border:1px solid var(--border);">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:12px;">📊 Distribución Wins / Losses</div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="flex:1;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--green)">${wins}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">WINS</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);margin-top:4px">${fr(avgWinR)} avg</div>
+        </div>
+        <div style="flex:1;background:rgba(255,61,87,.08);border:1px solid rgba(255,61,87,.2);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--red)">${lossTrades.length}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">LOSSES</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);margin-top:4px">${fr(avgLossR)} avg</div>
+        </div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">Barra de dominancia</div>
+      <div style="height:10px;background:rgba(255,61,87,.3);border-radius:5px;overflow:hidden;">
+        <div style="width:${wr}%;height:100%;background:var(--green);border-radius:5px;transition:width .8s ease;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;"><span>${wr}% wins</span><span>${100-wr}% losses</span></div>
+    </div>
+
+    <!-- Consistencia día a día -->
+    <div style="background:var(--bg3);border-radius:10px;padding:14px;border:1px solid var(--border);">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:12px;">📅 Consistencia por Sesión</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div style="flex:1;text-align:center;background:rgba(0,230,118,.07);border-radius:8px;padding:8px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green)">${positiveDays}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">DÍAS +R</div>
+        </div>
+        <div style="flex:1;text-align:center;background:rgba(255,61,87,.07);border-radius:8px;padding:8px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red)">${negativeDays}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">DÍAS −R</div>
+        </div>
+      </div>
+      <!-- Mini sparkline de R por sesión -->
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:6px;">R por sesión (SHORT)</div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:40px;">
+        ${(()=>{
+          const mn = Math.min(...rPerDay, 0);
+          const mx = Math.max(...rPerDay, 0.01);
+          const range = Math.max(mx - mn, 0.01);
+          return rPerDay.map((r,i)=>{
+            const fromZero = r >= 0 ? r : 0;
+            const neg      = r < 0 ? Math.abs(r) : 0;
+            const hPos = Math.round((fromZero/range)*36);
+            const hNeg = Math.round((neg/range)*36);
+            const col  = r >= 0 ? 'var(--green)' : 'var(--red)';
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:40px;" title="${dayStats[i]?.date}: ${fr(r)}">
+              <div style="width:100%;background:${col};border-radius:2px;min-height:2px;height:${Math.max(hPos,hNeg,2)}px;opacity:.85;"></div>
+            </div>`;
+          }).join('');
+        })()}
+      </div>
+    </div>
+
+    <!-- Racha y extremos -->
+    <div style="background:var(--bg3);border-radius:10px;padding:14px;border:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:4px;">⚡ Extremos</div>
+      ${[
+        { l:'Mejor sesión', v: fr(bestDay?.totalR||0), d: bestDay?.date||'—', c:'var(--green)' },
+        { l:'Peor sesión',  v: fr(worstDay?.totalR||0), d: worstDay?.date||'—', c:'var(--red)' },
+        { l:'Mejor trade',  v: `${bestTrade?.symbol} ${fr(bestTrade?.realR||0)}`, d:'', c:'var(--green)' },
+        { l:'Peor trade',   v: `${worstTrade?.symbol} ${fr(worstTrade?.realR||0)}`, d:'', c:'var(--red)' },
+        { l:`Racha actual (${streakType==='win'?'✅':'❌'})`, v: `${currentStreak} ${currentStreak===1?'día':'días'}`, d:'', c: streakType==='win'?'var(--green)':'var(--red)' },
+      ].map(r=>`
+        <div style="background:var(--bg2);border-radius:7px;padding:7px 10px;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">${r.l}${r.d?' · '+r.d:''}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:${r.c};margin-top:2px">${r.v}</div>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- FILA 3: Ranking de símbolos SHORT -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+
+    <!-- Tabla completa de símbolos -->
+    <div style="background:var(--bg3);border-radius:10px;padding:14px;border:1px solid var(--border);">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;">🏆 Ranking SHORT por Media de R</div>
+      <div style="display:flex;gap:4px;padding:4px 8px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;border-bottom:1px solid var(--border);margin-bottom:6px;">
+        <span style="width:52px">SYM</span>
+        <span style="width:30px">N</span>
+        <span style="width:44px">WR%</span>
+        <span style="width:60px">AVG R</span>
+        <span style="width:70px">TOTAL R</span>
+        <span style="margin-left:auto">PNL</span>
+      </div>
+      <div style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;">
+        ${symArr.map((s,i)=>`
+          <div style="display:flex;align-items:center;gap:4px;padding:6px 8px;background:var(--bg2);border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;">
+            <span style="font-size:9px;color:var(--muted2);width:16px">${i+1}</span>
+            <span style="font-weight:600;color:var(--text);width:52px">${s.sym}</span>
+            <span style="font-size:10px;color:var(--muted2);width:30px">${s.n}×</span>
+            <span style="width:44px;color:${s.wr>=55?'var(--green)':s.wr>=45?'var(--yellow)':'var(--red)'}">${s.wr}%</span>
+            <div style="width:80px;">
+              <span style="color:${fc(s.avgR)};font-weight:600">${fr(s.avgR)}</span>
+              ${bar(s.avgR, maxSymR, fc(s.avgR))}
+            </div>
+            <span style="width:60px;color:${fc(s.totalR)}">${fr(s.totalR)}</span>
+            <span style="margin-left:auto;color:${fc(s.totalPnl)}">${fp(s.totalPnl)}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Panel de mejora -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+
+      <!-- Tus mejores símbolos -->
+      ${topSyms.length ? `
+      <div style="background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.2);border-radius:10px;padding:14px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);margin-bottom:10px;">✅ Tus Mejores Shorts (aumenta tamaño)</div>
+        ${topSyms.map(s=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg2);border-radius:7px;margin-bottom:5px;font-family:'DM Mono',monospace;">
+            <span style="font-size:12px;font-weight:600;color:var(--text)">${s.sym}</span>
+            <span style="font-size:10px;color:var(--muted2)">${s.n} trades · ${s.wr}% WR</span>
+            <span style="font-size:12px;font-weight:600;color:var(--green)">${fr(s.avgR)} avg</span>
+          </div>`).join('')}
+      </div>` : ''}
+
+      <!-- Tus peores símbolos -->
+      ${bottomSyms.length ? `
+      <div style="background:rgba(255,61,87,.07);border:1px solid rgba(255,61,87,.2);border-radius:10px;padding:14px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);margin-bottom:10px;">⛔ Stocks a Revisar (reduce / evita)</div>
+        ${bottomSyms.map(s=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg2);border-radius:7px;margin-bottom:5px;font-family:'DM Mono',monospace;">
+            <span style="font-size:12px;font-weight:600;color:var(--text)">${s.sym}</span>
+            <span style="font-size:10px;color:var(--muted2)">${s.n} trades · ${s.wr}% WR</span>
+            <span style="font-size:12px;font-weight:600;color:var(--red)">${fr(s.avgR)} avg</span>
+          </div>`).join('')}
+      </div>` : ''}
+
+      <!-- Diagnóstico automático -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;">🧠 Diagnóstico Automático</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.6;">
+          ${(()=>{
+            const notes = [];
+            if (wr < 45)    notes.push(`⚠️ Win rate del <span style="color:var(--red)">${wr}%</span> — estás perdiendo más de la mitad. Revisa entradas y timing.`);
+            else if (wr > 60) notes.push(`✅ Win rate del <span style="color:var(--green)">${wr}%</span> — buen porcentaje de acierto en el SHORT side.`);
+            else notes.push(`📊 Win rate del <span style="color:var(--yellow)">${wr}%</span> — aceptable, busca superar el 55%.`);
+
+            if (parseFloat(rr) < 1) notes.push(`⚠️ Risk/Reward de <span style="color:var(--red)">${rr}x</span> — tus winners ganan menos de lo que pierden tus losers.`);
+            else notes.push(`✅ Risk/Reward de <span style="color:var(--green)">${rr}x</span> — tus winners compensan los losers.`);
+
+            if (avgR < 0)  notes.push(`❌ R media negativa (<span style="color:var(--red)">${fr(avgR)}</span>) — el SHORT no está generando edge neto. Sé más selectivo.`);
+            else if (avgR < 0.3) notes.push(`⚠️ R media de <span style="color:var(--yellow)">${fr(avgR)}</span> — positivo pero ajustado. Objetivo: superar +0.30R/trade.`);
+            else notes.push(`✅ R media de <span style="color:var(--green)">${fr(avgR)}</span>/trade — estás generando edge consistente en SHORT.`);
+
+            if (bottomSyms.length) notes.push(`🔴 <span style="color:var(--red)">${bottomSyms.map(s=>s.sym).join(', ')}</span> están lastrando tu P&L. Analiza si merece la pena seguir operándolos.`);
+            if (topSyms.length)    notes.push(`🟢 <span style="color:var(--green)">${topSyms.map(s=>s.sym).join(', ')}</span> son tus mejores shorts. Considera aumentar size.`);
+
+            if (positiveDays > negativeDays) notes.push(`📅 Más días positivos (${positiveDays}) que negativos (${negativeDays}) — buena consistencia diaria.`);
+            else notes.push(`📅 Más días negativos (${negativeDays}) que positivos (${positiveDays}) en SHORT — revisa las sesiones perdedoras.`);
+
+            return notes.map(n=>`<div style="padding:7px 10px;background:var(--bg2);border-radius:7px;">${n}</div>`).join('');
+          })()}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FILA 4: Tabla día a día SHORT -->
+  <div style="background:var(--bg3);border-radius:10px;padding:14px;border:1px solid var(--border);">
+    <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;">📋 Detalle por Sesión — SHORT</div>
+    <div style="display:flex;gap:4px;padding:5px 10px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;border-bottom:1px solid var(--border);margin-bottom:6px;">
+      <span style="width:90px">FECHA</span>
+      <span style="width:40px">N</span>
+      <span style="width:44px">WR</span>
+      <span style="width:70px">R TOTAL</span>
+      <span style="width:80px">PNL BRUTO</span>
+      <span style="margin-left:auto">BARRA R</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;">
+      ${dayStats.map(d=>{
+        const barW = Math.min(100, Math.abs(d.totalR / Math.max(...rPerDay.map(Math.abs), 0.01))*100);
+        const col  = d.totalR >= 0 ? 'var(--green)' : 'var(--red)';
+        return `<div style="display:flex;align-items:center;gap:4px;padding:6px 10px;background:var(--bg2);border-radius:7px;font-family:'DM Mono',monospace;font-size:11px;">
+          <span style="color:var(--gold);width:90px">${d.date}</span>
+          <span style="color:var(--muted2);width:40px">${d.n}T</span>
+          <span style="width:44px;color:${d.wr>=50?'var(--green)':'var(--red)'}">${d.wr}%</span>
+          <span style="width:70px;font-weight:600;color:${col}">${fr(d.totalR)}</span>
+          <span style="width:80px;color:${col}">${fp(d.totalPnl)}</span>
+          <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-left:auto;">
+            <div style="width:${barW}%;height:100%;background:${col};border-radius:4px;"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+  `;
+}
+
 // 1) Carga datos desde Firebase (o localStorage si offline)
 // 2) Renderiza toda la UI
 // 3) Activa sincronización en tiempo real con onSnapshot
@@ -3602,6 +3927,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="stats-card" style="--ac:var(--gold);grid-column:span 5">
         <div class="stats-card-title">📈 Media de R por Símbolo</div>
         <div id="stRPerSymbol"></div>
+      </div>
+      <!-- Tarjeta 17: SHORT SIDE STUDY -->
+      <div class="stats-card" style="--ac:var(--red);grid-column:span 5;min-height:auto">
+        <div class="stats-card-title">📉 SHORT SIDE — Estudio de Rendimiento</div>
+        <div id="stShortSide"></div>
       </div>
     </div>
   </div>
