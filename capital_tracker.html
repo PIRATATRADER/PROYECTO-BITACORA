@@ -204,6 +204,86 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 }
 #tradeModal .modal-del:hover{background:var(--red);color:#fff;}
 
+/* ── TRADES R MODAL ── */
+#tradesModal{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;
+}
+#tradesModal.open{display:flex;}
+.tm-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  width:min(640px,96vw);max-height:88vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);
+}
+.tm-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  background:var(--bg3);position:sticky;top:0;z-index:2;border-radius:14px 14px 0 0;
+}
+.tm-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--gold);}
+.tm-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);margin-top:2px;}
+.tm-close{width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid var(--border);
+  color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.tm-close:hover{background:var(--red);border-color:var(--red);}
+.tm-body{padding:16px 20px;}
+.tm-trades-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.tm-trade-row{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:9px;
+  font-family:'DM Mono',monospace;font-size:12px;
+}
+.tm-trade-row input,
+.tm-trade-row select{
+  background:var(--bg2);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:'DM Mono',monospace;font-size:11px;
+  padding:5px 8px;transition:border-color .15s;outline:none;
+}
+.tm-trade-row input:focus,
+.tm-trade-row select:focus{border-color:var(--gold);}
+.tm-trade-row input.sym{width:72px;text-transform:uppercase;}
+.tm-trade-row input.pnl{width:90px;}
+.tm-trade-row input.realR{width:70px;color:var(--cyan);}
+.tm-trade-row select.dir{width:80px;}
+.tm-trade-row .del-t{
+  width:24px;height:24px;border-radius:6px;border:1px solid var(--border);
+  background:transparent;color:var(--muted2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  transition:all .15s;flex-shrink:0;
+}
+.tm-trade-row .del-t:hover{border-color:var(--red);color:var(--red);}
+.tm-add-btn{
+  width:100%;padding:9px;border-radius:8px;border:1px dashed var(--border);
+  background:transparent;color:var(--muted2);font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:1px;cursor:pointer;transition:all .15s;
+}
+.tm-add-btn:hover{border-color:var(--gold);color:var(--gold);background:#f5a62310;}
+.tm-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-top:1px solid var(--border);
+  background:var(--bg3);border-radius:0 0 14px 14px;position:sticky;bottom:0;
+}
+.tm-summary{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);}
+.tm-save{
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1.5px;
+  padding:8px 20px;border-radius:8px;border:1px solid var(--gold);
+  background:#f5a62315;color:var(--gold);cursor:pointer;transition:all .15s;
+}
+.tm-save:hover{background:var(--gold);color:#000;}
+.tm-col-hdr{
+  display:flex;gap:8px;padding:4px 12px 8px;
+  font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;
+}
+/* R badge en la tabla */
+.r-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;
+  padding:2px 6px;border-radius:5px;border:1px solid var(--border);
+  background:var(--bg3);color:var(--muted2);cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.r-badge:hover{border-color:var(--cyan);color:var(--cyan);}
+.r-badge.has-data{border-color:rgba(0,176,255,.4);color:var(--cyan);background:rgba(0,176,255,.07);}
+
 /* Toast */
 .toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--gold);
   color:var(--gold);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;
@@ -319,6 +399,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>% Day</th>
           <th>R</th>
           <th style="text-align:center;color:var(--gold)">Score Auto</th>
+          <th style="text-align:center;color:var(--cyan)">R Trades</th>
           <th style="text-align:center;color:var(--muted2)">Trades</th>
         </tr></thead>
         <tbody id="mb"></tbody>
@@ -635,6 +716,15 @@ function renderMain() {
     // Add separator class for 20/03/2026 to mark where changes will start
     const separatorClass = d === '20/03/2026' ? ' tr-separator' : '';
 
+    // R badge: muestra cuántos trades tiene el día o invita a añadir
+    const aiKey = `ai_day_${month}_${k}`;
+    let aiEntry = null;
+    try { const raw = localStorage.getItem(aiKey); if(raw) aiEntry = JSON.parse(raw); } catch(e){}
+    const tradeCount = aiEntry ? (aiEntry.trades||[]).filter(t=>t.symbol!=='TABLA').length : 0;
+    const rBadgeClass = tradeCount > 0 ? 'r-badge has-data' : 'r-badge';
+    const rBadgeTxt = tradeCount > 0 ? `⚡ ${tradeCount}T` : '+ R';
+    const rBadgeHtml = `<button class="${rBadgeClass}" onclick="openTradesModal('${k}','${d}')" title="Gestionar trades del día">${rBadgeTxt}</button>`;
+
     rows+=`<tr${separatorClass ? ` class="${separatorClass.trim()}"` : ''}>
       <td>${d}</td>
       <td class="ed" data-k="${k}" data-f="startOfDay">${sod?fd(sod):''}</td>
@@ -653,6 +743,9 @@ function renderMain() {
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
       <td style="text-align:center">${scoreCell}</td>
+      <td style="text-align:center;padding:4px;">
+        ${rBadgeHtml}
+      </td>
       <td style="text-align:center;padding:4px;" class="trade-img-cell" data-key="trade_img_${month}_${k}">
         <div class="trade-thumb-wrap" data-key="trade_img_${month}_${k}"></div>
       </td>
@@ -873,6 +966,7 @@ function attachEd() {
         const v=inp.value.trim();
         if(!D[k]) D[k]={};
         if(v==='') delete D[k][f]; else D[k][f]=v;
+        syncAIDayFromTable(k, f);
         save(); renderAll(); showToast('✓ Guardado');
       };
       inp.addEventListener('blur',commit);
@@ -888,6 +982,67 @@ function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+// ── SINCRONIZACIÓN TABLA → ANÁLISIS IA ───────────────────────────────────────
+// Cuando el usuario edita pnlDay, htb o startOfDay en la tabla principal,
+// esta función crea/actualiza automáticamente la entrada ai_day_ correspondiente
+// para que la Tarjeta "Análisis IA" reciba los datos.
+// Los trades generados desde la tabla llevan symbol="TABLA" para identificarlos.
+function syncAIDayFromTable(k, f) {
+  if (f !== 'pnlDay' && f !== 'htb' && f !== 'startOfDay') return;
+
+  const row  = D[k] || {};
+  const pnl  = pd(row.pnlDay);
+  const sod  = pd(row.startOfDay);
+  const htb  = pd(row.htb) || 0;
+
+  // Índice de mes desde la clave YYYY-MM-DD
+  const monthNum = parseInt(k.split('-')[1]);
+  const mi = monthNum - 1;
+  const aiKey = `ai_day_${mi}_${k}`;
+
+  // Convertir YYYY-MM-DD → DD/MM/YYYY
+  const parts = k.split('-');
+  const displayDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  // Leer entrada existente o crear nueva
+  let entry = null;
+  try {
+    const raw = localStorage.getItem(aiKey);
+    if (raw) entry = JSON.parse(raw);
+  } catch(e) {}
+  if (!entry) entry = { date: displayDate, trades: [], summary: { htbCost: 0 } };
+  if (!entry.summary) entry.summary = { htbCost: 0 };
+
+  // Actualizar HTB en el resumen
+  entry.summary.htbCost = htb;
+
+  if (pnl === null) {
+    // Sin PNL → eliminar trade TABLA si existe
+    entry.trades = entry.trades.filter(t => t.symbol !== 'TABLA');
+  } else {
+    // Calcular R real si hay SOD disponible
+    const rt    = (sod && sod > 0) ? sod * 0.01 : 0;
+    const realR = rt > 0 ? Math.round((pnl / rt) * 100) / 100 : 0;
+
+    const tablaEntry = {
+      symbol   : 'TABLA',
+      direction: pnl >= 0 ? 'long' : 'short',
+      pnl      : pnl,
+      realR    : realR
+    };
+
+    const idx = entry.trades.findIndex(t => t.symbol === 'TABLA');
+    if (idx >= 0) entry.trades[idx] = tablaEntry;
+    else          entry.trades.push(tablaEntry);
+  }
+
+  // Guardar o eliminar según haya trades
+  try {
+    if (!entry.trades.length) localStorage.removeItem(aiKey);
+    else                      localStorage.setItem(aiKey, JSON.stringify(entry));
+  } catch(e) {}
 }
 
 // ── CALENDAR SCREEN ──────────────────────────────────────────────────────────
@@ -3293,6 +3448,42 @@ document.addEventListener('DOMContentLoaded', () => {
           {symbol:"ZYBT",pnl:106.17,realR:1.08,direction:"short"}
         ]
       }
+    },
+    {
+      key: 'ai_day_2_2026-03-24',
+      data: {
+        date: '24/03/2026',
+        summary: { totalPnl: 53.54, totalR: 0.57, htbCost: 46.24, totalShares: 50464 },
+        trades: [
+          {symbol:"AIB",   pnl:87.65,  realR:0.94,  direction:"short"},
+          {symbol:"AIDX",  pnl:-3.03,  realR:-0.03, direction:"short"},
+          {symbol:"ANNA",  pnl:30.81,  realR:0.33,  direction:"short"},
+          {symbol:"ASNS",  pnl:54.63,  realR:0.59,  direction:"short"},
+          {symbol:"BZAI",  pnl:-154.00,realR:-1.65, direction:"short"},
+          {symbol:"CIGL",  pnl:29.82,  realR:0.32,  direction:"short"},
+          {symbol:"EDBL",  pnl:18.60,  realR:0.20,  direction:"short"},
+          {symbol:"ELAB",  pnl:-8.35,  realR:-0.09, direction:"short"},
+          {symbol:"FEED",  pnl:-61.57, realR:-0.66, direction:"short"},
+          {symbol:"FFAI",  pnl:13.95,  realR:0.15,  direction:"short"},
+          {symbol:"ITOC",  pnl:46.73,  realR:0.50,  direction:"short"},
+          {symbol:"KPTI",  pnl:65.24,  realR:0.70,  direction:"short"},
+          {symbol:"LASE",  pnl:-0.04,  realR:0.00,  direction:"short"},
+          {symbol:"MDAI",  pnl:19.41,  realR:0.21,  direction:"short"},
+          {symbol:"MKDW",  pnl:27.00,  realR:0.29,  direction:"short"},
+          {symbol:"ORBS",  pnl:-27.97, realR:-0.30, direction:"short"},
+          {symbol:"PAVS",  pnl:-14.37, realR:-0.15, direction:"short"},
+          {symbol:"PAYS",  pnl:25.74,  realR:0.28,  direction:"short"},
+          {symbol:"RADX",  pnl:22.91,  realR:0.25,  direction:"short"},
+          {symbol:"RBNE",  pnl:-379.58,realR:-4.08, direction:"short"},
+          {symbol:"SAFX",  pnl:17.87,  realR:0.19,  direction:"short"},
+          {symbol:"TJGC",  pnl:36.60,  realR:0.39,  direction:"short"},
+          {symbol:"UGRO",  pnl:34.10,  realR:0.37,  direction:"long"},
+          {symbol:"USO",   pnl:0.34,   realR:0.00,  direction:"short"},
+          {symbol:"VIVS",  pnl:53.78,  realR:0.58,  direction:"short"},
+          {symbol:"YMT",   pnl:92.62,  realR:0.99,  direction:"short"},
+          {symbol:"YYGH",  pnl:24.65,  realR:0.26,  direction:"short"}
+        ]
+      }
     }
   ];
   days.forEach(function(d) {
@@ -3439,6 +3630,184 @@ document.addEventListener('DOMContentLoaded', () => {
     <button class="modal-del" onclick="deleteTradeImg()">🗑 Eliminar imagen</button>
   </div>
 </div>
+
+<!-- ═══════ TRADES R MODAL ═══════ -->
+<div id="tradesModal">
+  <div class="tm-box">
+    <div class="tm-hdr">
+      <div>
+        <div class="tm-title">📊 TRADES DEL DÍA</div>
+        <div class="tm-date" id="tmDate"></div>
+      </div>
+      <button class="tm-close" onclick="closeTradesModal()">✕</button>
+    </div>
+    <div class="tm-body">
+      <div class="tm-col-hdr">
+        <span style="width:72px">SYMBOL</span>
+        <span style="width:80px">DIRECCIÓN</span>
+        <span style="width:90px">PNL $</span>
+        <span style="width:70px">R REAL</span>
+        <span style="color:var(--muted);font-size:8px;margin-left:auto">auto · editable</span>
+      </div>
+      <div class="tm-trades-list" id="tmTradesList"></div>
+      <button class="tm-add-btn" onclick="tmAddRow()">+ Añadir trade</button>
+    </div>
+    <div class="tm-footer">
+      <div class="tm-summary" id="tmSummary"></div>
+      <button class="tm-save" onclick="tmSave()">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── MODAL TRADES R ───────────────────────────────────────────────────────────
+let tmCurrentKey  = null;
+let tmCurrentDate = null;
+let tmMonthIdx    = null;
+
+function openTradesModal(k, d) {
+  tmCurrentKey  = k;
+  tmCurrentDate = d;
+  const parts   = k.split('-');
+  tmMonthIdx    = parseInt(parts[1]) - 1;
+  document.getElementById('tmDate').textContent = d;
+  document.getElementById('tradesModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  tmRender();
+}
+
+function closeTradesModal() {
+  document.getElementById('tradesModal').classList.remove('open');
+  document.body.style.overflow = '';
+  tmCurrentKey = null;
+}
+
+function tmRender() {
+  const aiKey = `ai_day_${tmMonthIdx}_${tmCurrentKey}`;
+  let entry = null;
+  try { const r = localStorage.getItem(aiKey); if(r) entry = JSON.parse(r); } catch(e){}
+  const trades = (entry?.trades || []).filter(t => t.symbol !== 'TABLA');
+  const list = document.getElementById('tmTradesList');
+  list.innerHTML = '';
+  if (!trades.length) {
+    list.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;padding:14px 0">Sin trades registrados — pulsa + Añadir trade</div>`;
+  } else {
+    trades.forEach((t, i) => list.appendChild(tmBuildRow(t, i)));
+  }
+  tmUpdateSummary();
+}
+
+function tmBuildRow(t, idx) {
+  const row = document.createElement('div');
+  row.className = 'tm-trade-row';
+  row.dataset.idx = idx;
+  const sod = pd((D[tmCurrentKey] || {}).startOfDay);
+  const rt  = (sod && sod > 0) ? sod * 0.01 : 0;
+  const sym   = t.symbol    || '';
+  const dir   = t.direction || 'long';
+  const pnlV  = t.pnl   != null ? t.pnl   : '';
+  const realRV= t.realR  != null ? t.realR
+              : (rt>0 && t.pnl!=null ? Math.round((t.pnl/rt)*100)/100 : '');
+  row.innerHTML = `
+    <input class="sym" type="text" placeholder="AAPL" value="${sym}" title="Símbolo" />
+    <select class="dir">
+      <option value="long"  ${dir==='long' ?'selected':''}>📈 LONG</option>
+      <option value="short" ${dir==='short'?'selected':''}>📉 SHORT</option>
+    </select>
+    <input class="pnl" type="number" step="0.01" placeholder="PNL $" value="${pnlV}" title="PNL en dólares" />
+    <input class="realR" type="number" step="0.01" placeholder="R" value="${realRV}" title="R real (auto)" />
+    <button class="del-t" title="Eliminar">✕</button>
+  `;
+  const pnlInp = row.querySelector('.pnl');
+  const rInp   = row.querySelector('.realR');
+  const symInp = row.querySelector('.sym');
+  pnlInp.addEventListener('input', () => {
+    const v = parseFloat(pnlInp.value);
+    if (!isNaN(v) && rt > 0) rInp.value = Math.round((v/rt)*100)/100;
+    tmUpdateSummary();
+  });
+  rInp.addEventListener('input', tmUpdateSummary);
+  symInp.addEventListener('input', () => { symInp.value = symInp.value.toUpperCase(); });
+  row.querySelector('.del-t').addEventListener('click', () => {
+    row.remove();
+    tmUpdateSummary();
+    if (!document.querySelectorAll('#tmTradesList .tm-trade-row').length) {
+      document.getElementById('tmTradesList').innerHTML =
+        `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;padding:14px 0">Sin trades — pulsa + Añadir trade</div>`;
+    }
+  });
+  return row;
+}
+
+function tmAddRow() {
+  const list = document.getElementById('tmTradesList');
+  const empty = list.querySelector('div:not(.tm-trade-row)');
+  if (empty) empty.remove();
+  const count = list.querySelectorAll('.tm-trade-row').length;
+  list.appendChild(tmBuildRow({}, count));
+}
+
+function tmUpdateSummary() {
+  const rows = document.querySelectorAll('#tmTradesList .tm-trade-row');
+  let totalPnl=0, totalR=0, wins=0, n=0;
+  rows.forEach(row => {
+    const pnlV = parseFloat(row.querySelector('.pnl').value);
+    const rV   = parseFloat(row.querySelector('.realR').value);
+    if (!isNaN(pnlV)) { totalPnl+=pnlV; n++; if(pnlV>0) wins++; }
+    if (!isNaN(rV))   totalR+=rV;
+  });
+  const wr = n ? Math.round(wins/n*100) : 0;
+  const fc = v => v>=0 ? 'var(--green)' : 'var(--red)';
+  const fmt = v => `${v>=0?'+':'−'}$${Math.abs(v).toFixed(2)}`;
+  document.getElementById('tmSummary').innerHTML = n
+    ? `<span style="color:var(--muted2)">${n} trade${n>1?'s':''} &nbsp;·&nbsp; WR <span style="color:${wr>=50?'var(--green)':'var(--red)'}">${wr}%</span> &nbsp;·&nbsp; R <span style="color:var(--cyan)">${totalR>=0?'+':''}${totalR.toFixed(2)}R</span> &nbsp;·&nbsp; PNL <span style="color:${fc(totalPnl)}">${fmt(totalPnl)}</span></span>`
+    : '';
+}
+
+function tmSave() {
+  if (!tmCurrentKey) return;
+  const aiKey = `ai_day_${tmMonthIdx}_${tmCurrentKey}`;
+
+  // Leer entrada existente para conservar trades TABLA y summary HTB
+  let entry = { date: tmCurrentDate, trades: [], summary: { htbCost: 0 } };
+  try { const r = localStorage.getItem(aiKey); if(r) entry = JSON.parse(r); } catch(e){}
+  if (!entry.summary) entry.summary = { htbCost: 0 };
+
+  // Mantener el trade TABLA si existe
+  const tablaEntry = (entry.trades || []).find(t => t.symbol === 'TABLA');
+
+  // Recoger filas del modal
+  const rows = document.querySelectorAll('#tmTradesList .tm-trade-row');
+  const newTrades = [];
+  rows.forEach(row => {
+    const sym  = row.querySelector('.sym').value.trim().toUpperCase();
+    const dir  = row.querySelector('.dir').value;
+    const pnlV = parseFloat(row.querySelector('.pnl').value);
+    const rV   = parseFloat(row.querySelector('.realR').value);
+    if (!sym && isNaN(pnlV)) return; // fila vacía, ignorar
+    newTrades.push({
+      symbol   : sym || '—',
+      direction: dir,
+      pnl      : isNaN(pnlV) ? 0 : pnlV,
+      realR    : isNaN(rV)   ? 0 : rV
+    });
+  });
+
+  // Combinar: trades reales + TABLA (si existe)
+  entry.trades = [...newTrades, ...(tablaEntry ? [tablaEntry] : [])];
+  entry.date   = tmCurrentDate;
+
+  try {
+    if (!entry.trades.length) localStorage.removeItem(aiKey);
+    else                      localStorage.setItem(aiKey, JSON.stringify(entry));
+  } catch(e) {}
+
+  closeTradesModal();
+  renderAll();
+  showToast(`✓ ${newTrades.length} trade${newTrades.length!==1?'s':''} guardados`);
+}
+</script>
 
 </body>
 </html>

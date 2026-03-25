@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Proyecto Bitácora</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -702,14 +705,15 @@ const profitsCache = {};
 });
 
 function openDash(mode) {
+  const v = Date.now();
   if (mode === 'data') {
-    window.location.href = 'proyecto_data.html';
+    window.location.href = 'proyecto_data.html?v=' + v;
   } else if (mode === 'bitacora') {
-    window.location.href = 'capital_tracker.html';
+    window.location.href = 'capital_tracker.html?v=' + v;
   } else if (mode === 'disc') {
-    window.location.href = 'discrecional_dashboard.html';
+    window.location.href = 'discrecional_dashboard.html?v=' + v;
   } else if (mode === 'analysis') {
-    window.location.href = 'trades_analysis_dashboard.html';
+    window.location.href = 'trades_analysis_dashboard.html?v=' + v;
   }
 }
 </script>
