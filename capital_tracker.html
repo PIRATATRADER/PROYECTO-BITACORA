@@ -398,8 +398,6 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
-          <th style="text-align:center;color:var(--gold)">Score Auto</th>
-          <th style="text-align:center;color:var(--cyan)">R Trades</th>
           <th style="text-align:center;color:var(--muted2)">Trades</th>
         </tr></thead>
         <tbody id="mb"></tbody>
@@ -706,24 +704,9 @@ function renderMain() {
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
 
-    // Score automático
-    const autoScore = calcScore(pnl, sod, htb);
-    if(autoScore !== null){ scoreSum += autoScore; scoreCount++; }
-    const scoreCell = autoScore !== null
-      ? `<span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${scoreColor(autoScore)}">${autoScore.toFixed(1)}</span>`
-      : '';
     
     // Add separator class for 20/03/2026 to mark where changes will start
     const separatorClass = d === '20/03/2026' ? ' tr-separator' : '';
-
-    // R badge: muestra cuántos trades tiene el día o invita a añadir
-    const aiKey = `ai_day_${month}_${k}`;
-    let aiEntry = null;
-    try { const raw = localStorage.getItem(aiKey); if(raw) aiEntry = JSON.parse(raw); } catch(e){}
-    const tradeCount = aiEntry ? (aiEntry.trades||[]).filter(t=>t.symbol!=='TABLA').length : 0;
-    const rBadgeClass = tradeCount > 0 ? 'r-badge has-data' : 'r-badge';
-    const rBadgeTxt = tradeCount > 0 ? `⚡ ${tradeCount}T` : '+ R';
-    const rBadgeHtml = `<button class="${rBadgeClass}" onclick="openTradesModal('${k}','${d}')" title="Gestionar trades del día">${rBadgeTxt}</button>`;
 
     rows+=`<tr${separatorClass ? ` class="${separatorClass.trim()}"` : ''}>
       <td>${d}</td>
@@ -742,10 +725,6 @@ function renderMain() {
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
-      <td style="text-align:center">${scoreCell}</td>
-      <td style="text-align:center;padding:4px;">
-        ${rBadgeHtml}
-      </td>
       <td style="text-align:center;padding:4px;" class="trade-img-cell" data-key="trade_img_${month}_${k}">
         <div class="trade-thumb-wrap" data-key="trade_img_${month}_${k}"></div>
       </td>
@@ -777,7 +756,6 @@ function renderMain() {
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
-    <td style="text-align:center">${scoreCount>0?`<span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${scoreColor(scoreSum/scoreCount)}">${(scoreSum/scoreCount).toFixed(1)}</span>`:''}</td>
     <td></td>
   </tr>`;
 
@@ -1389,38 +1367,37 @@ function renderStats() {
   if (rows.length === 0) {
     document.getElementById('stRMedio').innerHTML = noDayData;
   } else {
-    const winRows = rows.filter(x => x.p > 0);
-    const lossRows = rows.filter(x => x.p < 0);
-    
-    const avgWinR = winRows.length > 0 
-      ? (winRows.reduce((sum, x) => sum + x.p, 0) / winRows.length).toFixed(2) + 'R'
+    // Calcular R real para cada día: PNL / (SOD × 1%)
+    const rRows = rows
+      .filter(x => x.sod && x.sod > 0)
+      .map(x => ({ d: x.d, r: x.p / (x.sod * 0.01), p: x.p }));
+
+    const winRRows  = rRows.filter(x => x.r > 0);
+    const lossRRows = rRows.filter(x => x.r < 0);
+
+    const avgWinR = winRRows.length > 0
+      ? (winRRows.reduce((s, x) => s + x.r, 0) / winRRows.length).toFixed(2) + 'R'
       : '—';
-    
-    const avgLossR = lossRows.length > 0 
-      ? (lossRows.reduce((sum, x) => sum + x.p, 0) / lossRows.length).toFixed(2) + 'R'
+    const avgLossR = lossRRows.length > 0
+      ? (lossRRows.reduce((s, x) => s + x.r, 0) / lossRRows.length).toFixed(2) + 'R'
       : '—';
-    
-    const totalR = rows.length > 0
-      ? (rows.reduce((sum, x) => sum + x.p, 0) / rows.length).toFixed(2) + 'R'
+    const totalR = rRows.length > 0
+      ? (rRows.reduce((s, x) => s + x.r, 0) / rRows.length).toFixed(2) + 'R'
       : '—';
-    
-    const avgWinNum = winRows.length > 0 ? winRows.reduce((sum, x) => sum + x.p, 0) / winRows.length : 0;
-    const avgLossNum = lossRows.length > 0 ? Math.abs(lossRows.reduce((sum, x) => sum + x.p, 0) / lossRows.length) : 0;
-    const totalNum = rows.length > 0 ? rows.reduce((sum, x) => sum + x.p, 0) / rows.length : 0;
-    
+
+    const avgWinNum  = winRRows.length  > 0 ? winRRows.reduce((s, x) => s + x.r, 0)  / winRRows.length  : 0;
+    const avgLossNum = lossRRows.length > 0 ? Math.abs(lossRRows.reduce((s, x) => s + x.r, 0) / lossRRows.length) : 0;
+    const totalNum   = rRows.length     > 0 ? rRows.reduce((s, x) => s + x.r, 0) / rRows.length : 0;
+
     let insight1 = '', insight2 = '';
-    
-    if (avgWinNum > 0 && avgWinNum >= 0.5) {
-      insight1 = 'Bien en wins';
-    } else if (avgWinNum > 0 && avgWinNum < 0.5) {
-      insight1 = 'Wins mejorables';
-    }
-    
-    if (avgLossNum > 0 && avgLossNum <= 1) {
-      insight2 = 'Loss controlable → correcto';
-    } else if (avgLossNum > 1) {
-      insight2 = 'Loss muy grande → revisar';
-    }
+    if      (avgWinNum >= 2)  insight1 = '✅ Wins excelentes (≥ 2R)';
+    else if (avgWinNum >= 1)  insight1 = '👍 Wins correctos (≥ 1R)';
+    else if (avgWinNum > 0)   insight1 = '⚠️ Wins mejorables (< 1R)';
+
+    if      (avgLossNum <= 1) insight2 = '✅ Losses controlados (≤ 1R)';
+    else if (avgLossNum <= 2) insight2 = '⚠️ Losses algo grandes (1-2R)';
+    else                      insight2 = '❌ Losses muy grandes (> 2R) — revisar';
+
     
     document.getElementById('stRMedio').innerHTML = `
       <div style="font-family:'DM Mono',monospace;font-size:11px;margin-bottom:12px;color:var(--muted2)">
