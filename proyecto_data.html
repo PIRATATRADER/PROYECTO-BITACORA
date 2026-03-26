@@ -989,6 +989,11 @@
     color: var(--red);
   }
 
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
   /* Section titles */
   .section-title {
     font-family: 'DM Mono', monospace;
@@ -1636,6 +1641,7 @@
           <div class="chart-image-preview" id="chartImagePreview">
             <img id="chartImg" src="" alt="Gráfico del trade">
             <div class="chart-image-actions">
+              <button class="chart-img-btn" onclick="expandChartImage()">⛶ Expandir</button>
               <button class="chart-img-btn" onclick="document.getElementById('chartImgInput').click()">🔄 Cambiar</button>
               <button class="chart-img-btn danger" onclick="removeChartImage()">✕ Eliminar</button>
             </div>
@@ -2008,6 +2014,51 @@
       <button class="btn-submit" id="addTradeSubmitBtn">＋ Añadir operación</button>
     </div>
 
+  </div>
+</div>
+
+<!-- Chart Lightbox -->
+<div id="chartLightbox" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.92);
+  backdrop-filter:blur(8px);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  cursor:zoom-out;
+  animation:fadeIn 0.2s ease;
+">
+  <div style="position:relative;max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;" onclick="event.stopPropagation()">
+    <img id="chartLightboxImg" src="" alt="Gráfico expandido" style="
+      max-width:95vw;
+      max-height:92vh;
+      object-fit:contain;
+      border-radius:8px;
+      border:1px solid var(--border);
+      box-shadow:0 24px 80px rgba(0,0,0,0.8);
+    ">
+    <button onclick="collapseChartImage()" style="
+      position:fixed;
+      top:20px;
+      right:20px;
+      width:44px;
+      height:44px;
+      background:rgba(10,12,15,0.9);
+      border:1px solid var(--border);
+      border-radius:10px;
+      color:var(--text);
+      font-size:20px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:all 0.15s;
+      z-index:10000;
+    " onmouseover="this.style.background='var(--red-dim)';this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+       onmouseout="this.style.background='rgba(10,12,15,0.9)';this.style.borderColor='var(--border)';this.style.color='var(--text)'">✕</button>
   </div>
 </div>
 
@@ -2834,7 +2885,42 @@ document.getElementById('chartImgInput').addEventListener('change', e => {
   e.target.value = '';
 });
 
-// Drag & drop on chart area
+function expandChartImage() {
+  const src = document.getElementById('chartImg').src;
+  if (!src) return;
+  const lb = document.getElementById('chartLightbox');
+  document.getElementById('chartLightboxImg').src = src;
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  // Close on backdrop click
+  lb.onclick = () => collapseChartImage();
+}
+
+function collapseChartImage() {
+  const lb = document.getElementById('chartLightbox');
+  lb.style.animation = 'none';
+  lb.style.opacity = '0';
+  lb.style.transition = 'opacity 0.18s ease';
+  setTimeout(() => {
+    lb.style.display = 'none';
+    lb.style.opacity = '';
+    lb.style.transition = '';
+    lb.style.animation = '';
+  }, 180);
+  // Restore body scroll only if trade modal is still open
+  if (!document.getElementById('tradeModal').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+// Close lightbox with ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('chartLightbox').style.display === 'flex') {
+    collapseChartImage();
+  }
+});
+
+
 const chartArea = document.getElementById('chartUploadArea');
 chartArea.addEventListener('dragover', e => { e.preventDefault(); chartArea.style.borderColor = 'var(--blue)'; });
 chartArea.addEventListener('dragleave', () => { chartArea.style.borderColor = ''; });

@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Discrecional</title>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --bg2: #111318;
+    --bg3: #181c24;
+    --border: #1e2530;
+    --green: #00e676;
+    --green-dim: #00e67622;
+    --red: #ff3d57;
+    --red-dim: #ff3d5722;
+    --yellow: #ffd600;
+    --blue: #448aff;
+    --purple: #b16aff;
+    --text: #e8eaf0;
+    --muted: #4a5568;
+    --muted2: #7a8599;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 100%;
+    margin: 0;
+    padding: 24px 32px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-area h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .logo-area h1 span {
+    color: var(--purple);
+  }
+
+  .logo-area p {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .back-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .back-btn:hover {
+    background: var(--bg2);
+    border-color: var(--purple);
+    color: var(--purple);
+  }
+
+  /* Add Trade Button */
+  .add-trade-btn {
+    background: var(--purple);
+    color: #000;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .add-trade-btn:hover { opacity: 0.85; }
+
+  /* KPI Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .kpi-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.5s ease forwards;
+    opacity: 0;
+    transform: translateY(16px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--purple);
+  }
+
+  .kpi-card:nth-child(1) { animation-delay: 0.1s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.2s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.3s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.4s; }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.red { color: var(--red); }
+  .kpi-value.purple { color: var(--purple); }
+
+  /* Days Grid */
+  .days-container {
+    animation: fadeUp 0.5s ease 0.6s forwards;
+    opacity: 0;
+  }
+
+  .section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .days-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .day-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .day-header {
+    background: var(--bg3);
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .day-header:hover {
+    background: #1a1f29;
+  }
+
+  .day-info h3 {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .day-info p {
+    font-size: 11px;
+    color: var(--muted2);
+  }
+
+  .day-stats {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .day-stat {
+    text-align: center;
+  }
+
+  .day-stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .day-stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .expand-icon {
+    font-size: 18px;
+    color: var(--muted2);
+    transition: transform 0.3s;
+  }
+
+  .day-card.expanded .expand-icon {
+    transform: rotate(180deg);
+  }
+
+  .day-trades {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .day-card.expanded .day-trades {
+    max-height: 2000px;
+  }
+
+  .trades-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .trades-table thead th {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 16px 20px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .trades-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  .trades-table tbody tr:hover {
+    background: var(--bg3);
+  }
+
+  .trades-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .trades-table tbody td {
+    padding: 12px 20px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .td-mono {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-red { background: var(--red-dim); color: var(--red); }
+  .badge-long { background: var(--green-dim); color: var(--green); }
+  .badge-short { background: var(--red-dim); color: var(--red); }
+
+  /* Estado badges */
+  .badge-estudio { 
+    background: rgba(255, 193, 7, 0.15); 
+    color: #ffc107;
+    font-weight: 600;
+  }
+  .badge-ejecucion { 
+    background: rgba(33, 150, 243, 0.15); 
+    color: #2196f3;
+    font-weight: 600;
+  }
+  .badge-finalizado { 
+    background: rgba(76, 175, 80, 0.15); 
+    color: #4caf50;
+    font-weight: 600;
+  }
+
+  /* Tabs de filtro */
+  .filter-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 8px;
+    background: var(--bg2);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .filter-tab {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .filter-tab:hover {
+    background: var(--bg3);
+    color: var(--text);
+  }
+
+  .filter-tab.active {
+    background: var(--bg3);
+    border-color: var(--purple);
+    color: var(--purple);
+  }
+
+  .filter-tab .count {
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.25s ease;
+  }
+
+  .modal-overlay.open .modal {
+    transform: translateY(0) scale(1);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg2);
+    z-index: 1;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--purple);
+  }
+
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted2);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .modal-close:hover {
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .modal-body {
+    padding: 24px 28px 28px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .form-grid.full {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted2);
+  }
+
+  .form-input, .form-select, .form-textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    transition: all 0.2s;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--purple);
+    background: var(--bg2);
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .btn-cancel {
+    background: var(--bg3);
+    color: var(--muted2);
+    border: 1px solid var(--border);
+  }
+
+  .btn-cancel:hover {
+    background: var(--bg2);
+    color: var(--text);
+  }
+
+  .btn-save {
+    background: var(--purple);
+    color: #000;
+  }
+
+  .btn-save:hover {
+    opacity: 0.85;
+  }
+
+  .btn-delete {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--red);
+    margin-right: auto;
+  }
+
+  .btn-delete:hover {
+    background: var(--red);
+    color: #fff;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted2);
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  /* Form sections */
+  .form-section {
+    margin-bottom: 32px;
+  }
+
+  .form-section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 13px;
+    transition: color 0.2s;
+  }
+
+  .checkbox-label:hover {
+    color: var(--purple);
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--purple);
+  }
+
+  /* Chart upload area */
+  .chart-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    background: var(--bg3);
+    transition: all 0.2s;
+  }
+
+  .chart-upload-area.dragover {
+    border-color: var(--purple);
+    background: rgba(177, 106, 255, 0.05);
+  }
+
+  /* Chart zoom modal */
+  .chart-zoom-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  .chart-zoom-overlay.open {
+    display: flex;
+  }
+
+  .chart-zoom-content {
+    max-width: 95vw;
+    max-height: 95vh;
+    position: relative;
+  }
+
+  .chart-zoom-content img {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  }
+
+  .chart-zoom-close {
+    position: absolute;
+    top: -50px;
+    right: 0;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .chart-zoom-close:hover {
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo-area">
+      <h1>TRADING <span>DISCRECIONAL</span></h1>
+      <p>Registro de operaciones · Estudio → Ejecución → Finalizado</p>
+    </div>
+    <div class="header-right">
+      <a href="proyecto_bitacora_home.html" class="back-btn">← Volver al Home</a>
+      <button class="add-trade-btn" onclick="openAddModal()">
+        <span>+</span> Nuevo Trade
+      </button>
+    </div>
+  </header>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">En Estudio</div>
+      <div class="kpi-value" style="color: #ffc107;" id="kpiEstudio">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">En Ejecución</div>
+      <div class="kpi-value" style="color: #2196f3;" id="kpiEjecucion">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Finalizados</div>
+      <div class="kpi-value purple" id="kpiFinalizados">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">PNL Total</div>
+      <div class="kpi-value" id="kpiPNL">$0</div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all" onclick="filterTrades('all')">
+      <span>📊 Todos</span>
+      <span class="count" id="countAll">0</span>
+    </button>
+    <button class="filter-tab" data-filter="estudio" onclick="filterTrades('estudio')">
+      <span>📚 Estudio</span>
+      <span class="count" id="countEstudio">0</span>
+    </button>
+    <button class="filter-tab" data-filter="ejecucion" onclick="filterTrades('ejecucion')">
+      <span>⚡ Ejecución</span>
+      <span class="count" id="countEjecucion">0</span>
+    </button>
+    <button class="filter-tab" data-filter="finalizado" onclick="filterTrades('finalizado')">
+      <span>✅ Finalizados</span>
+      <span class="count" id="countFinalizado">0</span>
+    </button>
+  </div>
+
+  <!-- Days Container -->
+  <div class="days-container">
+    <div class="section-title">📅 Historial por Días</div>
+    <div class="days-grid" id="daysGrid">
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <p>No hay trades registrados todavía</p>
+        <button class="add-trade-btn" onclick="openAddModal()">
+          <span>+</span> Agregar Primer Trade
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Add/Edit Trade -->
+<div class="modal-overlay" id="tradeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">NUEVO TRADE</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="tradeForm">
+        
+        <!-- ESTADO Y DATOS BÁSICOS -->
+        <div class="form-section">
+          <div class="form-section-title">Estado y Datos Básicos</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Estado *</label>
+              <select class="form-select" id="inputEstado" required>
+                <option value="">Seleccionar...</option>
+                <option value="estudio">📚 ESTUDIO</option>
+                <option value="ejecucion">⚡ EJECUCIÓN</option>
+                <option value="finalizado">✅ FINALIZADO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fecha *</label>
+              <input type="date" class="form-input" id="inputFecha" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ticker *</label>
+              <input type="text" class="form-input" id="inputTicker" placeholder="AAPL" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- DATOS DE ENTRADA -->
+        <div class="form-section">
+          <div class="form-section-title">Datos de Entrada</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Dirección</label>
+              <select class="form-select" id="inputDireccion">
+                <option value="">Seleccionar...</option>
+                <option value="LONG">LONG</option>
+                <option value="SHORT">SHORT</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Setup</label>
+              <select class="form-select" id="inputSetupEntrada">
+                <option value="">Seleccionar...</option>
+                <option value="SETUP A $800">SETUP A $800</option>
+                <option value="SETUP B $1000">SETUP B $1000</option>
+                <option value="SETUP C $1200">SETUP C $1200</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Inicio</label>
+              <select class="form-select" id="inputInicio">
+                <option value="">Seleccionar...</option>
+                <option value="PRE-MARKET">PRE-MARKET</option>
+                <option value="OPEN">OPEN</option>
+                <option value="MID-DAY">MID-DAY</option>
+                <option value="POST-MARKET">POST-MARKET</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-3" style="margin-top: 16px;">
+            <div class="form-group">
+              <label class="form-label">Closed</label>
+              <select class="form-select" id="inputClosed">
+                <option value="">Seleccionar...</option>
+                <option value="PRE-MARKET">PRE-MARKET</option>
+                <option value="MID-DAY">MID-DAY</option>
+                <option value="CLOSE">CLOSE</option>
+                <option value="POST-MARKET">POST-MARKET</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- DATOS DE SALIDA -->
+        <div class="form-section">
+          <div class="form-section-title">Datos de Salida</div>
+          <div class="form-grid-3">
+            <!-- CAMPO OCULTO - Precio Salida
+            <div class="form-group">
+              <label class="form-label">Precio Salida</label>
+              <input type="number" step="0.01" class="form-input" id="inputSalida" placeholder="151.00">
+            </div>
+            -->
+            <div class="form-group">
+              <label class="form-label">PNL ($)</label>
+              <input type="number" step="0.01" class="form-input" id="inputPNL" placeholder="50.00">
+            </div>
+            <!-- CAMPO OCULTO - Fees
+            <div class="form-group">
+              <label class="form-label">Fees ($)</label>
+              <input type="number" step="0.01" class="form-input" id="inputFees" placeholder="2.50">
+            </div>
+            -->
+          </div>
+          <div class="form-grid-2" style="margin-top: 16px;">
+            <!-- CAMPO OCULTO - Hora Salida
+            <div class="form-group">
+              <label class="form-label">Hora Salida</label>
+              <input type="time" class="form-input" id="inputHoraSalida">
+            </div>
+            -->
+            <div class="form-group">
+              <label class="form-label">R (Risk/Reward)</label>
+              <input type="number" step="0.01" class="form-input" id="inputRR" placeholder="2.5">
+            </div>
+          </div>
+        </div>
+
+        <!-- SETUP Y CONTEXTO -->
+        <div class="form-section">
+          <div class="form-section-title">Setup y Contexto</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Noticia</label>
+              <select class="form-select" id="inputNoticia">
+                <option value="">Seleccionar...</option>
+                <option value="SI">SÍ</option>
+                <option value="NO">NO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">País</label>
+              <select class="form-select" id="inputPais">
+                <option value="">Seleccionar...</option>
+                <option value="USA">USA</option>
+                <option value="China">China</option>
+                <option value="Israel">Israel</option>
+                <option value="UK">UK</option>
+                <option value="Canada">Canada</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Catalizador</label>
+              <input type="text" class="form-input" id="inputCatalizador" placeholder="Earnings, FDA, Merger...">
+            </div>
+          </div>
+          <div class="form-grid-2" style="margin-top: 16px;">
+            <div class="form-group">
+              <label class="form-label">Sector</label>
+              <input type="text" class="form-input" id="inputSector" placeholder="Tech, Biotech, Energy...">
+            </div>
+          </div>
+        </div>
+
+        <!-- FUNDAMENTALES -->
+        <div class="form-section">
+          <div class="form-section-title">Fundamentales</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">M.Cap</label>
+              <select class="form-select" id="inputMarketCap">
+                <option value="">Seleccionar...</option>
+                <option value="Nano Cap (<$50M)">Nano Cap (<$50M)</option>
+                <option value="Micro Cap ($50M-$300M)">Micro Cap ($50M-$300M)</option>
+                <option value="Small Cap ($300M-$2B)">Small Cap ($300M-$2B)</option>
+                <option value="Mid Cap ($2B-$10B)">Mid Cap ($2B-$10B)</option>
+                <option value="Large Cap (>$10B)">Large Cap (>$10B)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Float</label>
+              <select class="form-select" id="inputFloat">
+                <option value="">Seleccionar...</option>
+                <option value="Ultra Low Float (<5M)">Ultra Low Float (<5M)</option>
+                <option value="Low Float (5M-10M)">Low Float (5M-10M)</option>
+                <option value="Medium Low Float (10M-20M)">Medium Low Float (10M-20M)</option>
+                <option value="Medium Float (20M-50M)">Medium Float (20M-50M)</option>
+                <option value="High Float Small Cap (50M-100M)">High Float Small Cap (50M-100M)</option>
+                <option value="Large Float (>100M)">Large Float (>100M)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Insiders</label>
+              <select class="form-select" id="inputInsiders">
+                <option value="">Seleccionar...</option>
+                <option value="0%-25%">0%-25%</option>
+                <option value="25%-50%">25%-50%</option>
+                <option value=">50%">>50%</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-3" style="margin-top: 16px;">
+            <div class="form-group">
+              <label class="form-label">Inst. Own</label>
+              <select class="form-select" id="inputInstOwn">
+                <option value="">Seleccionar...</option>
+                <option value="0%-30%">0%-30%</option>
+                <option value="30%-60%">30%-60%</option>
+                <option value=">60%">>60%</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Overhead</label>
+              <select class="form-select" id="inputOverhead">
+                <option value="">Seleccionar...</option>
+                <option value="VOL. HISTORICO">VOL. HISTORICO</option>
+                <option value="RESISTENCIA">RESISTENCIA</option>
+                <option value="SIN OVERHEAD">SIN OVERHEAD</option>
+                <option value="DIVERGENCIA">DIVERGENCIA</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cash Need</label>
+              <select class="form-select" id="inputCashNeed">
+                <option value="">Seleccionar...</option>
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="• CASH POSITIVE">• CASH POSITIVE</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-3" style="margin-top: 16px;">
+            <div class="form-group" style="grid-column: span 3;">
+              <label class="form-label">Dilución</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionNoTiene" value="• NO TIENE DILUCIÓN">
+                  <span>• NO TIENE DILUCIÓN</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionS1" value="S-1 OFFERING">
+                  <span>S-1 OFFERING</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionWarrants" value="WARRANTS">
+                  <span>WARRANTS</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionConvertibleNote" value="CONVERTIBLE NOTE">
+                  <span>CONVERTIBLE NOTE</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionConvertiblePreferred" value="CONVERTIBLE PREFERRED">
+                  <span>CONVERTIBLE PREFERRED</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionEquityLine" value="EQUITY LINE">
+                  <span>EQUITY LINE</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionATM" value="ATM">
+                  <span>ATM</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionShelf" value="SHELF">
+                  <span>SHELF</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GESTIÓN Y PSICOLOGÍA -->
+        <div class="form-section">
+          <div class="form-section-title">Gestión y Psicología</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Convicción (1-5)</label>
+              <select class="form-select" id="inputConviccion">
+                <option value="">Seleccionar...</option>
+                <option value="1">1 - Muy Baja</option>
+                <option value="2">2 - Baja</option>
+                <option value="3">3 - Media</option>
+                <option value="4">4 - Alta</option>
+                <option value="5">5 - Muy Alta</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ejecución (1-5)</label>
+              <select class="form-select" id="inputEjecucionCalidad">
+                <option value="">Seleccionar...</option>
+                <option value="1">1 - Muy Mala</option>
+                <option value="2">2 - Mala</option>
+                <option value="3">3 - Aceptable</option>
+                <option value="4">4 - Buena</option>
+                <option value="5">5 - Excelente</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Emociones</label>
+              <select class="form-select" id="inputEmociones">
+                <option value="">Seleccionar...</option>
+                <option value="Neutral">Neutral</option>
+                <option value="Confiado">Confiado</option>
+                <option value="FOMO">FOMO</option>
+                <option value="Miedo">Miedo</option>
+                <option value="Revenge">Revenge Trading</option>
+                <option value="Impaciente">Impaciente</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ERRORES COMUNES (CHECKBOXES) -->
+        <div class="form-section">
+          <div class="form-section-title">Errores Cometidos</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorOversize" value="oversize">
+              <span>Oversize (tamaño excesivo)</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorFOMO" value="fomo">
+              <span>FOMO (entrada tardía)</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorNoStop" value="nostop">
+              <span>No respetó stop loss</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorOvertrading" value="overtrading">
+              <span>Overtrading</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorRevenge" value="revenge">
+              <span>Revenge trading</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorProfitEarly" value="profitearly">
+              <span>Salida anticipada</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorNoAnalisis" value="noanalisis">
+              <span>No analicé el Stock</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- NOTAS -->
+        <div class="form-section">
+          <div class="form-section-title">Notas y Observaciones</div>
+          <div class="form-group">
+            <label class="form-label">Notas</label>
+            <textarea class="form-textarea" id="inputNotas" placeholder="ESTUDIO: Setup identificado, catalizadores, plan de entrada...&#10;EJECUCIÓN: Cómo se desarrolla el trade, ajustes, gestión...&#10;FINALIZADO: Resultado, qué salió bien/mal, aprendizajes..." style="min-height: 120px;"></textarea>
+          </div>
+        </div>
+
+        <!-- GRÁFICO DEL TRADE -->
+        <div class="form-section">
+          <div class="form-section-title">Gráfico del Trade</div>
+          <div class="chart-upload-area" id="chartUploadArea">
+            <div class="chart-placeholder" id="chartPlaceholder">
+              <div style="text-align: center; padding: 40px 20px;">
+                <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;">📊</div>
+                <p style="color: var(--muted2); margin-bottom: 16px;">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                <button type="button" class="btn" style="background: var(--bg3); color: var(--text); border: 1px solid var(--border);" onclick="document.getElementById('chartInput').click()">
+                  Seleccionar Imagen
+                </button>
+                <input type="file" id="chartInput" accept="image/*" style="display: none;">
+              </div>
+            </div>
+            <div class="chart-preview" id="chartPreview" style="display: none;">
+              <img id="chartImage" src="" alt="Chart" style="width: 100%; height: auto; display: block; border-radius: 8px;">
+              <div class="chart-actions" style="margin-top: 12px; display: flex; gap: 12px; justify-content: center;">
+                <button type="button" class="btn" style="background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 8px 16px;" onclick="zoomChart()">
+                  🔍 Ampliar Gráfico
+                </button>
+                <button type="button" class="btn" style="background: var(--red-dim); color: var(--red); border: 1px solid var(--red); padding: 8px 16px;" onclick="removeChart()">
+                  ✕ Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-delete" id="btnDelete" onclick="deleteTrade()" style="display:none;">
+            🗑 Eliminar
+          </button>
+          <button type="button" class="btn btn-cancel" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-save">Guardar Trade</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Zoom Gráfico -->
+<div class="chart-zoom-overlay" id="chartZoomOverlay" onclick="closeChartZoom()">
+  <div class="chart-zoom-content" onclick="event.stopPropagation()">
+    <button class="chart-zoom-close" onclick="closeChartZoom()">✕</button>
+    <img id="chartZoomImage" src="" alt="Chart Zoom">
+  </div>
+</div>
+
+<script>
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDVR0xHEt5AIUPANlnfNok3dFqBVQb7jT0",
+  authDomain: "proyecto-bitacora-fead3.firebaseapp.com",
+  projectId: "proyecto-bitacora-fead3",
+  storageBucket: "proyecto-bitacora-fead3.firebasestorage.app",
+  messagingSenderId: "907354671911",
+  appId: "1:907354671911:web:68000bcbaa989d25db7702"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let allTrades = [];
+let editingTradeId = null;
+let currentFilter = 'all'; // Filtro activo
+let chartImageData = null; // Para almacenar la imagen del gráfico
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  loadTrades();
+  setDefaultDate();
+  initChartUpload();
+});
+
+function setDefaultDate() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('inputFecha').value = today;
+}
+
+// Load trades from Firebase
+async function loadTrades() {
+  try {
+    const doc = await db.collection('trading_discrecional').doc('trades_data').get();
+    if (doc.exists && doc.data().trades) {
+      allTrades = doc.data().trades;
+      renderDashboard();
+    } else {
+      allTrades = [];
+      renderDashboard();
+    }
+  } catch (error) {
+    console.error('Error loading trades:', error);
+  }
+}
+
+// Save trades to Firebase
+async function saveTrades() {
+  try {
+    await db.collection('trading_discrecional').doc('trades_data').set({
+      trades: allTrades,
+      lastUpdate: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error saving trades:', error);
+    alert('Error al guardar. Por favor intenta de nuevo.');
+  }
+}
+
+// Render dashboard
+function renderDashboard() {
+  updateKPIs();
+  renderDays();
+}
+
+// Update KPIs
+function updateKPIs() {
+  const estudio = allTrades.filter(t => t.estado === 'estudio').length;
+  const ejecucion = allTrades.filter(t => t.estado === 'ejecucion').length;
+  const finalizado = allTrades.filter(t => t.estado === 'finalizado').length;
+  const totalPNL = allTrades
+    .filter(t => t.estado === 'finalizado' && t.pnl != null)
+    .reduce((sum, t) => sum + (t.pnl || 0), 0);
+
+  document.getElementById('kpiEstudio').textContent = estudio;
+  document.getElementById('kpiEjecucion').textContent = ejecucion;
+  document.getElementById('kpiFinalizados').textContent = finalizado;
+  
+  const pnlEl = document.getElementById('kpiPNL');
+  pnlEl.textContent = formatPNL(totalPNL);
+  pnlEl.className = 'kpi-value ' + (totalPNL >= 0 ? 'green' : 'red');
+
+  // Update filter counts
+  document.getElementById('countAll').textContent = allTrades.length;
+  document.getElementById('countEstudio').textContent = estudio;
+  document.getElementById('countEjecucion').textContent = ejecucion;
+  document.getElementById('countFinalizado').textContent = finalizado;
+}
+
+// Filter trades by status
+function filterTrades(filter) {
+  currentFilter = filter;
+  
+  // Update active tab
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+  
+  renderDays();
+}
+
+// Render days
+function renderDays() {
+  const daysGrid = document.getElementById('daysGrid');
+  
+  // Filter trades based on current filter
+  let filteredTrades = allTrades;
+  if (currentFilter !== 'all') {
+    filteredTrades = allTrades.filter(t => t.estado === currentFilter);
+  }
+  
+  if (filteredTrades.length === 0) {
+    const emptyMsg = currentFilter === 'all' 
+      ? 'No hay trades registrados todavía'
+      : `No hay trades en estado "${getEstadoLabel(currentFilter)}"`;
+    daysGrid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <p>${emptyMsg}</p>
+        <button class="add-trade-btn" onclick="openAddModal()">
+          <span>+</span> Agregar Primer Trade
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  // Group by date
+  const tradesByDay = {};
+  filteredTrades.forEach(trade => {
+    if (!tradesByDay[trade.fecha]) {
+      tradesByDay[trade.fecha] = [];
+    }
+    tradesByDay[trade.fecha].push(trade);
+  });
+
+  // Sort dates descending
+  const sortedDates = Object.keys(tradesByDay).sort((a, b) => b.localeCompare(a));
+
+  let html = '';
+  sortedDates.forEach(fecha => {
+    const dayTrades = tradesByDay[fecha];
+    const finalizados = dayTrades.filter(t => t.estado === 'finalizado');
+    const dayPNL = finalizados.reduce((sum, t) => sum + (t.pnl || 0), 0);
+    const dayWins = finalizados.filter(t => t.pnl > 0).length;
+    const dayWR = finalizados.length > 0 ? Math.round((dayWins / finalizados.length) * 100) : 0;
+
+    html += `
+      <div class="day-card">
+        <div class="day-header" onclick="toggleDay(this)">
+          <div class="day-info">
+            <h3>${formatDate(fecha)}</h3>
+            <p>${dayTrades.length} trade${dayTrades.length > 1 ? 's' : ''}</p>
+          </div>
+          <div class="day-stats">
+            <div class="day-stat">
+              <div class="day-stat-label">PNL</div>
+              <div class="day-stat-val" style="color: ${dayPNL >= 0 ? 'var(--green)' : 'var(--red)'}">${finalizados.length > 0 ? formatPNL(dayPNL) : '-'}</div>
+            </div>
+            <div class="day-stat">
+              <div class="day-stat-label">Win Rate</div>
+              <div class="day-stat-val" style="color: var(--purple)">${finalizados.length > 0 ? dayWR + '%' : '-'}</div>
+            </div>
+            <div class="expand-icon">▼</div>
+          </div>
+        </div>
+        <div class="day-trades">
+          <table class="trades-table">
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Ticker</th>
+                <th>Dir</th>
+                <th>Noticia</th>
+                <th>Float</th>
+                <th>País</th>
+                <th>Sector</th>
+                <th>Insiders</th>
+                <th>Overhead</th>
+                <th>Dilución</th>
+                <th>PNL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${dayTrades.map((trade, idx) => {
+                const globalIdx = allTrades.findIndex(t => t === trade);
+                const dilucionText = trade.dilucion && trade.dilucion.length > 0 ? trade.dilucion.join(', ') : '-';
+                return `
+                <tr onclick="editTrade(${globalIdx})">
+                  <td>${getEstadoBadge(trade.estado)}</td>
+                  <td class="td-mono">${trade.ticker}</td>
+                  <td>${trade.direccion ? `<span class="badge ${trade.direccion === 'LONG' ? 'badge-long' : 'badge-short'}">${trade.direccion}</span>` : '-'}</td>
+                  <td class="td-mono">${trade.noticia || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px;">${trade.float || '-'}</td>
+                  <td class="td-mono">${trade.pais || '-'}</td>
+                  <td class="td-mono">${trade.sector || '-'}</td>
+                  <td class="td-mono">${trade.insiders || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px;">${dilucionText}</td>
+                  <td class="td-mono">${trade.pnl != null ? `<span class="badge ${trade.pnl >= 0 ? 'badge-green' : 'badge-red'}">${formatPNL(trade.pnl)}</span>` : '-'}</td>
+                </tr>
+              `}).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  });
+
+  daysGrid.innerHTML = html;
+}
+
+// Get estado badge HTML
+function getEstadoBadge(estado) {
+  const badges = {
+    'estudio': '<span class="badge badge-estudio">📚 ESTUDIO</span>',
+    'ejecucion': '<span class="badge badge-ejecucion">⚡ EJECUCIÓN</span>',
+    'finalizado': '<span class="badge badge-finalizado">✅ FINALIZADO</span>'
+  };
+  return badges[estado] || '-';
+}
+
+// Get estado label
+function getEstadoLabel(estado) {
+  const labels = {
+    'estudio': 'Estudio',
+    'ejecucion': 'Ejecución',
+    'finalizado': 'Finalizado'
+  };
+  return labels[estado] || estado;
+}
+
+// Toggle day expansion
+function toggleDay(header) {
+  const dayCard = header.closest('.day-card');
+  dayCard.classList.toggle('expanded');
+}
+
+// Open Add Modal
+function openAddModal() {
+  editingTradeId = null;
+  document.getElementById('modalTitle').textContent = 'NUEVO TRADE';
+  document.getElementById('tradeForm').reset();
+  document.getElementById('btnDelete').style.display = 'none';
+  removeChart();
+  setDefaultDate();
+  document.getElementById('tradeModal').classList.add('open');
+}
+
+// Edit Trade
+function editTrade(globalIdx) {
+  const trade = allTrades[globalIdx];
+  
+  editingTradeId = globalIdx;
+  document.getElementById('modalTitle').textContent = 'EDITAR TRADE';
+  
+  // Datos básicos
+  document.getElementById('inputEstado').value = trade.estado || '';
+  document.getElementById('inputFecha').value = trade.fecha;
+  document.getElementById('inputTicker').value = trade.ticker;
+  
+  // Datos de entrada
+  document.getElementById('inputDireccion').value = trade.direccion || '';
+  document.getElementById('inputSetupEntrada').value = trade.setupEntrada || '';
+  document.getElementById('inputInicio').value = trade.inicio || '';
+  document.getElementById('inputClosed').value = trade.closed || '';
+  
+  // Datos de salida
+  document.getElementById('inputPNL').value = trade.pnl != null ? trade.pnl : '';
+  document.getElementById('inputRR').value = trade.rr || '';
+  
+  // Setup y contexto
+  document.getElementById('inputNoticia').value = trade.noticia || '';
+  document.getElementById('inputPais').value = trade.pais || '';
+  document.getElementById('inputCatalizador').value = trade.catalizador || '';
+  document.getElementById('inputSector').value = trade.sector || '';
+  
+  // Fundamentales
+  document.getElementById('inputMarketCap').value = trade.marketCap || '';
+  document.getElementById('inputFloat').value = trade.float || '';
+  document.getElementById('inputInsiders').value = trade.insiders || '';
+  document.getElementById('inputInstOwn').value = trade.instOwn || '';
+  document.getElementById('inputOverhead').value = trade.overhead || '';
+  document.getElementById('inputCashNeed').value = trade.cashNeed || '';
+  
+  // Dilución (checkboxes)
+  const dilucion = trade.dilucion || [];
+  document.getElementById('dilucionNoTiene').checked = dilucion.includes('• NO TIENE DILUCIÓN');
+  document.getElementById('dilucionS1').checked = dilucion.includes('S-1 OFFERING');
+  document.getElementById('dilucionWarrants').checked = dilucion.includes('WARRANTS');
+  document.getElementById('dilucionConvertibleNote').checked = dilucion.includes('CONVERTIBLE NOTE');
+  document.getElementById('dilucionConvertiblePreferred').checked = dilucion.includes('CONVERTIBLE PREFERRED');
+  document.getElementById('dilucionEquityLine').checked = dilucion.includes('EQUITY LINE');
+  document.getElementById('dilucionATM').checked = dilucion.includes('ATM');
+  document.getElementById('dilucionShelf').checked = dilucion.includes('SHELF');
+  
+  // Gestión y psicología
+  document.getElementById('inputConviccion').value = trade.conviccion || '';
+  document.getElementById('inputEjecucionCalidad').value = trade.ejecucionCalidad || '';
+  document.getElementById('inputEmociones').value = trade.emociones || '';
+  
+  // Errores (checkboxes)
+  const errores = trade.errores || [];
+  document.getElementById('errorOversize').checked = errores.includes('oversize');
+  document.getElementById('errorFOMO').checked = errores.includes('fomo');
+  document.getElementById('errorNoStop').checked = errores.includes('nostop');
+  document.getElementById('errorOvertrading').checked = errores.includes('overtrading');
+  document.getElementById('errorRevenge').checked = errores.includes('revenge');
+  document.getElementById('errorProfitEarly').checked = errores.includes('profitearly');
+  document.getElementById('errorNoAnalisis').checked = errores.includes('noanalisis');
+  
+  // Notas
+  document.getElementById('inputNotas').value = trade.notas || '';
+  
+  // Gráfico
+  if (trade.chartImage) {
+    chartImageData = trade.chartImage;
+    displayChart(chartImageData);
+  } else {
+    removeChart();
+  }
+  
+  // Mostrar botón de eliminar para ESTUDIO y FINALIZADO (NO para EJECUCIÓN)
+  const btnDelete = document.getElementById('btnDelete');
+  
+  if (trade.estado === 'estudio') {
+    btnDelete.style.display = 'block';
+    btnDelete.style.opacity = '1';
+    btnDelete.style.cursor = 'pointer';
+    btnDelete.innerHTML = '🗑 Eliminar';
+  } else if (trade.estado === 'ejecucion') {
+    btnDelete.style.display = 'block';
+    btnDelete.style.opacity = '0.4';
+    btnDelete.style.cursor = 'not-allowed';
+    btnDelete.innerHTML = '🔒 En ejecución';
+  } else if (trade.estado === 'finalizado') {
+    btnDelete.style.display = 'block';
+    btnDelete.style.opacity = '1';
+    btnDelete.style.cursor = 'pointer';
+    btnDelete.innerHTML = '🗑 Eliminar';
+  }
+  
+  document.getElementById('tradeModal').classList.add('open');
+}
+
+// Close Modal
+function closeModal() {
+  document.getElementById('tradeModal').classList.remove('open');
+}
+
+// Form Submit
+document.getElementById('tradeForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  // Recoger errores seleccionados
+  const errores = [];
+  if (document.getElementById('errorOversize').checked) errores.push('oversize');
+  if (document.getElementById('errorFOMO').checked) errores.push('fomo');
+  if (document.getElementById('errorNoStop').checked) errores.push('nostop');
+  if (document.getElementById('errorOvertrading').checked) errores.push('overtrading');
+  if (document.getElementById('errorRevenge').checked) errores.push('revenge');
+  if (document.getElementById('errorProfitEarly').checked) errores.push('profitearly');
+  if (document.getElementById('errorNoAnalisis').checked) errores.push('noanalisis');
+
+  // Recoger dilución seleccionada
+  const dilucion = [];
+  if (document.getElementById('dilucionNoTiene').checked) dilucion.push('• NO TIENE DILUCIÓN');
+  if (document.getElementById('dilucionS1').checked) dilucion.push('S-1 OFFERING');
+  if (document.getElementById('dilucionWarrants').checked) dilucion.push('WARRANTS');
+  if (document.getElementById('dilucionConvertibleNote').checked) dilucion.push('CONVERTIBLE NOTE');
+  if (document.getElementById('dilucionConvertiblePreferred').checked) dilucion.push('CONVERTIBLE PREFERRED');
+  if (document.getElementById('dilucionEquityLine').checked) dilucion.push('EQUITY LINE');
+  if (document.getElementById('dilucionATM').checked) dilucion.push('ATM');
+  if (document.getElementById('dilucionShelf').checked) dilucion.push('SHELF');
+
+  const trade = {
+    // Datos básicos
+    estado: document.getElementById('inputEstado').value,
+    fecha: document.getElementById('inputFecha').value,
+    ticker: document.getElementById('inputTicker').value.toUpperCase(),
+    
+    // Datos de entrada
+    direccion: document.getElementById('inputDireccion').value || null,
+    setupEntrada: document.getElementById('inputSetupEntrada').value || '',
+    inicio: document.getElementById('inputInicio').value || '',
+    closed: document.getElementById('inputClosed').value || '',
+    
+    // Datos de salida
+    pnl: parseFloat(document.getElementById('inputPNL').value) || null,
+    rr: parseFloat(document.getElementById('inputRR').value) || null,
+    
+    // Setup y contexto
+    noticia: document.getElementById('inputNoticia').value || '',
+    pais: document.getElementById('inputPais').value || '',
+    catalizador: document.getElementById('inputCatalizador').value || '',
+    sector: document.getElementById('inputSector').value || '',
+    
+    // Fundamentales
+    marketCap: document.getElementById('inputMarketCap').value || '',
+    float: document.getElementById('inputFloat').value || '',
+    insiders: document.getElementById('inputInsiders').value || '',
+    instOwn: document.getElementById('inputInstOwn').value || '',
+    overhead: document.getElementById('inputOverhead').value || '',
+    cashNeed: document.getElementById('inputCashNeed').value || '',
+    dilucion: dilucion,
+    
+    // Gestión y psicología
+    conviccion: document.getElementById('inputConviccion').value || '',
+    ejecucionCalidad: document.getElementById('inputEjecucionCalidad').value || '',
+    emociones: document.getElementById('inputEmociones').value || '',
+    errores: errores,
+    
+    // Notas
+    notas: document.getElementById('inputNotas').value || '',
+    
+    // Gráfico
+    chartImage: chartImageData || null
+  };
+
+  if (editingTradeId !== null) {
+    allTrades[editingTradeId] = trade;
+  } else {
+    allTrades.push(trade);
+  }
+
+  await saveTrades();
+  renderDashboard();
+  closeModal();
+});
+
+// Delete Trade
+async function deleteTrade() {
+  const trade = allTrades[editingTradeId];
+  
+  // Solo NO se puede eliminar un trade en EJECUCIÓN (posición abierta)
+  if (trade.estado === 'ejecucion') {
+    alert('⚠️ No puedes eliminar un trade en EJECUCIÓN.\n\nSi quieres cerrarlo, cambia su estado a FINALIZADO.');
+    return;
+  }
+  
+  // ESTUDIO y FINALIZADO sí se pueden eliminar
+  let confirmMsg = '';
+  if (trade.estado === 'estudio') {
+    confirmMsg = '¿Estás seguro de eliminar este trade en estudio?\n\nEste trade no se ejecutó, por lo que puede ser eliminado.';
+  } else if (trade.estado === 'finalizado') {
+    confirmMsg = '¿Estás seguro de eliminar este trade finalizado?\n\nEsta acción no se puede deshacer.';
+  }
+  
+  if (!confirm(confirmMsg)) return;
+  
+  allTrades.splice(editingTradeId, 1);
+  await saveTrades();
+  renderDashboard();
+  closeModal();
+}
+
+// Format helpers
+function formatPNL(val) {
+  const sign = val >= 0 ? '+' : '';
+  return sign + '$' + val.toFixed(2);
+}
+
+function formatDate(dateStr) {
+  const [year, month, day] = dateStr.split('-');
+  const date = new Date(year, month - 1, day);
+  const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  return `${days[date.getDay()]} ${day} ${months[date.getMonth()]} ${year}`;
+}
+
+// ── CHART FUNCTIONS ────────────────────────────────────────────────────────────
+function initChartUpload() {
+  const chartInput = document.getElementById('chartInput');
+  const chartUploadArea = document.getElementById('chartUploadArea');
+  
+  // Handle file input change
+  chartInput.addEventListener('change', handleChartFile);
+  
+  // Handle drag and drop
+  chartUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    chartUploadArea.classList.add('dragover');
+  });
+  
+  chartUploadArea.addEventListener('dragleave', () => {
+    chartUploadArea.classList.remove('dragover');
+  });
+  
+  chartUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    chartUploadArea.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith('image/')) {
+      chartInput.files = files;
+      handleChartFile();
+    }
+  });
+}
+
+function handleChartFile() {
+  const file = document.getElementById('chartInput').files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    chartImageData = e.target.result;
+    displayChart(chartImageData);
+  };
+  reader.readAsDataURL(file);
+}
+
+function displayChart(imageData) {
+  document.getElementById('chartPlaceholder').style.display = 'none';
+  document.getElementById('chartPreview').style.display = 'block';
+  document.getElementById('chartImage').src = imageData;
+}
+
+function removeChart() {
+  chartImageData = null;
+  document.getElementById('chartInput').value = '';
+  document.getElementById('chartPlaceholder').style.display = 'block';
+  document.getElementById('chartPreview').style.display = 'none';
+  document.getElementById('chartImage').src = '';
+}
+
+function zoomChart() {
+  const chartImage = document.getElementById('chartImage').src;
+  if (!chartImage) return;
+  
+  document.getElementById('chartZoomImage').src = chartImage;
+  document.getElementById('chartZoomOverlay').classList.add('open');
+}
+
+function closeChartZoom() {
+  document.getElementById('chartZoomOverlay').classList.remove('open');
+}
+
+</script>
+
+</body>
+</html>

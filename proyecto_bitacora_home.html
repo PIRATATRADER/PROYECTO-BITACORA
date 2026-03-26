@@ -92,19 +92,28 @@ body::before {
 /* ── GRID LAYOUT ── */
 .main-layout {
   display: grid;
-  grid-template-columns: 560px minmax(0, 1fr) 560px;
-  gap: 60px;
+  grid-template-columns: 480px minmax(0, 1fr) 480px;
+  gap: 48px;
   width: 100%;
-  max-width: 1800px;
+  max-width: 1900px;
   align-items: center;
 }
 
 .cards-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   width: 100%;
   min-width: 0;
+}
+
+/* Tarjetas 4 y 5 (segunda fila) ocupan más espacio */
+.card-screener {
+  grid-column: 1 / 2;
+}
+
+.card-profits {
+  grid-column: 2 / 4;
 }
 
 /* Mascot column */
@@ -113,7 +122,7 @@ body::before {
   align-items: center;
   justify-content: flex-end;
   flex-shrink: 0;
-  transform: translateX(45%);
+  transform: translateX(35%);
 }
 
 .mascot-col-left {
@@ -121,7 +130,7 @@ body::before {
   align-items: center;
   justify-content: flex-start;
   flex-shrink: 0;
-  transform: translateX(-30%);
+  transform: translateX(-25%);
 }
 
 /* Shared image base */
@@ -136,14 +145,14 @@ body::before {
   display: block;
 }
 
-/* Left image (Guarida): 20% bigger than right */
+/* Left image (Guarida): tamaño ajustado */
 .mascot-col-left .mascot-img {
-  width: 934px;
+  width: 750px;
 }
 
 /* Right image (Pirata): base size, height compressed 20% */
 .mascot-col .mascot-img {
-  width: 540px;
+  width: 450px;
   height: auto;
   transform: scaleY(0.8);
   transform-origin: center;
@@ -207,6 +216,7 @@ body::before {
 .card-bitacora  { --card-accent: var(--gold); }
 .card-profits   { --card-accent: var(--green); }
 .card-screener  { --card-accent: var(--purple); }
+.card-discrecional { --card-accent: #ff6b6b; } /* Rojo coral */
 
 .card-icon {
   font-size: 32px;
@@ -411,6 +421,22 @@ body::before {
       <div class="card-arrow">Abrir tracker →</div>
     </div>
 
+    <!-- TARJETA 5: TRADING DISCRECIONAL (Superior Derecha) -->
+    <div class="mode-card card-discrecional" onclick="window.location.href='trading_discrecional.html'" style="cursor:pointer;">
+      <div class="card-icon">🎯</div>
+      <div>
+        <div class="card-label">Registro</div>
+        <div class="card-title">TRADING DISCRECIONAL</div>
+      </div>
+      <div class="card-desc">Registro manual de trades discrecionales. Seguimiento día a día de operaciones en mercado americano.</div>
+      <div class="card-stats" id="statsDiscrecional">
+        <div class="card-stat"><div class="card-stat-val" id="discrecionalTrades" style="color:#ff6b6b">—</div><div class="card-stat-label">Trades</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="discrecionalWR" style="color:#ff6b6b">—</div><div class="card-stat-label">Win Rate</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="discrecionalPNL" style="color:#ff6b6b">—</div><div class="card-stat-label">PNL Total</div></div>
+      </div>
+      <div class="card-arrow">Ver registro →</div>
+    </div>
+
     <!-- TARJETA 3: SCREENER PREMARKET (Inferior Izquierda) -->
     <div class="mode-card card-screener" onclick="window.location.href='screener_premarket.html'" style="cursor:pointer;">
       <div class="card-icon">🔍</div>
@@ -570,6 +596,14 @@ async function loadAllStats() {
       { year: 2026, doc: doc26 },
     ]);
   } catch(e) { console.error('Error loading profits stats:', e); }
+
+  // ── Trading Discrecional ──────────────────────────────────────────────────────
+  try {
+    const discDoc = await db.collection('trading_discrecional').doc('trades_data').get();
+    if (discDoc.exists && discDoc.data().trades) {
+      renderCardStats('discrecional', calcStats(discDoc.data().trades));
+    }
+  } catch(e) { console.error('Error loading trading discrecional stats:', e); }
 }
 
 // ── Helpers de renderizado para Capital Tracker ─────────────────────────────
