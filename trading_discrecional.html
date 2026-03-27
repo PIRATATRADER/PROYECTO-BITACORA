@@ -949,15 +949,14 @@
             </div>
             <div class="form-group">
               <label class="form-label">País</label>
-              <select class="form-select" id="inputPais">
-                <option value="">Seleccionar...</option>
-                <option value="USA">USA</option>
-                <option value="China">China</option>
-                <option value="Israel">Israel</option>
-                <option value="UK">UK</option>
-                <option value="Canada">Canada</option>
-                <option value="Otro">Otro</option>
-              </select>
+              <input type="text" class="form-input" id="inputPais" list="paisList" placeholder="Escribe o selecciona...">
+              <datalist id="paisList">
+                <option value="USA">
+                <option value="China">
+                <option value="Israel">
+                <option value="UK">
+                <option value="Canada">
+              </datalist>
             </div>
             <div class="form-group">
               <label class="form-label">Catalizador</label>
@@ -1237,6 +1236,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTrades();
   setDefaultDate();
   initChartUpload();
+  loadCountryList();
+  initCountryInput();
 });
 
 function setDefaultDate() {
@@ -1751,6 +1752,60 @@ function zoomChart() {
 
 function closeChartZoom() {
   document.getElementById('chartZoomOverlay').classList.remove('open');
+}
+
+// ── COUNTRY LIST FUNCTIONS ────────────────────────────────────────────────────
+function loadCountryList() {
+  const savedCountries = localStorage.getItem('customCountries');
+  if (savedCountries) {
+    const countries = JSON.parse(savedCountries);
+    const datalist = document.getElementById('paisList');
+    
+    // Añadir los países guardados al datalist
+    countries.forEach(country => {
+      // Comprobar si ya existe para no duplicar
+      const exists = Array.from(datalist.options).some(opt => opt.value === country);
+      if (!exists) {
+        const option = document.createElement('option');
+        option.value = country;
+        datalist.appendChild(option);
+      }
+    });
+  }
+}
+
+function initCountryInput() {
+  const inputPais = document.getElementById('inputPais');
+  
+  inputPais.addEventListener('blur', function() {
+    const value = this.value.trim();
+    if (value) {
+      saveCountryToList(value);
+    }
+  });
+}
+
+function saveCountryToList(country) {
+  if (!country) return;
+  
+  // Obtener lista actual
+  let countries = [];
+  const savedCountries = localStorage.getItem('customCountries');
+  if (savedCountries) {
+    countries = JSON.parse(savedCountries);
+  }
+  
+  // Añadir solo si no existe
+  if (!countries.includes(country)) {
+    countries.push(country);
+    localStorage.setItem('customCountries', JSON.stringify(countries));
+    
+    // Añadir al datalist
+    const datalist = document.getElementById('paisList');
+    const option = document.createElement('option');
+    option.value = country;
+    datalist.appendChild(option);
+  }
 }
 
 </script>
