@@ -362,6 +362,61 @@
   .badge-long { background: var(--green-dim); color: var(--green); }
   .badge-short { background: var(--red-dim); color: var(--red); }
 
+  /* Chart thumbnail in table */
+  .td-chart {
+    padding: 8px 12px !important;
+  }
+
+  .chart-thumbnail-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .chart-thumbnail {
+    width: 60px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .chart-thumbnail:hover {
+    border-color: var(--purple);
+    transform: scale(1.05);
+  }
+
+  .chart-delete-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--red);
+    color: #000;
+    border: none;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .chart-thumbnail-wrapper:hover .chart-delete-btn {
+    opacity: 1;
+  }
+
+  .chart-delete-btn:hover {
+    background: var(--red);
+    transform: scale(1.1);
+  }
+
   /* Estado badges */
   .badge-estudio { 
     background: rgba(255, 193, 7, 0.15); 
@@ -1365,13 +1420,40 @@ async function loadTrades() {
 // Save trades to Firebase
 async function saveTrades() {
   try {
+    // Limpiar undefined de todos los trades (Firestore no acepta undefined)
+    const cleanedTrades = allTrades.map(trade => {
+      const cleanTrade = {...trade};
+      Object.keys(cleanTrade).forEach(key => {
+        if (cleanTrade[key] === undefined) {
+          cleanTrade[key] = null;
+        }
+      });
+      return cleanTrade;
+    });
+    
+    // Calcular tamaño aproximado de los datos
+    const dataSize = JSON.stringify(cleanedTrades).length;
+    const maxSize = 1048576; // 1MB en bytes (límite de Firestore)
+    
+    if (dataSize > maxSize) {
+      alert('⚠️ Los datos son demasiado grandes.\n\nAlgunos gráficos son muy pesados. Por favor, reduce el tamaño de las imágenes o elimina algunos gráficos.');
+      return;
+    }
+    
     await db.collection('trading_discrecional').doc('trades_data').set({
-      trades: allTrades,
+      trades: cleanedTrades,
       lastUpdate: new Date().toISOString()
     });
+    
+    // Actualizar allTrades con los datos limpios
+    allTrades = cleanedTrades;
   } catch (error) {
     console.error('Error saving trades:', error);
-    alert('Error al guardar. Por favor intenta de nuevo.');
+    if (error.code === 'resource-exhausted' || error.message.includes('maximum size')) {
+      alert('⚠️ Error: Los datos exceden el límite de Firebase.\n\nLos gráficos son demasiado grandes. Intenta:\n1. Usar imágenes más pequeñas\n2. Eliminar algunos gráficos antiguos');
+    } else {
+      alert('Error al guardar. Por favor intenta de nuevo.\n\n' + error.message);
+    }
   }
 }
 
@@ -1505,6 +1587,7 @@ function renderDays() {
                 <th>Overhead</th>
                 <th>Dilución</th>
                 <th>PNL</th>
+                <th>Gráfico</th>
               </tr>
             </thead>
             <tbody>
@@ -1536,6 +1619,14 @@ function renderDays() {
                   <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${dilucionText}</td>
                   <td class="td-mono">${pnlContent}</td>
+                  <td class="td-chart">
+                    ${trade.chartImage ? `
+                      <div class="chart-thumbnail-wrapper">
+                        <img src="${trade.chartImage}" class="chart-thumbnail" onclick="event.stopPropagation(); zoomChartFromTable(${globalIdx});" title="Click para ampliar">
+                        <button class="chart-delete-btn" onclick="event.stopPropagation(); deleteChartFromTable(${globalIdx});" title="Eliminar gráfico">✕</button>
+                      </div>
+                    ` : '<span style="color: var(--muted); font-size: 11px;">-</span>'}
+                  </td>
                 </tr>
               `}).join('')}
             </tbody>
@@ -1763,8 +1854,15 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     // Timer de ejecución - guardar timestamp si pasa a ejecución
     ejecucionStartTime: (newEstado === 'ejecucion' && oldEstado !== 'ejecucion') 
       ? Date.now() 
-      : (editingTradeId !== null ? allTrades[editingTradeId].ejecucionStartTime : null)
+      : (editingTradeId !== null && allTrades[editingTradeId].ejecucionStartTime ? allTrades[editingTradeId].ejecucionStartTime : null)
   };
+
+  // Limpiar undefined del objeto (Firestore no acepta undefined)
+  Object.keys(trade).forEach(key => {
+    if (trade[key] === undefined) {
+      trade[key] = null;
+    }
+  });
 
   if (editingTradeId !== null) {
     allTrades[editingTradeId] = trade;
@@ -1853,10 +1951,43 @@ function handleChartFile() {
   
   const reader = new FileReader();
   reader.onload = function(e) {
-    chartImageData = e.target.result;
-    displayChart(chartImageData);
+    // Comprimir la imagen antes de guardarla
+    compressImage(e.target.result, (compressedImage) => {
+      chartImageData = compressedImage;
+      displayChart(chartImageData);
+    });
   };
   reader.readAsDataURL(file);
+}
+
+// Función para comprimir imágenes
+function compressImage(base64Image, callback) {
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Redimensionar si es muy grande (máximo 1200px de ancho)
+    let width = img.width;
+    let height = img.height;
+    const maxWidth = 1200;
+    
+    if (width > maxWidth) {
+      height = (height * maxWidth) / width;
+      width = maxWidth;
+    }
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Dibujar imagen redimensionada
+    ctx.drawImage(img, 0, 0, width, height);
+    
+    // Comprimir a JPEG con calidad 0.7
+    const compressedImage = canvas.toDataURL('image/jpeg', 0.7);
+    callback(compressedImage);
+  };
+  img.src = base64Image;
 }
 
 function displayChart(imageData) {
@@ -1883,6 +2014,24 @@ function zoomChart() {
 
 function closeChartZoom() {
   document.getElementById('chartZoomOverlay').classList.remove('open');
+}
+
+// Ampliar gráfico desde la tabla
+function zoomChartFromTable(tradeIdx) {
+  const trade = allTrades[tradeIdx];
+  if (trade && trade.chartImage) {
+    document.getElementById('chartZoomImage').src = trade.chartImage;
+    document.getElementById('chartZoomOverlay').classList.add('open');
+  }
+}
+
+// Eliminar gráfico desde la tabla
+async function deleteChartFromTable(tradeIdx) {
+  if (!confirm('¿Eliminar el gráfico de este trade?')) return;
+  
+  allTrades[tradeIdx].chartImage = null;
+  await saveTrades();
+  renderDashboard();
 }
 
 // ── COUNTRY LIST FUNCTIONS ────────────────────────────────────────────────────
