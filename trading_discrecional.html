@@ -1358,7 +1358,14 @@ function renderDays() {
   let html = '';
   sortedDates.forEach(fecha => {
     const dayTrades = tradesByDay[fecha];
-    const finalizados = dayTrades.filter(t => t.estado === 'finalizado');
+    
+    // Ordenar trades por estado: finalizado > ejecucion > estudio
+    const sortedDayTrades = dayTrades.sort((a, b) => {
+      const estadoOrder = { 'finalizado': 1, 'ejecucion': 2, 'estudio': 3 };
+      return estadoOrder[a.estado] - estadoOrder[b.estado];
+    });
+    
+    const finalizados = sortedDayTrades.filter(t => t.estado === 'finalizado');
     const dayPNL = finalizados.reduce((sum, t) => sum + (t.pnl || 0), 0);
     const dayWins = finalizados.filter(t => t.pnl > 0).length;
     const dayWR = finalizados.length > 0 ? Math.round((dayWins / finalizados.length) * 100) : 0;
@@ -1368,7 +1375,7 @@ function renderDays() {
         <div class="day-header" onclick="toggleDay(this)">
           <div class="day-info">
             <h3>${formatDate(fecha)}</h3>
-            <p>${dayTrades.length} trade${dayTrades.length > 1 ? 's' : ''}</p>
+            <p>${sortedDayTrades.length} trade${sortedDayTrades.length > 1 ? 's' : ''}</p>
           </div>
           <div class="day-stats">
             <div class="day-stat">
@@ -1400,14 +1407,14 @@ function renderDays() {
               </tr>
             </thead>
             <tbody>
-              ${dayTrades.map((trade, idx) => {
+              ${sortedDayTrades.map((trade, idx) => {
                 const globalIdx = allTrades.findIndex(t => t === trade);
                 const dilucionText = trade.dilucion && trade.dilucion.length > 0 ? trade.dilucion.join(', ') : '-';
                 return `
                 <tr onclick="editTrade(${globalIdx})">
                   <td>${getEstadoBadge(trade.estado)}</td>
                   <td class="td-mono">${trade.ticker}</td>
-                  <td>${trade.direccion ? `<span class="badge ${trade.direccion === 'LONG' ? 'badge-long' : 'badge-short'}">${trade.direccion}</span>` : '-'}</td>
+                  <td>${trade.direccion ? `<span class="badge ${trade.direccion === 'LONG' ? 'badge-short' : 'badge-long'}">${trade.direccion}</span>` : '-'}</td>
                   <td class="td-mono">${trade.noticia || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
