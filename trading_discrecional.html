@@ -1019,6 +1019,7 @@
                 <option value="">Seleccionar...</option>
                 <option value="SI">SÍ</option>
                 <option value="NO">NO</option>
+                <option value="NOTICIA DE AYER">NOTICIA DE AYER</option>
               </select>
             </div>
             <div class="form-group">
@@ -1526,7 +1527,7 @@ function renderDays() {
                 <tr onclick="editTrade(${globalIdx})">
                   <td>${getEstadoBadge(trade.estado)}</td>
                   <td class="td-mono">${trade.ticker}</td>
-                  <td>${trade.direccion ? `<span class="badge ${trade.direccion === 'LONG' ? 'badge-short' : 'badge-long'}">${trade.direccion}</span>` : '-'}</td>
+                  <td>${trade.direccion ? `<span class="badge ${trade.direccion === 'LONG' ? 'badge-long' : 'badge-short'}">${trade.direccion}</span>` : '-'}</td>
                   <td class="td-mono">${trade.noticia || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
