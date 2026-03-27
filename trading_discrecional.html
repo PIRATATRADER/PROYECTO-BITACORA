@@ -6,7 +6,6 @@
 <title>Trading Discrecional</title>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -94,7 +93,7 @@
     gap: 16px;
   }
 
-  .back-btn, .stats-btn {
+  .back-btn {
     background: var(--bg3);
     border: 1px solid var(--border);
     padding: 10px 20px;
@@ -109,7 +108,7 @@
     display: inline-block;
   }
 
-  .back-btn:hover, .stats-btn:hover {
+  .back-btn:hover {
     background: var(--bg2);
     border-color: var(--purple);
     color: var(--purple);
@@ -264,37 +263,32 @@
 
   .day-stats {
     display: flex;
+    gap: 24px;
     align-items: center;
-    gap: 32px;
   }
 
-  .stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+  .day-stat {
+    text-align: center;
   }
 
-  .stat-label {
+  .day-stat-label {
     font-family: 'DM Mono', monospace;
     font-size: 9px;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 2px;
+    margin-bottom: 4px;
   }
 
-  .stat-value {
+  .day-stat-val {
     font-family: 'DM Mono', monospace;
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
   }
-
-  .stat-value.green { color: var(--green); }
-  .stat-value.red { color: var(--red); }
 
   .expand-icon {
-    color: var(--muted2);
     font-size: 18px;
+    color: var(--muted2);
     transition: transform 0.3s;
   }
 
@@ -302,118 +296,151 @@
     transform: rotate(180deg);
   }
 
-  /* Trades List */
-  .trades-list {
+  .day-trades {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease;
   }
 
-  .day-card.expanded .trades-list {
+  .day-card.expanded .day-trades {
     max-height: 2000px;
   }
 
-  .trade-row {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: grid;
-    grid-template-columns: 60px 1fr 120px 100px 100px 80px 120px;
-    gap: 16px;
-    align-items: center;
-    cursor: pointer;
-    transition: background 0.2s;
+  .trades-table {
+    width: 100%;
+    border-collapse: collapse;
   }
 
-  .trade-row:hover {
+  .trades-table thead th {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 16px 20px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .trades-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  .trades-table tbody tr:hover {
     background: var(--bg3);
   }
 
-  .trade-row:last-child {
+  .trades-table tbody tr:last-child {
     border-bottom: none;
   }
 
-  .trade-estado {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    font-weight: 500;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  .trade-estado.estudio {
-    background: var(--blue);
-    color: #000;
-  }
-
-  .trade-estado.ejecucion {
-    background: var(--yellow);
-    color: #000;
-  }
-
-  .trade-estado.finalizado {
-    background: var(--muted);
-    color: var(--text);
-  }
-
-  .trade-ticker {
-    font-family: 'DM Mono', monospace;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .trade-setup {
-    font-size: 13px;
-    color: var(--muted2);
-  }
-
-  .trade-direction {
-    font-family: 'DM Mono', monospace;
+  .trades-table tbody td {
+    padding: 12px 20px;
     font-size: 12px;
-    font-weight: 500;
+    color: var(--text);
   }
 
-  .trade-direction.LONG { color: var(--green); }
-  .trade-direction.SHORT { color: var(--red); }
-
-  .trade-pnl {
-    font-family: 'DM Mono', monospace;
-    font-size: 15px;
-    font-weight: 600;
-  }
-
-  .trade-pnl.positive { color: var(--green); }
-  .trade-pnl.negative { color: var(--red); }
-
-  .trade-rr {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    color: var(--muted2);
-  }
-
-  .trade-time {
+  .td-mono {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-red { background: var(--red-dim); color: var(--red); }
+  .badge-long { background: var(--green-dim); color: var(--green); }
+  .badge-short { background: var(--red-dim); color: var(--red); }
+
+  /* Estado badges */
+  .badge-estudio { 
+    background: rgba(255, 193, 7, 0.15); 
+    color: #ffc107;
+    font-weight: 600;
+  }
+  .badge-ejecucion { 
+    background: rgba(33, 150, 243, 0.15); 
+    color: #2196f3;
+    font-weight: 600;
+  }
+  .badge-finalizado { 
+    background: rgba(76, 175, 80, 0.15); 
+    color: #4caf50;
+    font-weight: 600;
+  }
+
+  /* Tabs de filtro */
+  .filter-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 8px;
+    background: var(--bg2);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .filter-tab {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .filter-tab:hover {
+    background: var(--bg3);
+    color: var(--text);
+  }
+
+  .filter-tab.active {
+    background: var(--bg3);
+    border-color: var(--purple);
+    color: var(--purple);
+  }
+
+  .filter-tab .count {
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
   }
 
   /* Modal */
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
-    z-index: 100;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 24px;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s;
-    padding: 20px;
+    transition: opacity 0.25s ease;
   }
 
   .modal-overlay.open {
@@ -429,62 +456,180 @@
     max-width: 900px;
     max-height: 90vh;
     overflow-y: auto;
-    transform: scale(0.95);
-    transition: transform 0.3s;
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.25s ease;
   }
 
   .modal-overlay.open .modal {
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 
   .modal-header {
-    padding: 24px 32px;
-    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     background: var(--bg2);
-    z-index: 10;
+    z-index: 1;
+    border-radius: 16px 16px 0 0;
   }
 
-  .modal-header h2 {
+  .modal-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 32px;
+    font-size: 28px;
     letter-spacing: 2px;
-    color: var(--text);
+    color: var(--purple);
   }
 
   .modal-close {
-    background: none;
-    border: none;
+    width: 36px;
+    height: 36px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
     color: var(--muted2);
-    font-size: 28px;
+    font-size: 18px;
     cursor: pointer;
-    line-height: 1;
-    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
   }
 
   .modal-close:hover {
-    color: var(--text);
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--red);
   }
 
   .modal-body {
-    padding: 32px;
+    padding: 24px 28px 28px;
   }
 
-  /* Form */
   .form-grid {
     display: grid;
-    gap: 24px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
   }
 
-  .form-section {
+  .form-grid.full {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted2);
+  }
+
+  .form-input, .form-select, .form-textarea {
     background: var(--bg3);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px 24px;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    transition: all 0.2s;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--purple);
+    background: var(--bg2);
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .btn-cancel {
+    background: var(--bg3);
+    color: var(--muted2);
+    border: 1px solid var(--border);
+  }
+
+  .btn-cancel:hover {
+    background: var(--bg2);
+    color: var(--text);
+  }
+
+  .btn-save {
+    background: var(--purple);
+    color: #000;
+  }
+
+  .btn-save:hover {
+    opacity: 0.85;
+  }
+
+  .btn-delete {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--red);
+    margin-right: auto;
+  }
+
+  .btn-delete:hover {
+    background: var(--red);
+    color: #fff;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted2);
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  /* Form sections */
+  .form-section {
+    margin-bottom: 32px;
   }
 
   .form-section-title {
@@ -492,506 +637,114 @@
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: var(--purple);
+    color: var(--muted);
     margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .form-row {
+  .form-grid-2 {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: 1fr 1fr;
     gap: 16px;
-    margin-bottom: 16px;
   }
 
-  .form-row:last-child {
-    margin-bottom: 0;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .form-group label {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted2);
-    margin-bottom: 8px;
-  }
-
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    color: var(--text);
-    transition: border-color 0.2s;
-  }
-
-  .form-group input:focus,
-  .form-group select:focus,
-  .form-group textarea:focus {
-    outline: none;
-    border-color: var(--purple);
-  }
-
-  .form-group textarea {
-    resize: vertical;
-    min-height: 80px;
-    font-family: 'DM Mono', monospace;
-  }
-
-  /* Checkbox Group */
-  .checkbox-group {
+  .form-grid-3 {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
   }
 
-  .checkbox-item {
+  .checkbox-label {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 10px 0;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 13px;
+    transition: color 0.2s;
   }
 
-  .checkbox-item input[type="checkbox"] {
+  .checkbox-label:hover {
+    color: var(--purple);
+  }
+
+  .checkbox-label input[type="checkbox"] {
     width: 18px;
     height: 18px;
     cursor: pointer;
+    accent-color: var(--purple);
   }
 
-  .checkbox-item label {
-    font-size: 12px;
-    color: var(--text);
-    cursor: pointer;
-    margin: 0;
-    text-transform: none;
-  }
-
-  /* Chart Upload Area */
-  .chart-upload-section {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px 24px;
-  }
-
+  /* Chart upload area */
   .chart-upload-area {
     border: 2px dashed var(--border);
-    border-radius: 8px;
-    padding: 40px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-  }
-
-  .chart-upload-area:hover {
-    border-color: var(--purple);
-    background: var(--bg);
+    border-radius: 12px;
+    background: var(--bg3);
+    transition: all 0.2s;
   }
 
   .chart-upload-area.dragover {
     border-color: var(--purple);
-    background: var(--bg);
+    background: rgba(177, 106, 255, 0.05);
   }
 
-  .chart-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .chart-placeholder-icon {
-    font-size: 48px;
-    color: var(--muted);
-  }
-
-  .chart-placeholder-text {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    color: var(--muted2);
-  }
-
-  .chart-preview {
-    display: none;
-    position: relative;
-  }
-
-  .chart-preview img {
-    width: 100%;
-    border-radius: 8px;
-  }
-
-  .chart-actions {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    display: flex;
-    gap: 8px;
-  }
-
-  .chart-btn {
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .chart-btn:hover {
-    background: rgba(0, 0, 0, 0.9);
-    border-color: var(--purple);
-  }
-
-  /* Chart Zoom Overlay */
+  /* Chart zoom modal */
   .chart-zoom-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.95);
-    z-index: 200;
-    display: flex;
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: none;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
     padding: 40px;
   }
 
   .chart-zoom-overlay.open {
-    opacity: 1;
-    pointer-events: all;
+    display: flex;
   }
 
   .chart-zoom-content {
-    max-width: 90%;
-    max-height: 90%;
+    max-width: 95vw;
+    max-height: 95vh;
+    position: relative;
   }
 
   .chart-zoom-content img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
   }
 
   .chart-zoom-close {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 12px 20px;
+    top: -50px;
+    right: 0;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 40px;
+    height: 40px;
     border-radius: 8px;
-    font-size: 14px;
     cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s;
   }
 
   .chart-zoom-close:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  /* Form Actions */
-  .form-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 24px;
-  }
-
-  .btn {
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-  }
-
-  .btn-primary {
-    background: var(--purple);
-    color: #000;
-  }
-
-  .btn-primary:hover {
-    opacity: 0.85;
-  }
-
-  .btn-secondary {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-  }
-
-  .btn-secondary:hover {
-    background: var(--bg);
-  }
-
-  .btn-danger {
-    background: var(--red);
-    color: #fff;
-  }
-
-  .btn-danger:hover {
-    opacity: 0.85;
-  }
-
-  .btn-danger:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  /* Hidden input */
-  #chartInput {
-    display: none;
-  }
-
-  /* STATISTICS PANEL */
-  .stats-panel {
-    display: none;
-  }
-
-  .stats-panel.active {
-    display: block;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 24px;
-    margin-bottom: 32px;
-  }
-
-  .stats-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-  }
-
-  .stats-card-title {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted2);
-    margin-bottom: 20px;
-  }
-
-  .chart-container {
-    position: relative;
-    height: 300px;
-  }
-
-  .radar-container {
-    position: relative;
-    height: 280px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .stats-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .stats-table th {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-align: left;
-    padding: 12px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .stats-table td {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    padding: 12px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .stats-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  .ticker-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-  }
-
-  .ticker-badge.long { border-left: 3px solid var(--green); }
-  .ticker-badge.short { border-left: 3px solid var(--red); }
-
-  .daily-stats-grid {
-    display: grid;
-    gap: 16px;
-  }
-
-  .daily-stat-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .daily-stat-info h4 {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-
-  .daily-stat-info p {
-    font-size: 11px;
-    color: var(--muted2);
-  }
-
-  .daily-stat-values {
-    display: flex;
-    gap: 24px;
-    align-items: center;
-  }
-
-  .daily-stat-item {
-    text-align: right;
-  }
-
-  .daily-stat-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 2px;
-  }
-
-  .daily-stat-value {
-    font-family: 'DM Mono', monospace;
-    font-size: 16px;
-    font-weight: 600;
-  }
-
-  .insights-section {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
-  }
-
-  .insight-item {
-    padding: 16px;
-    background: var(--bg3);
-    border-left: 3px solid var(--purple);
-    border-radius: 6px;
-    margin-bottom: 12px;
-  }
-
-  .insight-item:last-child {
-    margin-bottom: 0;
-  }
-
-  .insight-title {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--purple);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .insight-text {
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--muted2);
-  }
-
-  .insight-highlight {
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .symbol-performance-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .symbol-performance-table th {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-align: left;
-    padding: 12px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .symbol-performance-table td {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    padding: 12px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .symbol-performance-table tr:hover {
-    background: var(--bg3);
-  }
-
-  .win-loss-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-
-  .win-loss-badge.win-100 {
-    background: var(--green-dim);
-    color: var(--green);
-  }
-
-  .win-loss-badge.win-high {
-    background: rgba(255, 214, 0, 0.15);
-    color: var(--yellow);
-  }
-
-  .win-loss-badge.win-mid {
-    background: rgba(255, 61, 87, 0.15);
-    color: var(--red);
-  }
-
-  .win-loss-badge.win-low {
     background: var(--red-dim);
+    border-color: var(--red);
     color: var(--red);
   }
+
+
 </style>
 </head>
 <body>
@@ -1000,877 +753,724 @@
   <header>
     <div class="logo-area">
       <h1>TRADING <span>DISCRECIONAL</span></h1>
-      <p>Sistema de Registro de Operaciones</p>
+      <p>Registro de operaciones · Estudio → Ejecución → Finalizado</p>
     </div>
     <div class="header-right">
-      <button class="stats-btn" onclick="toggleStatsPanel()">📊 Estadísticas</button>
-      <button class="back-btn" onclick="window.history.back()">← Volver</button>
-      <button class="add-trade-btn" onclick="openModal()">
+      <a href="proyecto_bitacora_home.html" class="back-btn">← Volver al Home</a>
+      <button class="add-trade-btn" onclick="openAddModal()">
         <span>+</span> Nuevo Trade
       </button>
     </div>
   </header>
 
-  <!-- DASHBOARD VIEW -->
-  <div id="dashboardView">
-    <div class="kpi-grid" id="kpiGrid"></div>
-    <div class="days-container">
-      <div class="section-title">Historial de Trading</div>
-      <div class="days-grid" id="daysGrid"></div>
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">En Estudio</div>
+      <div class="kpi-value" style="color: #ffc107;" id="kpiEstudio">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">En Ejecución</div>
+      <div class="kpi-value" style="color: #2196f3;" id="kpiEjecucion">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Finalizados</div>
+      <div class="kpi-value purple" id="kpiFinalizados">0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">PNL Total</div>
+      <div class="kpi-value" id="kpiPNL">$0</div>
     </div>
   </div>
 
-  <!-- STATISTICS VIEW -->
-  <div id="statsView" class="stats-panel">
-    <!-- Balance & Profile Charts -->
-    <div class="stats-grid">
-      <div class="stats-card">
-        <h3 class="stats-card-title">Balance de Trades</h3>
-        <div class="chart-container">
-          <canvas id="balanceChart"></canvas>
-        </div>
+  <!-- Filter Tabs -->
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all" onclick="filterTrades('all')">
+      <span>📊 Todos</span>
+      <span class="count" id="countAll">0</span>
+    </button>
+    <button class="filter-tab" data-filter="estudio" onclick="filterTrades('estudio')">
+      <span>📚 Estudio</span>
+      <span class="count" id="countEstudio">0</span>
+    </button>
+    <button class="filter-tab" data-filter="ejecucion" onclick="filterTrades('ejecucion')">
+      <span>⚡ Ejecución</span>
+      <span class="count" id="countEjecucion">0</span>
+    </button>
+    <button class="filter-tab" data-filter="finalizado" onclick="filterTrades('finalizado')">
+      <span>✅ Finalizados</span>
+      <span class="count" id="countFinalizado">0</span>
+    </button>
+  </div>
+
+  <!-- Days Container -->
+  <div class="days-container">
+    <div class="section-title">📅 Historial por Días</div>
+    <div class="days-grid" id="daysGrid">
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <p>No hay trades registrados todavía</p>
+        <button class="add-trade-btn" onclick="openAddModal()">
+          <span>+</span> Agregar Primer Trade
+        </button>
       </div>
-      <div class="stats-card">
-        <h3 class="stats-card-title">Perfil del Día</h3>
-        <div class="radar-container">
-          <canvas id="radarChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Performance Insights -->
-    <div class="insights-section">
-      <h3 class="stats-card-title">Análisis de Rendimiento</h3>
-      <div id="insightsContainer"></div>
-    </div>
-
-    <!-- Daily Statistics -->
-    <div class="stats-card" style="margin-bottom: 24px;">
-      <h3 class="stats-card-title">Estadísticas por Día</h3>
-      <div class="daily-stats-grid" id="dailyStatsGrid"></div>
-    </div>
-
-    <!-- Symbol Performance -->
-    <div class="stats-card">
-      <h3 class="stats-card-title">Rendimiento por Símbolo</h3>
-      <table class="symbol-performance-table" id="symbolPerformanceTable">
-        <thead>
-          <tr>
-            <th>Símbolo</th>
-            <th>Profit</th>
-            <th># Trades</th>
-            <th>Win/Loss</th>
-          </tr>
-        </thead>
-        <tbody id="symbolPerformanceBody">
-        </tbody>
-      </table>
     </div>
   </div>
 </div>
 
-<!-- Trade Modal -->
+<!-- Modal Add/Edit Trade -->
 <div class="modal-overlay" id="tradeModal">
   <div class="modal">
     <div class="modal-header">
-      <h2>Trade Details</h2>
-      <button class="modal-close" onclick="closeModal()">×</button>
+      <div class="modal-title" id="modalTitle">NUEVO TRADE</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
       <form id="tradeForm">
-        <!-- Datos básicos -->
+        
+        <!-- ESTADO Y DATOS BÁSICOS -->
         <div class="form-section">
-          <div class="form-section-title">📋 Datos Básicos</div>
-          <div class="form-row">
+          <div class="form-section-title">Estado y Datos Básicos</div>
+          <div class="form-grid-3">
             <div class="form-group">
-              <label>Estado</label>
-              <select id="inputEstado" required>
-                <option value="estudio">📚 Estudio</option>
-                <option value="ejecucion">⚡ Ejecución</option>
-                <option value="finalizado">✅ Finalizado</option>
+              <label class="form-label">Estado *</label>
+              <select class="form-select" id="inputEstado" required>
+                <option value="">Seleccionar...</option>
+                <option value="estudio">📚 ESTUDIO</option>
+                <option value="ejecucion">⚡ EJECUCIÓN</option>
+                <option value="finalizado">✅ FINALIZADO</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Fecha</label>
-              <input type="date" id="inputFecha" required>
+              <label class="form-label">Fecha *</label>
+              <input type="date" class="form-input" id="inputFecha" required>
             </div>
             <div class="form-group">
-              <label>Ticker</label>
-              <input type="text" id="inputTicker" placeholder="Ej: AAPL" required>
+              <label class="form-label">Ticker *</label>
+              <input type="text" class="form-input" id="inputTicker" placeholder="AAPL" required>
             </div>
           </div>
         </div>
 
-        <!-- Datos de entrada -->
+        <!-- DATOS DE ENTRADA -->
         <div class="form-section">
-          <div class="form-section-title">🎯 Datos de Entrada</div>
-          <div class="form-row">
+          <div class="form-section-title">Datos de Entrada</div>
+          <div class="form-grid-3">
             <div class="form-group">
-              <label>Dirección</label>
-              <select id="inputDireccion">
+              <label class="form-label">Dirección</label>
+              <select class="form-select" id="inputDireccion">
                 <option value="">Seleccionar...</option>
                 <option value="LONG">LONG</option>
                 <option value="SHORT">SHORT</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Setup de Entrada</label>
-              <input type="text" id="inputSetupEntrada" placeholder="Ej: Breakout">
+              <label class="form-label">Setup</label>
+              <select class="form-select" id="inputSetupEntrada">
+                <option value="">Seleccionar...</option>
+                <option value="SETUP A $800">SETUP A $800</option>
+                <option value="SETUP B $1000">SETUP B $1000</option>
+                <option value="SETUP C $1200">SETUP C $1200</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Inicio</label>
+              <select class="form-select" id="inputInicio">
+                <option value="">Seleccionar...</option>
+                <option value="PRE-MARKET">PRE-MARKET</option>
+                <option value="OPEN">OPEN</option>
+                <option value="MID-DAY">MID-DAY</option>
+                <option value="POST-MARKET">POST-MARKET</option>
+              </select>
             </div>
           </div>
-          <div class="form-row">
+          <div class="form-grid-3" style="margin-top: 16px;">
             <div class="form-group">
-              <label>Hora de Inicio</label>
-              <input type="time" id="inputInicio">
-            </div>
-            <div class="form-group">
-              <label>Hora de Cierre</label>
-              <input type="time" id="inputClosed">
-            </div>
-          </div>
-        </div>
-
-        <!-- Datos de salida -->
-        <div class="form-section">
-          <div class="form-section-title">💰 Datos de Salida</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>P&L ($)</label>
-              <input type="number" step="0.01" id="inputPNL" placeholder="Ej: 150.50">
-            </div>
-            <div class="form-group">
-              <label>R:R</label>
-              <input type="number" step="0.1" id="inputRR" placeholder="Ej: 2.5">
-            </div>
-          </div>
-        </div>
-
-        <!-- Setup y contexto -->
-        <div class="form-section">
-          <div class="form-section-title">🌐 Setup y Contexto</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Noticia</label>
-              <input type="text" id="inputNoticia" placeholder="Ej: Earnings beat">
-            </div>
-            <div class="form-group">
-              <label>País</label>
-              <input type="text" id="inputPais" placeholder="Ej: USA">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Catalizador</label>
-              <input type="text" id="inputCatalizador" placeholder="Ej: FDA approval">
-            </div>
-            <div class="form-group">
-              <label>Sector</label>
-              <input type="text" id="inputSector" placeholder="Ej: Tech">
+              <label class="form-label">Closed</label>
+              <select class="form-select" id="inputClosed">
+                <option value="">Seleccionar...</option>
+                <option value="PRE-MARKET">PRE-MARKET</option>
+                <option value="MID-DAY">MID-DAY</option>
+                <option value="CLOSE">CLOSE</option>
+                <option value="POST-MARKET">POST-MARKET</option>
+              </select>
             </div>
           </div>
         </div>
 
-        <!-- Fundamentales -->
+        <!-- DATOS DE SALIDA -->
         <div class="form-section">
-          <div class="form-section-title">📊 Fundamentales</div>
-          <div class="form-row">
+          <div class="form-section-title">Datos de Salida</div>
+          <div class="form-grid-3">
+            <!-- CAMPO OCULTO - Precio Salida
             <div class="form-group">
-              <label>Market Cap</label>
-              <input type="text" id="inputMarketCap" placeholder="Ej: 50M">
+              <label class="form-label">Precio Salida</label>
+              <input type="number" step="0.01" class="form-input" id="inputSalida" placeholder="151.00">
             </div>
+            -->
             <div class="form-group">
-              <label>Float</label>
-              <input type="text" id="inputFloat" placeholder="Ej: 10M">
+              <label class="form-label">PNL ($)</label>
+              <input type="number" step="0.01" class="form-input" id="inputPNL" placeholder="50.00">
             </div>
+            <!-- CAMPO OCULTO - Fees
             <div class="form-group">
-              <label>Insiders %</label>
-              <input type="text" id="inputInsiders" placeholder="Ej: 15%">
+              <label class="form-label">Fees ($)</label>
+              <input type="number" step="0.01" class="form-input" id="inputFees" placeholder="2.50">
+            </div>
+            -->
+          </div>
+          <div class="form-grid-2" style="margin-top: 16px;">
+            <!-- CAMPO OCULTO - Hora Salida
+            <div class="form-group">
+              <label class="form-label">Hora Salida</label>
+              <input type="time" class="form-input" id="inputHoraSalida">
+            </div>
+            -->
+            <div class="form-group">
+              <label class="form-label">R (Risk/Reward)</label>
+              <input type="number" step="0.01" class="form-input" id="inputRR" placeholder="2.5">
             </div>
           </div>
-          <div class="form-row">
+        </div>
+
+        <!-- SETUP Y CONTEXTO -->
+        <div class="form-section">
+          <div class="form-section-title">Setup y Contexto</div>
+          <div class="form-grid-3">
             <div class="form-group">
-              <label>Inst. Ownership</label>
-              <input type="text" id="inputInstOwn" placeholder="Ej: 20%">
+              <label class="form-label">Noticia</label>
+              <select class="form-select" id="inputNoticia">
+                <option value="">Seleccionar...</option>
+                <option value="SI">SÍ</option>
+                <option value="NO">NO</option>
+              </select>
             </div>
             <div class="form-group">
-              <label>Overhead</label>
-              <input type="text" id="inputOverhead" placeholder="Ej: Low">
+              <label class="form-label">País</label>
+              <select class="form-select" id="inputPais">
+                <option value="">Seleccionar...</option>
+                <option value="USA">USA</option>
+                <option value="China">China</option>
+                <option value="Israel">Israel</option>
+                <option value="UK">UK</option>
+                <option value="Canada">Canada</option>
+                <option value="Otro">Otro</option>
+              </select>
             </div>
             <div class="form-group">
-              <label>Cash Need</label>
-              <input type="text" id="inputCashNeed" placeholder="Ej: High">
+              <label class="form-label">Catalizador</label>
+              <input type="text" class="form-input" id="inputCatalizador" placeholder="Earnings, FDA, Merger...">
             </div>
           </div>
-          
+          <div class="form-grid-2" style="margin-top: 16px;">
+            <div class="form-group">
+              <label class="form-label">Sector</label>
+              <input type="text" class="form-input" id="inputSector" placeholder="Tech, Biotech, Energy...">
+            </div>
+          </div>
+        </div>
+
+        <!-- FUNDAMENTALES -->
+        <div class="form-section">
+          <div class="form-section-title">Fundamentales</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">M.Cap</label>
+              <select class="form-select" id="inputMarketCap">
+                <option value="">Seleccionar...</option>
+                <option value="Nano Cap (<$50M)">Nano Cap (<$50M)</option>
+                <option value="Micro Cap ($50M-$300M)">Micro Cap ($50M-$300M)</option>
+                <option value="Small Cap ($300M-$2B)">Small Cap ($300M-$2B)</option>
+                <option value="Mid Cap ($2B-$10B)">Mid Cap ($2B-$10B)</option>
+                <option value="Large Cap (>$10B)">Large Cap (>$10B)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Float</label>
+              <select class="form-select" id="inputFloat">
+                <option value="">Seleccionar...</option>
+                <option value="Ultra Low Float (<5M)">Ultra Low Float (<5M)</option>
+                <option value="Low Float (5M-10M)">Low Float (5M-10M)</option>
+                <option value="Medium Low Float (10M-20M)">Medium Low Float (10M-20M)</option>
+                <option value="Medium Float (20M-50M)">Medium Float (20M-50M)</option>
+                <option value="High Float Small Cap (50M-100M)">High Float Small Cap (50M-100M)</option>
+                <option value="Large Float (>100M)">Large Float (>100M)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Insiders</label>
+              <select class="form-select" id="inputInsiders">
+                <option value="">Seleccionar...</option>
+                <option value="0%-25%">0%-25%</option>
+                <option value="25%-50%">25%-50%</option>
+                <option value=">50%">>50%</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-3" style="margin-top: 16px;">
+            <div class="form-group">
+              <label class="form-label">Inst. Own</label>
+              <select class="form-select" id="inputInstOwn">
+                <option value="">Seleccionar...</option>
+                <option value="0%-30%">0%-30%</option>
+                <option value="30%-60%">30%-60%</option>
+                <option value=">60%">>60%</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Overhead</label>
+              <select class="form-select" id="inputOverhead">
+                <option value="">Seleccionar...</option>
+                <option value="VOL. HISTORICO">VOL. HISTORICO</option>
+                <option value="RESISTENCIA">RESISTENCIA</option>
+                <option value="SIN OVERHEAD">SIN OVERHEAD</option>
+                <option value="DIVERGENCIA">DIVERGENCIA</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cash Need</label>
+              <select class="form-select" id="inputCashNeed">
+                <option value="">Seleccionar...</option>
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="• CASH POSITIVE">• CASH POSITIVE</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-3" style="margin-top: 16px;">
+            <div class="form-group" style="grid-column: span 3;">
+              <label class="form-label">Dilución</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionNoTiene" value="• NO TIENE DILUCIÓN">
+                  <span>• NO TIENE DILUCIÓN</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionS1" value="S-1 OFFERING">
+                  <span>S-1 OFFERING</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionWarrants" value="WARRANTS">
+                  <span>WARRANTS</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionConvertibleNote" value="CONVERTIBLE NOTE">
+                  <span>CONVERTIBLE NOTE</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionConvertiblePreferred" value="CONVERTIBLE PREFERRED">
+                  <span>CONVERTIBLE PREFERRED</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionEquityLine" value="EQUITY LINE">
+                  <span>EQUITY LINE</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionATM" value="ATM">
+                  <span>ATM</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dilucionShelf" value="SHELF">
+                  <span>SHELF</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GESTIÓN Y PSICOLOGÍA -->
+        <div class="form-section">
+          <div class="form-section-title">Gestión y Psicología</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Convicción (1-5)</label>
+              <select class="form-select" id="inputConviccion">
+                <option value="">Seleccionar...</option>
+                <option value="1">1 - Muy Baja</option>
+                <option value="2">2 - Baja</option>
+                <option value="3">3 - Media</option>
+                <option value="4">4 - Alta</option>
+                <option value="5">5 - Muy Alta</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ejecución (1-5)</label>
+              <select class="form-select" id="inputEjecucionCalidad">
+                <option value="">Seleccionar...</option>
+                <option value="1">1 - Muy Mala</option>
+                <option value="2">2 - Mala</option>
+                <option value="3">3 - Aceptable</option>
+                <option value="4">4 - Buena</option>
+                <option value="5">5 - Excelente</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Emociones</label>
+              <select class="form-select" id="inputEmociones">
+                <option value="">Seleccionar...</option>
+                <option value="Neutral">Neutral</option>
+                <option value="Confiado">Confiado</option>
+                <option value="FOMO">FOMO</option>
+                <option value="Miedo">Miedo</option>
+                <option value="Revenge">Revenge Trading</option>
+                <option value="Impaciente">Impaciente</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ERRORES COMUNES (CHECKBOXES) -->
+        <div class="form-section">
+          <div class="form-section-title">Errores Cometidos</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorOversize" value="oversize">
+              <span>Oversize (tamaño excesivo)</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorFOMO" value="fomo">
+              <span>FOMO (entrada tardía)</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorNoStop" value="nostop">
+              <span>No respetó stop loss</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorOvertrading" value="overtrading">
+              <span>Overtrading</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorRevenge" value="revenge">
+              <span>Revenge trading</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorProfitEarly" value="profitearly">
+              <span>Salida anticipada</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="errorNoAnalisis" value="noanalisis">
+              <span>No analicé el Stock</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- NOTAS -->
+        <div class="form-section">
+          <div class="form-section-title">Notas y Observaciones</div>
           <div class="form-group">
-            <label>Dilución</label>
-            <div class="checkbox-group">
-              <div class="checkbox-item">
-                <input type="checkbox" id="dilucionNoTiene">
-                <label for="dilucionNoTiene">• NO TIENE DILUCIÓN</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="dilucionS1">
-                <label for="dilucionS1">S-1 OFFERING</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="dilucionWarrants">
-                <label for="dilucionWarrants">WARRANTS</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="dilucionConvertibleNote">
-                <label for="dilucionConvertibleNote">CONVERTIBLE NOTE</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="dilucionConvertiblePreferred">
-                <label for="dilucionConvertiblePreferred">CONVERTIBLE PREFERRED</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="dilucionEquityLine">
-                <label for="dilucionEquityLine">EQUITY LINE</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="dilucionATM">
-                <label for="dilucionATM">ATM</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="dilucionShelf">
-                <label for="dilucionShelf">SHELF</label>
-              </div>
-            </div>
+            <label class="form-label">Notas</label>
+            <textarea class="form-textarea" id="inputNotas" placeholder="ESTUDIO: Setup identificado, catalizadores, plan de entrada...&#10;EJECUCIÓN: Cómo se desarrolla el trade, ajustes, gestión...&#10;FINALIZADO: Resultado, qué salió bien/mal, aprendizajes..." style="min-height: 120px;"></textarea>
           </div>
         </div>
 
-        <!-- Gestión y psicología -->
+        <!-- GRÁFICO DEL TRADE -->
         <div class="form-section">
-          <div class="form-section-title">🧠 Gestión y Psicología</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Convicción (1-10)</label>
-              <input type="number" min="1" max="10" id="inputConviccion" placeholder="1-10">
-            </div>
-            <div class="form-group">
-              <label>Calidad de Ejecución (1-10)</label>
-              <input type="number" min="1" max="10" id="inputEjecucionCalidad" placeholder="1-10">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Emociones</label>
-            <textarea id="inputEmociones" placeholder="¿Cómo te sentiste durante el trade?"></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label>Errores Cometidos</label>
-            <div class="checkbox-group">
-              <div class="checkbox-item">
-                <input type="checkbox" id="errorOversize">
-                <label for="errorOversize">Oversize</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="errorFOMO">
-                <label for="errorFOMO">FOMO</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="errorNoStop">
-                <label for="errorNoStop">Sin Stop Loss</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="errorOvertrading">
-                <label for="errorOvertrading">Overtrading</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="errorRevenge">
-                <label for="errorRevenge">Revenge Trading</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="errorProfitEarly">
-                <label for="errorProfitEarly">Salida Anticipada</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="errorNoAnalisis">
-                <label for="errorNoAnalisis">Sin Análisis</label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Notas -->
-        <div class="form-section">
-          <div class="form-section-title">📝 Notas</div>
-          <div class="form-group">
-            <label>Observaciones adicionales</label>
-            <textarea id="inputNotas" placeholder="Escribe aquí tus notas sobre el trade..."></textarea>
-          </div>
-        </div>
-
-        <!-- Chart Upload -->
-        <div class="chart-upload-section">
-          <div class="form-section-title">📈 Gráfico del Trade</div>
-          <input type="file" id="chartInput" accept="image/*">
-          <div class="chart-upload-area" id="chartUploadArea" onclick="document.getElementById('chartInput').click()">
+          <div class="form-section-title">Gráfico del Trade</div>
+          <div class="chart-upload-area" id="chartUploadArea">
             <div class="chart-placeholder" id="chartPlaceholder">
-              <div class="chart-placeholder-icon">📊</div>
-              <div class="chart-placeholder-text">
-                Click para subir imagen o arrastra aquí
+              <div style="text-align: center; padding: 40px 20px;">
+                <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;">📊</div>
+                <p style="color: var(--muted2); margin-bottom: 16px;">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                <button type="button" class="btn" style="background: var(--bg3); color: var(--text); border: 1px solid var(--border);" onclick="document.getElementById('chartInput').click()">
+                  Seleccionar Imagen
+                </button>
+                <input type="file" id="chartInput" accept="image/*" style="display: none;">
               </div>
             </div>
-            <div class="chart-preview" id="chartPreview">
-              <img id="chartImage" src="" alt="Chart">
-              <div class="chart-actions">
-                <button type="button" class="chart-btn" onclick="zoomChart(); event.stopPropagation();">🔍 Zoom</button>
-                <button type="button" class="chart-btn" onclick="removeChart(); event.stopPropagation();">🗑 Eliminar</button>
+            <div class="chart-preview" id="chartPreview" style="display: none;">
+              <img id="chartImage" src="" alt="Chart" style="width: 100%; height: auto; display: block; border-radius: 8px;">
+              <div class="chart-actions" style="margin-top: 12px; display: flex; gap: 12px; justify-content: center;">
+                <button type="button" class="btn" style="background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 8px 16px;" onclick="zoomChart()">
+                  🔍 Ampliar Gráfico
+                </button>
+                <button type="button" class="btn" style="background: var(--red-dim); color: var(--red); border: 1px solid var(--red); padding: 8px 16px;" onclick="removeChart()">
+                  ✕ Eliminar
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Form Actions -->
-        <div class="form-actions">
-          <button type="button" class="btn btn-danger" id="btnDelete" onclick="deleteTrade()" style="display: none;">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-delete" id="btnDelete" onclick="deleteTrade()" style="display:none;">
             🗑 Eliminar
           </button>
-          <div style="display: flex; gap: 12px; margin-left: auto;">
-            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar Trade</button>
-          </div>
+          <button type="button" class="btn btn-cancel" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-save">Guardar Trade</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Chart Zoom Overlay -->
+<!-- Modal Zoom Gráfico -->
 <div class="chart-zoom-overlay" id="chartZoomOverlay" onclick="closeChartZoom()">
-  <button class="chart-zoom-close">✕ Cerrar</button>
-  <div class="chart-zoom-content">
+  <div class="chart-zoom-content" onclick="event.stopPropagation()">
+    <button class="chart-zoom-close" onclick="closeChartZoom()">✕</button>
     <img id="chartZoomImage" src="" alt="Chart Zoom">
   </div>
 </div>
 
 <script>
-// ── FIREBASE CONFIG ────────────────────────────────────────────────────────
+// Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDIO65sv8I65TfQohZoLfmfECSmNaL9yB0",
-  authDomain: "trading-discrecional.firebaseapp.com",
-  projectId: "trading-discrecional",
-  storageBucket: "trading-discrecional.firebasestorage.app",
-  messagingSenderId: "711814161641",
-  appId: "1:711814161641:web:99e5a5c5dcaa68bd1ba393"
+  apiKey: "AIzaSyDVR0xHEt5AIUPANlnfNok3dFqBVQb7jT0",
+  authDomain: "proyecto-bitacora-fead3.firebaseapp.com",
+  projectId: "proyecto-bitacora-fead3",
+  storageBucket: "proyecto-bitacora-fead3.firebasestorage.app",
+  messagingSenderId: "907354671911",
+  appId: "1:907354671911:web:68000bcbaa989d25db7702"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ── GLOBAL VARIABLES ───────────────────────────────────────────────────────
 let allTrades = [];
 let editingTradeId = null;
-let chartImageData = null;
-let balanceChartInstance = null;
-let radarChartInstance = null;
+let currentFilter = 'all'; // Filtro activo
+let chartImageData = null; // Para almacenar la imagen del gráfico
 
-// ── INIT ───────────────────────────────────────────────────────────────────
-async function init() {
-  await loadTrades();
-  renderDashboard();
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  loadTrades();
+  setDefaultDate();
   initChartUpload();
-  
-  // Set default date to today
+});
+
+function setDefaultDate() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('inputFecha').value = today;
 }
 
-init();
-
-// ── FIREBASE FUNCTIONS ─────────────────────────────────────────────────────
+// Load trades from Firebase
 async function loadTrades() {
   try {
-    const snapshot = await db.collection('trades').orderBy('fecha', 'desc').get();
-    allTrades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const doc = await db.collection('trading_discrecional').doc('trades_data').get();
+    if (doc.exists && doc.data().trades) {
+      allTrades = doc.data().trades;
+      renderDashboard();
+    } else {
+      allTrades = [];
+      renderDashboard();
+    }
   } catch (error) {
     console.error('Error loading trades:', error);
-    allTrades = [];
   }
 }
 
+// Save trades to Firebase
 async function saveTrades() {
   try {
-    // Clear existing trades
-    const snapshot = await db.collection('trades').get();
-    const batch = db.batch();
-    snapshot.docs.forEach(doc => batch.delete(doc.ref));
-    await batch.commit();
-    
-    // Save all trades
-    const saveBatch = db.batch();
-    allTrades.forEach(trade => {
-      const ref = db.collection('trades').doc();
-      saveBatch.set(ref, trade);
+    await db.collection('trading_discrecional').doc('trades_data').set({
+      trades: allTrades,
+      lastUpdate: new Date().toISOString()
     });
-    await saveBatch.commit();
-    
-    await loadTrades();
   } catch (error) {
     console.error('Error saving trades:', error);
+    alert('Error al guardar. Por favor intenta de nuevo.');
   }
 }
 
-// ── RENDER FUNCTIONS ───────────────────────────────────────────────────────
+// Render dashboard
 function renderDashboard() {
-  renderKPIs();
+  updateKPIs();
   renderDays();
 }
 
-function renderKPIs() {
-  const finalizados = allTrades.filter(t => t.estado === 'finalizado');
-  const totalPNL = finalizados.reduce((sum, t) => sum + (t.pnl || 0), 0);
-  const wins = finalizados.filter(t => t.pnl > 0).length;
-  const losses = finalizados.filter(t => t.pnl < 0).length;
-  const winRate = finalizados.length > 0 ? ((wins / finalizados.length) * 100).toFixed(1) : 0;
-  const avgRR = finalizados.length > 0 
-    ? (finalizados.reduce((sum, t) => sum + (t.rr || 0), 0) / finalizados.length).toFixed(2)
-    : 0;
-
-  document.getElementById('kpiGrid').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-label">P&L Total</div>
-      <div class="kpi-value ${totalPNL >= 0 ? 'green' : 'red'}">${formatPNL(totalPNL)}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Win Rate</div>
-      <div class="kpi-value purple">${winRate}%</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Trades</div>
-      <div class="kpi-value">${finalizados.length}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Avg R:R</div>
-      <div class="kpi-value">${avgRR}</div>
-    </div>
-  `;
-}
-
-function renderDays() {
-  const dayGroups = {};
-  
-  allTrades.forEach(trade => {
-    if (!dayGroups[trade.fecha]) {
-      dayGroups[trade.fecha] = [];
-    }
-    dayGroups[trade.fecha].push(trade);
-  });
-
-  const sortedDates = Object.keys(dayGroups).sort((a, b) => b.localeCompare(a));
-  
-  const html = sortedDates.map(date => {
-    const trades = dayGroups[date];
-    const finalizados = trades.filter(t => t.estado === 'finalizado');
-    const dayPNL = finalizados.reduce((sum, t) => sum + (t.pnl || 0), 0);
-    
-    const tradesHtml = trades.map((trade, idx) => {
-      const pnlClass = trade.pnl > 0 ? 'positive' : trade.pnl < 0 ? 'negative' : '';
-      return `
-        <div class="trade-row" onclick="editTrade(${allTrades.indexOf(trade)})">
-          <div>
-            <span class="trade-estado ${trade.estado}">${
-              trade.estado === 'estudio' ? '📚' : 
-              trade.estado === 'ejecucion' ? '⚡' : '✅'
-            }</span>
-          </div>
-          <div>
-            <div class="trade-ticker">${trade.ticker}</div>
-            ${trade.setupEntrada ? `<div class="trade-setup">${trade.setupEntrada}</div>` : ''}
-          </div>
-          <div class="trade-direction ${trade.direccion || ''}">${trade.direccion || '-'}</div>
-          <div class="trade-pnl ${pnlClass}">${trade.pnl != null ? formatPNL(trade.pnl) : '-'}</div>
-          <div class="trade-rr">${trade.rr != null ? 'R:R ' + trade.rr : '-'}</div>
-          <div class="trade-time">${trade.inicio || '-'}</div>
-          <div class="trade-time">${trade.closed || '-'}</div>
-        </div>
-      `;
-    }).join('');
-
-    return `
-      <div class="day-card">
-        <div class="day-header" onclick="toggleDay(this)">
-          <div class="day-info">
-            <h3>${formatDate(date)}</h3>
-            <p>${trades.length} trade${trades.length !== 1 ? 's' : ''}</p>
-          </div>
-          <div class="day-stats">
-            <div class="stat-item">
-              <div class="stat-label">P&L</div>
-              <div class="stat-value ${dayPNL >= 0 ? 'green' : 'red'}">${formatPNL(dayPNL)}</div>
-            </div>
-            <div class="expand-icon">▼</div>
-          </div>
-        </div>
-        <div class="trades-list">
-          ${tradesHtml}
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  document.getElementById('daysGrid').innerHTML = html;
-}
-
-function toggleDay(header) {
-  const card = header.closest('.day-card');
-  card.classList.toggle('expanded');
-}
-
-// ── STATISTICS FUNCTIONS ───────────────────────────────────────────────────
-function toggleStatsPanel() {
-  const dashboardView = document.getElementById('dashboardView');
-  const statsView = document.getElementById('statsView');
-  const statsBtn = document.querySelector('.stats-btn');
-  
-  if (statsView.classList.contains('active')) {
-    statsView.classList.remove('active');
-    dashboardView.style.display = 'block';
-    statsBtn.textContent = '📊 Estadísticas';
-  } else {
-    dashboardView.style.display = 'none';
-    statsView.classList.add('active');
-    statsBtn.textContent = '← Dashboard';
-    renderStatistics();
-  }
-}
-
-function renderStatistics() {
-  renderBalanceChart();
-  renderRadarChart();
-  renderInsights();
-  renderDailyStats();
-  renderSymbolPerformance();
-}
-
-function renderBalanceChart() {
-  const ctx = document.getElementById('balanceChart');
-  if (!ctx) return;
-  
-  const finalizados = allTrades
+// Update KPIs
+function updateKPIs() {
+  const estudio = allTrades.filter(t => t.estado === 'estudio').length;
+  const ejecucion = allTrades.filter(t => t.estado === 'ejecucion').length;
+  const finalizado = allTrades.filter(t => t.estado === 'finalizado').length;
+  const totalPNL = allTrades
     .filter(t => t.estado === 'finalizado' && t.pnl != null)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+    .reduce((sum, t) => sum + (t.pnl || 0), 0);
+
+  document.getElementById('kpiEstudio').textContent = estudio;
+  document.getElementById('kpiEjecucion').textContent = ejecucion;
+  document.getElementById('kpiFinalizados').textContent = finalizado;
   
-  let balance = 0;
-  const data = finalizados.map((trade, idx) => {
-    balance += trade.pnl;
-    return { x: idx + 1, y: balance };
-  });
-  
-  if (balanceChartInstance) {
-    balanceChartInstance.destroy();
-  }
-  
-  balanceChartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      datasets: [{
-        label: 'Balance Acumulado',
-        data: data,
-        borderColor: '#b16aff',
-        backgroundColor: 'rgba(177, 106, 255, 0.1)',
-        fill: true,
-        tension: 0.4,
-        pointRadius: 3,
-        pointHoverRadius: 5
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#181c24',
-          borderColor: '#1e2530',
-          borderWidth: 1,
-          titleColor: '#e8eaf0',
-          bodyColor: '#7a8599',
-          callbacks: {
-            label: (context) => `Balance: $${context.parsed.y.toFixed(2)}`
-          }
-        }
-      },
-      scales: {
-        x: {
-          title: { display: true, text: 'Trades', color: '#7a8599' },
-          grid: { color: '#1e2530' },
-          ticks: { color: '#7a8599' }
-        },
-        y: {
-          title: { display: true, text: 'P&L ($)', color: '#7a8599' },
-          grid: { color: '#1e2530' },
-          ticks: { color: '#7a8599' }
-        }
-      }
-    }
-  });
+  const pnlEl = document.getElementById('kpiPNL');
+  pnlEl.textContent = formatPNL(totalPNL);
+  pnlEl.className = 'kpi-value ' + (totalPNL >= 0 ? 'green' : 'red');
+
+  // Update filter counts
+  document.getElementById('countAll').textContent = allTrades.length;
+  document.getElementById('countEstudio').textContent = estudio;
+  document.getElementById('countEjecucion').textContent = ejecucion;
+  document.getElementById('countFinalizado').textContent = finalizado;
 }
 
-function renderRadarChart() {
-  const ctx = document.getElementById('radarChart');
-  if (!ctx) return;
+// Filter trades by status
+function filterTrades(filter) {
+  currentFilter = filter;
   
-  const finalizados = allTrades.filter(t => t.estado === 'finalizado');
-  const wins = finalizados.filter(t => t.pnl > 0).length;
-  const winRate = finalizados.length > 0 ? (wins / finalizados.length) * 100 : 0;
-  
-  const avgConviccion = finalizados.length > 0
-    ? (finalizados.reduce((sum, t) => sum + (parseInt(t.conviccion) || 0), 0) / finalizados.length) * 10
-    : 0;
-  
-  const avgEjecucion = finalizados.length > 0
-    ? (finalizados.reduce((sum, t) => sum + (parseInt(t.ejecucionCalidad) || 0), 0) / finalizados.length) * 10
-    : 0;
-  
-  const avgRR = finalizados.length > 0
-    ? (finalizados.reduce((sum, t) => sum + (t.rr || 0), 0) / finalizados.length) * 20
-    : 0;
-  
-  const tradeCount = (finalizados.length / 50) * 100; // Normalize to 100
-  
-  if (radarChartInstance) {
-    radarChartInstance.destroy();
-  }
-  
-  radarChartInstance = new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: ['Win Rate', 'Avg RR', 'Trades', 'Ejecución', 'Convicción'],
-      datasets: [{
-        label: 'Este Periodo',
-        data: [winRate, Math.min(avgRR, 100), Math.min(tradeCount, 100), avgEjecucion, avgConviccion],
-        borderColor: '#448aff',
-        backgroundColor: 'rgba(68, 138, 255, 0.2)',
-        pointBackgroundColor: '#448aff',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: '#448aff'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        r: {
-          beginAtZero: true,
-          max: 100,
-          ticks: { display: false },
-          grid: { color: '#1e2530' },
-          pointLabels: { color: '#7a8599', font: { size: 11 } }
-        }
-      }
-    }
+  // Update active tab
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.classList.remove('active');
   });
+  document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+  
+  renderDays();
 }
 
-function renderInsights() {
-  const finalizados = allTrades.filter(t => t.estado === 'finalizado');
+// Render days
+function renderDays() {
+  const daysGrid = document.getElementById('daysGrid');
   
-  if (finalizados.length === 0) {
-    document.getElementById('insightsContainer').innerHTML = `
-      <div class="insight-item">
-        <div class="insight-title">Sin datos suficientes</div>
-        <div class="insight-text">Necesitas al menos un trade finalizado para generar insights.</div>
+  // Filter trades based on current filter
+  let filteredTrades = allTrades;
+  if (currentFilter !== 'all') {
+    filteredTrades = allTrades.filter(t => t.estado === currentFilter);
+  }
+  
+  if (filteredTrades.length === 0) {
+    const emptyMsg = currentFilter === 'all' 
+      ? 'No hay trades registrados todavía'
+      : `No hay trades en estado "${getEstadoLabel(currentFilter)}"`;
+    daysGrid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <p>${emptyMsg}</p>
+        <button class="add-trade-btn" onclick="openAddModal()">
+          <span>+</span> Agregar Primer Trade
+        </button>
       </div>
     `;
     return;
   }
-  
-  const wins = finalizados.filter(t => t.pnl > 0);
-  const losses = finalizados.filter(t => t.pnl < 0);
-  const winRate = ((wins.length / finalizados.length) * 100).toFixed(1);
-  
-  // Best setup analysis
-  const setupGroups = {};
-  finalizados.forEach(t => {
-    const setup = t.setupEntrada || 'Sin setup';
-    if (!setupGroups[setup]) setupGroups[setup] = { wins: 0, total: 0, pnl: 0 };
-    setupGroups[setup].total++;
-    setupGroups[setup].pnl += t.pnl || 0;
-    if (t.pnl > 0) setupGroups[setup].wins++;
-  });
-  
-  const bestSetup = Object.entries(setupGroups)
-    .sort((a, b) => (b[1].wins / b[1].total) - (a[1].wins / a[1].total))[0];
-  
-  // Error analysis
-  const errorCounts = {};
-  finalizados.forEach(t => {
-    (t.errores || []).forEach(err => {
-      errorCounts[err] = (errorCounts[err] || 0) + 1;
-    });
-  });
-  
-  const mostCommonError = Object.entries(errorCounts)
-    .sort((a, b) => b[1] - a[1])[0];
-  
-  const errorNames = {
-    'oversize': 'Oversize',
-    'fomo': 'FOMO',
-    'nostop': 'Sin Stop Loss',
-    'overtrading': 'Overtrading',
-    'revenge': 'Revenge Trading',
-    'profitearly': 'Salida Anticipada',
-    'noanalisis': 'Sin Análisis'
-  };
-  
-  let insights = `
-    <div class="insight-item">
-      <div class="insight-title">📊 Rendimiento General</div>
-      <div class="insight-text">
-        Has completado <span class="insight-highlight">${finalizados.length} trades</span> 
-        con un win rate de <span class="insight-highlight">${winRate}%</span>. 
-        ${wins.length > losses.length 
-          ? 'Estás siendo consistente con más operaciones ganadoras que perdedoras.' 
-          : 'Enfócate en mejorar tu selección de trades para aumentar tu tasa de éxito.'}
-      </div>
-    </div>
-  `;
-  
-  if (bestSetup) {
-    const setupWinRate = ((bestSetup[1].wins / bestSetup[1].total) * 100).toFixed(1);
-    insights += `
-      <div class="insight-item">
-        <div class="insight-title">🎯 Mejor Setup</div>
-        <div class="insight-text">
-          Tu setup más exitoso es <span class="insight-highlight">${bestSetup[0]}</span> 
-          con un win rate de <span class="insight-highlight">${setupWinRate}%</span> 
-          en ${bestSetup[1].total} trade${bestSetup[1].total !== 1 ? 's' : ''}.
-        </div>
-      </div>
-    `;
-  }
-  
-  if (mostCommonError) {
-    insights += `
-      <div class="insight-item">
-        <div class="insight-title">⚠️ Error Más Común</div>
-        <div class="insight-text">
-          Tu error más frecuente es <span class="insight-highlight">${errorNames[mostCommonError[0]] || mostCommonError[0]}</span>, 
-          registrado en ${mostCommonError[1]} trade${mostCommonError[1] !== 1 ? 's' : ''}. 
-          Trabaja en reducir este patrón para mejorar tu rendimiento.
-        </div>
-      </div>
-    `;
-  }
-  
-  document.getElementById('insightsContainer').innerHTML = insights;
-}
 
-function renderDailyStats() {
-  const dayGroups = {};
-  
-  allTrades.forEach(trade => {
-    if (!dayGroups[trade.fecha]) {
-      dayGroups[trade.fecha] = [];
+  // Group by date
+  const tradesByDay = {};
+  filteredTrades.forEach(trade => {
+    if (!tradesByDay[trade.fecha]) {
+      tradesByDay[trade.fecha] = [];
     }
-    dayGroups[trade.fecha].push(trade);
+    tradesByDay[trade.fecha].push(trade);
   });
-  
-  const sortedDates = Object.keys(dayGroups).sort((a, b) => b.localeCompare(a));
-  
-  const html = sortedDates.map(date => {
-    const trades = dayGroups[date];
-    const finalizados = trades.filter(t => t.estado === 'finalizado');
+
+  // Sort dates descending
+  const sortedDates = Object.keys(tradesByDay).sort((a, b) => b.localeCompare(a));
+
+  let html = '';
+  sortedDates.forEach(fecha => {
+    const dayTrades = tradesByDay[fecha];
+    const finalizados = dayTrades.filter(t => t.estado === 'finalizado');
     const dayPNL = finalizados.reduce((sum, t) => sum + (t.pnl || 0), 0);
-    const wins = finalizados.filter(t => t.pnl > 0).length;
-    const winRate = finalizados.length > 0 ? ((wins / finalizados.length) * 100).toFixed(0) : 0;
-    
-    return `
-      <div class="daily-stat-card">
-        <div class="daily-stat-info">
-          <h4>${formatDate(date)}</h4>
-          <p>${trades.length} trade${trades.length !== 1 ? 's' : ''} • ${finalizados.length} finalizado${finalizados.length !== 1 ? 's' : ''}</p>
+    const dayWins = finalizados.filter(t => t.pnl > 0).length;
+    const dayWR = finalizados.length > 0 ? Math.round((dayWins / finalizados.length) * 100) : 0;
+
+    html += `
+      <div class="day-card">
+        <div class="day-header" onclick="toggleDay(this)">
+          <div class="day-info">
+            <h3>${formatDate(fecha)}</h3>
+            <p>${dayTrades.length} trade${dayTrades.length > 1 ? 's' : ''}</p>
+          </div>
+          <div class="day-stats">
+            <div class="day-stat">
+              <div class="day-stat-label">PNL</div>
+              <div class="day-stat-val" style="color: ${dayPNL >= 0 ? 'var(--green)' : 'var(--red)'}">${finalizados.length > 0 ? formatPNL(dayPNL) : '-'}</div>
+            </div>
+            <div class="day-stat">
+              <div class="day-stat-label">Win Rate</div>
+              <div class="day-stat-val" style="color: var(--purple)">${finalizados.length > 0 ? dayWR + '%' : '-'}</div>
+            </div>
+            <div class="expand-icon">▼</div>
+          </div>
         </div>
-        <div class="daily-stat-values">
-          <div class="daily-stat-item">
-            <div class="daily-stat-label">Win Rate</div>
-            <div class="daily-stat-value" style="color: var(--purple)">${winRate}%</div>
-          </div>
-          <div class="daily-stat-item">
-            <div class="daily-stat-label">P&L</div>
-            <div class="daily-stat-value ${dayPNL >= 0 ? 'green' : 'red'}" style="color: ${dayPNL >= 0 ? 'var(--green)' : 'var(--red)'}">${formatPNL(dayPNL)}</div>
-          </div>
+        <div class="day-trades">
+          <table class="trades-table">
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Ticker</th>
+                <th>Dir</th>
+                <th>Noticia</th>
+                <th>Float</th>
+                <th>País</th>
+                <th>Sector</th>
+                <th>Insiders</th>
+                <th>Overhead</th>
+                <th>Dilución</th>
+                <th>PNL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${dayTrades.map((trade, idx) => {
+                const globalIdx = allTrades.findIndex(t => t === trade);
+                const dilucionText = trade.dilucion && trade.dilucion.length > 0 ? trade.dilucion.join(', ') : '-';
+                return `
+                <tr onclick="editTrade(${globalIdx})">
+                  <td>${getEstadoBadge(trade.estado)}</td>
+                  <td class="td-mono">${trade.ticker}</td>
+                  <td>${trade.direccion ? `<span class="badge ${trade.direccion === 'LONG' ? 'badge-long' : 'badge-short'}">${trade.direccion}</span>` : '-'}</td>
+                  <td class="td-mono">${trade.noticia || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px;">${trade.float || '-'}</td>
+                  <td class="td-mono">${trade.pais || '-'}</td>
+                  <td class="td-mono">${trade.sector || '-'}</td>
+                  <td class="td-mono">${trade.insiders || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px;">${dilucionText}</td>
+                  <td class="td-mono">${trade.pnl != null ? `<span class="badge ${trade.pnl >= 0 ? 'badge-green' : 'badge-red'}">${formatPNL(trade.pnl)}</span>` : '-'}</td>
+                </tr>
+              `}).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
     `;
-  }).join('');
-  
-  document.getElementById('dailyStatsGrid').innerHTML = html || '<p style="color: var(--muted2); text-align: center;">No hay datos disponibles</p>';
-}
-
-function renderSymbolPerformance() {
-  const symbolGroups = {};
-  
-  allTrades.filter(t => t.estado === 'finalizado').forEach(trade => {
-    const ticker = trade.ticker || 'Unknown';
-    if (!symbolGroups[ticker]) {
-      symbolGroups[ticker] = {
-        profit: 0,
-        trades: 0,
-        wins: 0,
-        direction: trade.direccion
-      };
-    }
-    symbolGroups[ticker].profit += trade.pnl || 0;
-    symbolGroups[ticker].trades++;
-    if (trade.pnl > 0) symbolGroups[ticker].wins++;
   });
-  
-  const sortedSymbols = Object.entries(symbolGroups)
-    .sort((a, b) => b[1].profit - a[1].profit);
-  
-  const html = sortedSymbols.map(([ticker, data]) => {
-    const winRate = ((data.wins / data.trades) * 100).toFixed(0);
-    let badgeClass = 'win-100';
-    if (winRate < 100) badgeClass = 'win-high';
-    if (winRate < 70) badgeClass = 'win-mid';
-    if (winRate < 50) badgeClass = 'win-low';
-    
-    return `
-      <tr>
-        <td>
-          <span class="ticker-badge ${data.direction ? data.direction.toLowerCase() : ''}">${ticker}</span>
-        </td>
-        <td style="color: ${data.profit >= 0 ? 'var(--green)' : 'var(--red)'}">${formatPNL(data.profit)}</td>
-        <td>${data.trades}</td>
-        <td>
-          <span class="win-loss-badge ${badgeClass}">${winRate}%</span>
-        </td>
-      </tr>
-    `;
-  }).join('');
-  
-  document.getElementById('symbolPerformanceBody').innerHTML = html || '<tr><td colspan="4" style="text-align: center; color: var(--muted2);">No hay datos disponibles</td></tr>';
+
+  daysGrid.innerHTML = html;
 }
 
-// ── MODAL FUNCTIONS ────────────────────────────────────────────────────────
-function openModal() {
+// Get estado badge HTML
+function getEstadoBadge(estado) {
+  const badges = {
+    'estudio': '<span class="badge badge-estudio">📚 ESTUDIO</span>',
+    'ejecucion': '<span class="badge badge-ejecucion">⚡ EJECUCIÓN</span>',
+    'finalizado': '<span class="badge badge-finalizado">✅ FINALIZADO</span>'
+  };
+  return badges[estado] || '-';
+}
+
+// Get estado label
+function getEstadoLabel(estado) {
+  const labels = {
+    'estudio': 'Estudio',
+    'ejecucion': 'Ejecución',
+    'finalizado': 'Finalizado'
+  };
+  return labels[estado] || estado;
+}
+
+// Toggle day expansion
+function toggleDay(header) {
+  const dayCard = header.closest('.day-card');
+  dayCard.classList.toggle('expanded');
+}
+
+// Open Add Modal
+function openAddModal() {
   editingTradeId = null;
+  document.getElementById('modalTitle').textContent = 'NUEVO TRADE';
   document.getElementById('tradeForm').reset();
-  chartImageData = null;
-  removeChart();
-  
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('inputFecha').value = today;
   document.getElementById('btnDelete').style.display = 'none';
-  
+  removeChart();
+  setDefaultDate();
   document.getElementById('tradeModal').classList.add('open');
 }
 
-function editTrade(index) {
-  editingTradeId = index;
-  const trade = allTrades[index];
+// Edit Trade
+function editTrade(globalIdx) {
+  const trade = allTrades[globalIdx];
+  
+  editingTradeId = globalIdx;
+  document.getElementById('modalTitle').textContent = 'EDITAR TRADE';
   
   // Datos básicos
-  document.getElementById('inputEstado').value = trade.estado;
+  document.getElementById('inputEstado').value = trade.estado || '';
   document.getElementById('inputFecha').value = trade.fecha;
   document.getElementById('inputTicker').value = trade.ticker;
   
@@ -1881,7 +1481,7 @@ function editTrade(index) {
   document.getElementById('inputClosed').value = trade.closed || '';
   
   // Datos de salida
-  document.getElementById('inputPNL').value = trade.pnl || '';
+  document.getElementById('inputPNL').value = trade.pnl != null ? trade.pnl : '';
   document.getElementById('inputRR').value = trade.rr || '';
   
   // Setup y contexto
@@ -2083,7 +1683,7 @@ function formatDate(dateStr) {
   return `${days[date.getDay()]} ${day} ${months[date.getMonth()]} ${year}`;
 }
 
-// ── CHART FUNCTIONS ────────────────────────────────────────────────────────
+// ── CHART FUNCTIONS ────────────────────────────────────────────────────────────
 function initChartUpload() {
   const chartInput = document.getElementById('chartInput');
   const chartUploadArea = document.getElementById('chartUploadArea');
