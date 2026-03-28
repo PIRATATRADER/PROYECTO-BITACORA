@@ -365,6 +365,13 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     display:inline-flex;align-items:center;gap:6px;">
     📊 Estadísticas
   </button>
+  <button id="btnPNLAnual" onclick="showPNLAnual()" style="
+    font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    padding:6px 16px;border-radius:7px;border:1px solid var(--cyan);background:#00b0ff15;
+    color:var(--cyan);cursor:pointer;transition:all .15s;margin-left:10px;flex-shrink:0;
+    display:inline-flex;align-items:center;gap:6px;">
+    📈 PNL Anual
+  </button>
 </div>
 
 <div class="trow">
@@ -448,6 +455,8 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
 // ── FIREBASE — Configuración y conexión ──────────────────────────────────────
 // Proyecto Bitácora: Capital Tracker 2026
@@ -1186,6 +1195,449 @@ function showStats() {
 function hideStats() {
   document.getElementById('statsScreen').style.display = 'none';
   document.body.style.overflow = '';
+}
+
+// ── PNL ANUAL FUNCTIONS ────────────────────────────────────────────────────────
+let pnlAnualChart = null;
+
+function showPNLAnual() {
+  document.getElementById('pnlAnualScreen').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  renderPNLAnual();
+}
+
+function hidePNLAnual() {
+  document.getElementById('pnlAnualScreen').style.display = 'none';
+  document.body.style.overflow = '';
+  // Destruir el gráfico para liberar memoria
+  if (pnlAnualChart) {
+    pnlAnualChart.destroy();
+    pnlAnualChart = null;
+  }
+}
+
+async function renderPNLAnual() {
+  console.log('=== INICIANDO renderPNLAnual ===');
+  console.log('MONTHS:', MONTHS);
+  console.log('D (datos):', D);
+  
+  // Intentar obtener datos de profits_net desde Firebase
+  let profitsNetData = null;
+  try {
+    const docRef = firebase.firestore().collection('profits_net').doc('data_2026');
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+      profitsNetData = docSnap.data();
+      console.log('✅ Datos de profits_net cargados desde Firebase:', profitsNetData);
+    } else {
+      console.log('⚠️ No se encontró documento data_2026 en profits_net');
+    }
+  } catch (err) {
+    console.error('❌ Error al cargar profits_net:', err);
+  }
+  
+  // Función para calcular PNL mensual desde profits_net
+  function getPNLFromProfitsNet(mesNumero) {
+    if (!profitsNetData || !profitsNetData.rows) return null;
+    
+    // Agrupar por mes y sumar adjNet
+    let totalAdjNet = 0;
+    let encontrado = false;
+    
+    profitsNetData.rows.forEach(row => {
+      // Parsear fecha (formato: "1/2/2026" o "1/2/26")
+      const parts = row.date.split('/');
+      const mes = parseInt(parts[0]); // mes 1-12
+      const year = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+      
+      // Verificar que sea el año 2026 y el mes correcto
+      if (year === '2026' && mes === (mesNumero + 1)) { // mesNumero es 0-11
+        totalAdjNet += row.adjNet || 0;
+        encontrado = true;
+      }
+    });
+    
+    return encontrado ? totalAdjNet : null;
+  }
+  
+  // Función helper para formatear dinero
+  const fm = v => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
+  
+  // Obtener el capital inicial del año (primer SOD de enero)
+  let capitalInicialAnual = null;
+  for (let i = 0; i < MONTHS[0].days.length; i++) {
+    const s = pd((D[dk(MONTHS[0].days[i])] || {}).startOfDay);
+    if (s) {
+      capitalInicialAnual = s;
+      break;
+    }
+  }
+  
+  console.log('Capital inicial anual:', capitalInicialAnual);
+  console.log('Primer día de enero:', MONTHS[0].days[0]);
+  console.log('Datos del 2 de enero:', D[dk('2026-01-02')]);
+  
+  // Si no hay capital inicial, usar 0
+  if (!capitalInicialAnual) {
+    capitalInicialAnual = 0;
+  }
+  
+  // Calcular PNL de cada mes
+  const pnlMensual = [];
+  let pnlAcumulado = 0;
+  let totalPNL = 0;
+  let mesesConDatos = 0;
+  let mejorMes = { mes: '', pnl: -Infinity };
+  let peorMes = { mes: '', pnl: Infinity };
+  
+  MONTHS.forEach((m, idx) => {
+    let pnlMes = 0;
+    let diasConDatos = 0;
+    let fuenteDatos = 'capital_tracker';
+    
+    // Primero intentar obtener de profits_net
+    const pnlProfitsNet = getPNLFromProfitsNet(idx);
+    
+    if (pnlProfitsNet !== null) {
+      pnlMes = pnlProfitsNet;
+      diasConDatos = 1; // Marcar que tiene datos
+      fuenteDatos = 'profits_net';
+      console.log(`📊 Mes ${m.name}: usando profits_net = $${pnlMes.toFixed(2)}`);
+    } else {
+      // Fallback: calcular desde capital_tracker
+      // PNL MES = suma(pnlDay) - suma(htb)
+      let pnlDayTotal = 0;
+      let htbTotal = 0;
+      
+      m.days.forEach(d => {
+        const row = D[dk(d)] || {};
+        const pnl = pd(row.pnlDay);
+        const htb = pd(row.htb) || 0;
+        
+        if (pnl !== null) {
+          pnlDayTotal += pnl;
+          htbTotal += htb;
+          diasConDatos++;
+        }
+      });
+      
+      pnlMes = pnlDayTotal - htbTotal;
+      
+      if (diasConDatos > 0) {
+        console.log(`📅 Mes ${m.name}: usando capital_tracker = $${pnlMes.toFixed(2)} (pnlDay: $${pnlDayTotal.toFixed(2)} - htb: $${htbTotal.toFixed(2)})`);
+      }
+    }
+    
+    if (diasConDatos > 0 || pnlProfitsNet !== null) {
+      mesesConDatos++;
+      totalPNL += pnlMes;
+      pnlAcumulado += pnlMes;
+      
+      if (pnlMes > mejorMes.pnl) {
+        mejorMes = { mes: m.name, pnl: pnlMes };
+      }
+      if (pnlMes < peorMes.pnl) {
+        peorMes = { mes: m.name, pnl: pnlMes };
+      }
+    }
+    
+    pnlMensual.push({
+      mes: m.name,
+      pnl: pnlMes,
+      acumulado: pnlAcumulado,
+      tieneDatos: diasConDatos > 0 || pnlProfitsNet !== null,
+      mesNumero: idx,
+      fuente: fuenteDatos
+    });
+  });
+  
+  console.log('PNL Mensual calculado:', pnlMensual);
+  console.log('Total PNL:', totalPNL);
+  
+  // Actualizar KPIs
+  document.getElementById('pnlAnualCapitalInicial').textContent = '$' + capitalInicialAnual.toFixed(2);
+  document.getElementById('pnlAnualCapitalInicial').style.color = 'var(--blue)';
+  
+  document.getElementById('pnlAnualTotal').textContent = fm(totalPNL);
+  document.getElementById('pnlAnualTotal').style.color = totalPNL >= 0 ? 'var(--green)' : 'var(--red)';
+  
+  const promedio = mesesConDatos > 0 ? totalPNL / mesesConDatos : 0;
+  document.getElementById('pnlAnualPromedio').textContent = fm(promedio);
+  
+  if (mejorMes.pnl > -Infinity) {
+    document.getElementById('pnlAnualBest').textContent = `${mejorMes.mes}: ${fm(mejorMes.pnl)}`;
+  } else {
+    document.getElementById('pnlAnualBest').textContent = '-';
+  }
+  
+  if (peorMes.pnl < Infinity) {
+    document.getElementById('pnlAnualWorst').textContent = `${peorMes.mes}: ${fm(peorMes.pnl)}`;
+  } else {
+    document.getElementById('pnlAnualWorst').textContent = '-';
+  }
+  
+  // Generar gráfico
+  generarGraficoPNLAnual(pnlMensual, capitalInicialAnual);
+  
+  // Generar tabla
+  generarTablaPNLMensual(pnlMensual, capitalInicialAnual);
+}
+
+function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
+  // Destruir gráfico anterior si existe
+  if (pnlAnualChart) {
+    pnlAnualChart.destroy();
+    pnlAnualChart = null;
+  }
+  
+  const ctx = document.getElementById('chartPNLAnual');
+  if (!ctx) {
+    console.error('Canvas chartPNLAnual no encontrado');
+    return;
+  }
+  
+  // Preparar datos - MOSTRAR TODOS LOS MESES
+  const labels = pnlMensual.map((m, idx) => `${idx + 1}. ${m.mes}`);
+  
+  // Datos de Capital Total (Capital Inicial + PNL Acumulado)
+  const dataCapitalTotal = pnlMensual.map(m => m.tieneDatos ? capitalInicial + m.acumulado : null);
+  
+  console.log('Labels (meses):', labels);
+  console.log('Capital inicial:', capitalInicial);
+  console.log('Data capital total:', dataCapitalTotal);
+  console.log('PNL mensual completo:', pnlMensual);
+  
+  // Calcular líneas de objetivo 1% y 2% DIARIO compuesto
+  // Estas líneas muestran el CAPITAL TOTAL esperado acumulando 1% o 2% cada día de mercado
+  const objetivo1Pct = [];
+  const objetivo2Pct = [];
+  
+  let capitalAcumulado1 = capitalInicial;
+  let capitalAcumulado2 = capitalInicial;
+  
+  for (let mesIdx = 0; mesIdx < 12; mesIdx++) {
+    // Contar días de mercado del mes (días con datos)
+    let diasMercadoMes = 0;
+    MONTHS[mesIdx].days.forEach(d => {
+      const row = D[dk(d)] || {};
+      // Un día de mercado es un día que tiene startOfDay (está abierto el mercado)
+      if (pd(row.startOfDay) !== null) {
+        diasMercadoMes++;
+      }
+    });
+    
+    // Aplicar 1% compuesto diario por cada día de mercado del mes
+    capitalAcumulado1 = capitalAcumulado1 * Math.pow(1.01, diasMercadoMes);
+    objetivo1Pct.push(capitalAcumulado1);
+    
+    // Aplicar 2% compuesto diario por cada día de mercado del mes
+    capitalAcumulado2 = capitalAcumulado2 * Math.pow(1.02, diasMercadoMes);
+    objetivo2Pct.push(capitalAcumulado2);
+  }
+  
+  console.log('Objetivos 1% diario (capital total):', objetivo1Pct);
+  console.log('Objetivos 2% diario (capital total):', objetivo2Pct);
+  
+  // Crear datasets
+  const datasets = [
+    {
+      label: 'Capital Total Real',
+      data: dataCapitalTotal,
+      borderColor: '#00e676',
+      backgroundColor: 'rgba(0, 230, 118, 0.1)',
+      borderWidth: 3,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 6,
+      pointBackgroundColor: '#00e676',
+      pointBorderColor: '#0a0c0f',
+      pointBorderWidth: 2,
+      spanGaps: false // No conectar puntos null
+    },
+    {
+      label: 'Objetivo +1%/día',
+      data: objetivo1Pct,
+      borderColor: '#ffd600',
+      borderWidth: 2,
+      borderDash: [5, 5],
+      fill: false,
+      tension: 0,
+      pointRadius: 0,
+      pointHoverRadius: 4
+    },
+    {
+      label: 'Objetivo +2%/día',
+      data: objetivo2Pct,
+      borderColor: '#00b0ff',
+      borderWidth: 2,
+      borderDash: [5, 5],
+      fill: false,
+      tension: 0,
+      pointRadius: 0,
+      pointHoverRadius: 4
+    }
+  ];
+  
+  pnlAnualChart = new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            color: '#e8eaf0',
+            font: {
+              family: 'DM Mono',
+              size: 11
+            },
+            padding: 15,
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          backgroundColor: '#111318',
+          titleColor: '#e8eaf0',
+          bodyColor: '#e8eaf0',
+          borderColor: '#1e2530',
+          borderWidth: 1,
+          padding: 12,
+          titleFont: {
+            family: 'DM Mono',
+            size: 12
+          },
+          bodyFont: {
+            family: 'DM Mono',
+            size: 11
+          },
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += '$' + context.parsed.y.toFixed(2);
+              }
+              return label;
+            }
+          }
+        },
+        datalabels: {
+          display: function(context) {
+            // Solo mostrar labels en la línea de Capital Total Real
+            return context.datasetIndex === 0 && context.parsed.y !== null;
+          },
+          align: 'bottom',
+          offset: 8,
+          color: '#00e676',
+          font: {
+            family: 'DM Mono',
+            size: 10,
+            weight: '600'
+          },
+          formatter: function(value) {
+            return '$' + value.toFixed(0);
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#7a8599',
+            font: {
+              family: 'DM Mono',
+              size: 10
+            },
+            callback: function(value) {
+              return '$' + value.toFixed(0);
+            }
+          },
+          grid: {
+            color: '#1e2530',
+            drawBorder: false
+          }
+        },
+        x: {
+          ticks: {
+            color: '#7a8599',
+            font: {
+              family: 'DM Mono',
+              size: 11,
+              weight: '500'
+            }
+          },
+          grid: {
+            color: '#1e2530',
+            drawBorder: false
+          }
+        }
+      }
+    }
+  });
+}
+
+function generarTablaPNLMensual(pnlMensual, capitalInicial) {
+  const fm = v => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
+  
+  let html = `
+    <table style="width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:13px;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);background:var(--bg2);">
+          <th style="padding:12px;text-align:center;color:var(--muted2);font-weight:600;">Mes</th>
+          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">PNL Mensual</th>
+          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">PNL Acumulado</th>
+          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">Capital Total</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  let totalPNL = 0;
+  
+  pnlMensual.forEach((m, idx) => {
+    const capitalTotal = capitalInicial + m.acumulado;
+    const tieneDatos = m.tieneDatos;
+    
+    // Color para PNL mensual
+    const colorMensual = tieneDatos ? (m.pnl >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
+    
+    // Color para PNL acumulado
+    const colorAcumulado = tieneDatos ? (m.acumulado >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
+    
+    // Color para capital total
+    const colorCapital = tieneDatos ? (capitalTotal >= capitalInicial ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
+    
+    // Valores a mostrar
+    const pnlMensualStr = tieneDatos ? fm(m.pnl) : '—';
+    const pnlAcumuladoStr = tieneDatos ? fm(m.acumulado) : '—';
+    const capitalTotalStr = tieneDatos ? '$' + capitalTotal.toFixed(2) : '—';
+    
+    const bgColor = idx % 2 === 0 ? 'var(--bg)' : 'var(--bg2)';
+    
+    html += `
+      <tr style="border-bottom:1px solid var(--border);background:${bgColor};">
+        <td style="padding:12px;text-align:center;font-weight:600;">${idx + 1}. ${m.mes}</td>
+        <td style="padding:12px;text-align:right;color:${colorMensual};font-weight:600;font-size:14px;">${pnlMensualStr}</td>
+        <td style="padding:12px;text-align:right;color:${colorAcumulado};font-weight:600;">${pnlAcumuladoStr}</td>
+        <td style="padding:12px;text-align:right;color:${colorCapital};font-weight:600;font-size:14px;">${capitalTotalStr}</td>
+      </tr>
+    `;
+  });
+  
+  html += '</tbody></table>';
+  document.getElementById('tablaPNLMensual').innerHTML = html;
 }
 
 function renderStatsTabs() {
@@ -4271,6 +4723,54 @@ function renderLongSide(monthIdx) {
     <div class="tm-footer">
       <div class="tm-summary" id="tmSummary"></div>
       <button class="tm-save" onclick="tmSave()">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANTALLA PNL ANUAL ══ -->
+<div id="pnlAnualScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;">
+  <div class="stats-wrap">
+    <div class="stats-header">
+      <button class="stats-back" onclick="hidePNLAnual()">← Volver</button>
+      <div class="stats-title">PNL <span>ANUAL 2026</span></div>
+    </div>
+    
+    <!-- KPIs Anuales -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:28px;">
+      <div class="kpi" style="--ac:var(--blue)">
+        <div class="kpi-l">Capital Inicial Enero</div>
+        <div class="kpi-v kb" id="pnlAnualCapitalInicial">$0</div>
+      </div>
+      <div class="kpi" style="--ac:var(--green)">
+        <div class="kpi-l">PNL Total Anual</div>
+        <div class="kpi-v kg" id="pnlAnualTotal">$0</div>
+      </div>
+      <div class="kpi" style="--ac:var(--gold)">
+        <div class="kpi-l">PNL Promedio Mensual</div>
+        <div class="kpi-v kgo" id="pnlAnualPromedio">$0</div>
+      </div>
+      <div class="kpi" style="--ac:var(--cyan)">
+        <div class="kpi-l">Mejor Mes</div>
+        <div class="kpi-v kb" id="pnlAnualBest">-</div>
+      </div>
+      <div class="kpi" style="--ac:var(--red)">
+        <div class="kpi-l">Peor Mes</div>
+        <div class="kpi-v kr" id="pnlAnualWorst">-</div>
+      </div>
+    </div>
+
+    <!-- Gráfico de Evolución del Capital Total -->
+    <div class="stats-card" style="--ac:var(--green);margin-bottom:24px;">
+      <div class="stats-card-title">📈 Evolución del Capital Total (Capital Inicial + PNL Acumulado)</div>
+      <div style="position:relative;height:400px;width:100%;">
+        <canvas id="chartPNLAnual"></canvas>
+      </div>
+    </div>
+
+    <!-- Tabla de PNL por Mes -->
+    <div class="stats-card" style="--ac:var(--blue);">
+      <div class="stats-card-title">📊 Detalle Mensual</div>
+      <div id="tablaPNLMensual"></div>
     </div>
   </div>
 </div>
