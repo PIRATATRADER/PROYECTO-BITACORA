@@ -1240,6 +1240,13 @@
                 <input type="file" id="chartInput" accept="image/*" style="display: none;">
               </div>
             </div>
+            <div class="chart-uploading" id="chartUploading" style="display: none;">
+              <div style="text-align: center; padding: 40px 20px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                <p style="color: var(--purple); font-weight: 600; margin-bottom: 8px;">Subiendo gráfico a Storage...</p>
+                <p style="color: var(--muted2); font-size: 12px;">Por favor espera</p>
+              </div>
+            </div>
             <div class="chart-preview" id="chartPreview" style="display: none;">
               <img id="chartImage" src="" alt="Chart" style="width: 100%; height: auto; display: block; border-radius: 8px;">
               <div class="chart-actions" style="margin-top: 12px; display: flex; gap: 12px; justify-content: center;">
@@ -2019,12 +2026,10 @@ async function handleChartFile() {
   const file = document.getElementById('chartInput').files[0];
   if (!file) return;
   
-  // Mostrar preview inmediato mientras se sube
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    displayChart(e.target.result);
-  };
-  reader.readAsDataURL(file);
+  // Mostrar indicador de carga
+  document.getElementById('chartPlaceholder').style.display = 'none';
+  document.getElementById('chartUploading').style.display = 'block';
+  document.getElementById('chartPreview').style.display = 'none';
   
   // Comprimir y subir a Storage
   return new Promise((resolve, reject) => {
@@ -2041,7 +2046,11 @@ async function handleChartFile() {
         // Guardar la URL en lugar del base64
         chartImageData = downloadURL;
         
-        // Actualizar preview con la URL real de Storage
+        // Ocultar indicador de carga y mostrar preview
+        document.getElementById('chartUploading').style.display = 'none';
+        document.getElementById('chartPreview').style.display = 'block';
+        
+        // Mostrar el gráfico
         displayChart(downloadURL);
         
         console.log('✅ Gráfico subido a Storage:', downloadURL);
@@ -2049,6 +2058,11 @@ async function handleChartFile() {
         resolve(downloadURL);
       } catch (error) {
         console.error('❌ Error subiendo gráfico:', error);
+        
+        // Ocultar indicador de carga y volver al placeholder
+        document.getElementById('chartUploading').style.display = 'none';
+        document.getElementById('chartPlaceholder').style.display = 'block';
+        
         alert('Error al subir el gráfico. Por favor, intenta de nuevo.');
         reject(error);
       }
@@ -2131,6 +2145,7 @@ function removeChart() {
   chartImageData = null;
   document.getElementById('chartInput').value = '';
   document.getElementById('chartPlaceholder').style.display = 'block';
+  document.getElementById('chartUploading').style.display = 'none';
   document.getElementById('chartPreview').style.display = 'none';
   document.getElementById('chartImage').src = '';
 }
