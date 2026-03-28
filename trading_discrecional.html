@@ -1032,34 +1032,34 @@
         <!-- DATOS DE SALIDA -->
         <div class="form-section">
           <div class="form-section-title">Datos de Salida</div>
-          <div class="form-grid-3">
-            <!-- CAMPO OCULTO - Precio Salida
-            <div class="form-group">
-              <label class="form-label">Precio Salida</label>
-              <input type="number" step="0.01" class="form-input" id="inputSalida" placeholder="151.00">
+          
+          <!-- SHORT -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: var(--red); margin-bottom: 12px; text-transform: uppercase;">🔴 Short</div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">PNL Short ($)</label>
+                <input type="number" step="0.01" class="form-input" id="inputPNLShort" placeholder="50.00">
+              </div>
+              <div class="form-group">
+                <label class="form-label">R Short</label>
+                <input type="number" step="0.01" class="form-input" id="inputRRShort" placeholder="2.5">
+              </div>
             </div>
-            -->
-            <div class="form-group">
-              <label class="form-label">PNL ($)</label>
-              <input type="number" step="0.01" class="form-input" id="inputPNL" placeholder="50.00">
-            </div>
-            <!-- CAMPO OCULTO - Fees
-            <div class="form-group">
-              <label class="form-label">Fees ($)</label>
-              <input type="number" step="0.01" class="form-input" id="inputFees" placeholder="2.50">
-            </div>
-            -->
           </div>
-          <div class="form-grid-2" style="margin-top: 16px;">
-            <!-- CAMPO OCULTO - Hora Salida
-            <div class="form-group">
-              <label class="form-label">Hora Salida</label>
-              <input type="time" class="form-input" id="inputHoraSalida">
-            </div>
-            -->
-            <div class="form-group">
-              <label class="form-label">R (Risk/Reward)</label>
-              <input type="number" step="0.01" class="form-input" id="inputRR" placeholder="2.5">
+          
+          <!-- LONG -->
+          <div>
+            <div style="font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: var(--green); margin-bottom: 12px; text-transform: uppercase;">🟢 Long</div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">PNL Long ($)</label>
+                <input type="number" step="0.01" class="form-input" id="inputPNLLong" placeholder="50.00">
+              </div>
+              <div class="form-group">
+                <label class="form-label">R Long</label>
+                <input type="number" step="0.01" class="form-input" id="inputRRLong" placeholder="2.5">
+              </div>
             </div>
           </div>
         </div>
@@ -1600,7 +1600,18 @@ function renderDays() {
                 if (trade.estado === 'ejecucion' && trade.ejecucionStartTime) {
                   console.log('Trade en ejecución:', trade.ticker, 'StartTime:', trade.ejecucionStartTime);
                   pnlContent = `<span class="countdown-timer" data-start-time="${trade.ejecucionStartTime}" style="color: var(--green); font-weight: 600;"></span>`;
+                } else if (trade.pnlShort != null || trade.pnlLong != null) {
+                  // Mostrar SHORT y LONG separados
+                  let parts = [];
+                  if (trade.pnlShort != null) {
+                    parts.push(`<div style="margin-bottom: 2px;"><span style="color: var(--red); font-size: 9px;">S:</span> <span class="badge ${trade.pnlShort >= 0 ? 'badge-green' : 'badge-red'}">${formatPNL(trade.pnlShort)}</span> <span style="color: var(--muted); font-size: 9px;">R${trade.rrShort || '-'}</span></div>`);
+                  }
+                  if (trade.pnlLong != null) {
+                    parts.push(`<div><span style="color: var(--green); font-size: 9px;">L:</span> <span class="badge ${trade.pnlLong >= 0 ? 'badge-green' : 'badge-red'}">${formatPNL(trade.pnlLong)}</span> <span style="color: var(--muted); font-size: 9px;">R${trade.rrLong || '-'}</span></div>`);
+                  }
+                  pnlContent = parts.join('');
                 } else if (trade.pnl != null) {
+                  // Compatibilidad con trades antiguos
                   pnlContent = `<span class="badge ${trade.pnl >= 0 ? 'badge-green' : 'badge-red'}">${formatPNL(trade.pnl)}</span>`;
                 } else if (trade.estado === 'ejecucion') {
                   console.log('Trade en ejecución SIN startTime:', trade.ticker);
@@ -1698,8 +1709,11 @@ function editTrade(globalIdx) {
   document.getElementById('inputClosed').value = trade.closed || '';
   
   // Datos de salida
-  document.getElementById('inputPNL').value = trade.pnl != null ? trade.pnl : '';
-  document.getElementById('inputRR').value = trade.rr || '';
+  // Datos de salida - SHORT y LONG
+  document.getElementById('inputPNLShort').value = trade.pnlShort != null ? trade.pnlShort : '';
+  document.getElementById('inputRRShort').value = trade.rrShort || '';
+  document.getElementById('inputPNLLong').value = trade.pnlLong != null ? trade.pnlLong : '';
+  document.getElementById('inputRRLong').value = trade.rrLong || '';
   
   // Setup y contexto
   document.getElementById('inputNoticia').value = trade.noticia || '';
@@ -1820,9 +1834,14 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     inicio: document.getElementById('inputInicio').value || '',
     closed: document.getElementById('inputClosed').value || '',
     
-    // Datos de salida
-    pnl: parseFloat(document.getElementById('inputPNL').value) || null,
-    rr: parseFloat(document.getElementById('inputRR').value) || null,
+    // Datos de salida - SHORT y LONG separados
+    pnlShort: parseFloat(document.getElementById('inputPNLShort').value) || null,
+    rrShort: parseFloat(document.getElementById('inputRRShort').value) || null,
+    pnlLong: parseFloat(document.getElementById('inputPNLLong').value) || null,
+    rrLong: parseFloat(document.getElementById('inputRRLong').value) || null,
+    
+    // PNL total combinado (para mantener compatibilidad)
+    pnl: (parseFloat(document.getElementById('inputPNLShort').value) || 0) + (parseFloat(document.getElementById('inputPNLLong').value) || 0) || null,
     
     // Setup y contexto
     noticia: document.getElementById('inputNoticia').value || '',
