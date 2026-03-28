@@ -1386,11 +1386,22 @@ function setDefaultDate() {
 // Load trades from Firebase
 async function loadTrades() {
   try {
-    // Primero intentar cargar desde el sistema nuevo (particionado por semana)
+    // Primero intentar cargar desde el sistema nuevo (particionado por día)
     const indexDoc = await db.collection('trading_discrecional').doc('_index').get();
     
-    if (indexDoc.exists && indexDoc.data().weeks) {
-      // Sistema nuevo por semanas: cargar todas las semanas
+    if (indexDoc.exists && indexDoc.data().days) {
+      // Sistema nuevo por días: cargar todos los días
+      const days = indexDoc.data().days;
+      allTrades = [];
+      
+      for (const day of days) {
+        const dayDoc = await db.collection('trading_discrecional').doc(`trades_${day}`).get();
+        if (dayDoc.exists && dayDoc.data().trades) {
+          allTrades = allTrades.concat(dayDoc.data().trades);
+        }
+      }
+    } else if (indexDoc.exists && indexDoc.data().weeks) {
+      // Sistema anterior por semanas: cargar todas las semanas
       const weeks = indexDoc.data().weeks;
       allTrades = [];
       
@@ -1400,6 +1411,8 @@ async function loadTrades() {
           allTrades = allTrades.concat(weekDoc.data().trades);
         }
       }
+      // Migrar al nuevo sistema por días
+      await saveTrades();
     } else if (indexDoc.exists && indexDoc.data().months) {
       // Sistema anterior por meses: cargar todos los meses
       const months = indexDoc.data().months;
@@ -1411,14 +1424,14 @@ async function loadTrades() {
           allTrades = allTrades.concat(monthDoc.data().trades);
         }
       }
-      // Migrar al nuevo sistema por semanas
+      // Migrar al nuevo sistema por días
       await saveTrades();
     } else {
       // Sistema muy antiguo: intentar cargar desde documento único
       const oldDoc = await db.collection('trading_discrecional').doc('trades_data').get();
       if (oldDoc.exists && oldDoc.data().trades) {
         allTrades = oldDoc.data().trades;
-        // Migrar al nuevo sistema por semanas
+        // Migrar al nuevo sistema por días
         await saveTrades();
       } else {
         allTrades = [];
@@ -1447,7 +1460,7 @@ async function loadTrades() {
   }
 }
 
-// Save trades to Firebase con particionamiento por semana
+// Save trades to Firebase con particionamiento por DÍA
 async function saveTrades() {
   try {
     // Limpiar undefined de todos los trades (Firestore no acepta undefined)
@@ -1461,36 +1474,28 @@ async function saveTrades() {
       return cleanTrade;
     });
     
-    // Función para obtener el número de semana del año
-    function getWeekKey(dateString) {
-      const date = new Date(dateString);
-      const yearStart = new Date(date.getFullYear(), 0, 1);
-      const weekNum = Math.ceil((((date - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
-      return `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
-    }
-    
-    // Agrupar trades por semana (YYYY-W01, YYYY-W02, etc.)
-    const tradesByWeek = {};
+    // Agrupar trades por DÍA (YYYY-MM-DD)
+    const tradesByDay = {};
     cleanedTrades.forEach(trade => {
-      const weekKey = getWeekKey(trade.fecha);
-      if (!tradesByWeek[weekKey]) {
-        tradesByWeek[weekKey] = [];
+      const dayKey = trade.fecha; // "2026-03-28"
+      if (!tradesByDay[dayKey]) {
+        tradesByDay[dayKey] = [];
       }
-      tradesByWeek[weekKey].push(trade);
+      tradesByDay[dayKey].push(trade);
     });
     
-    // Guardar cada semana en un documento separado (uno por uno)
-    for (const [weekKey, trades] of Object.entries(tradesByWeek)) {
-      await db.collection('trading_discrecional').doc(`trades_${weekKey}`).set({
+    // Guardar cada día en un documento separado (uno por uno)
+    for (const [dayKey, trades] of Object.entries(tradesByDay)) {
+      await db.collection('trading_discrecional').doc(`trades_${dayKey}`).set({
         trades: trades,
-        week: weekKey,
+        day: dayKey,
         lastUpdate: new Date().toISOString()
       });
     }
     
-    // Guardar índice de semanas disponibles
+    // Guardar índice de días disponibles
     await db.collection('trading_discrecional').doc('_index').set({
-      weeks: Object.keys(tradesByWeek),
+      days: Object.keys(tradesByDay),
       lastUpdate: new Date().toISOString()
     });
     
