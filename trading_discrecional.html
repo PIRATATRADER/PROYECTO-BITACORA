@@ -6,7 +6,7 @@
 <title>Trading Discrecional</title>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -874,6 +874,38 @@
     opacity: 0.85;
   }
 
+  /* Stats Dashboard */
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .chart-container {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
 
 </style>
 </head>
@@ -930,6 +962,9 @@
     <button class="filter-tab" data-filter="finalizado" onclick="filterTrades('finalizado')">
       <span>✅ Finalizados</span>
       <span class="count" id="countFinalizado">0</span>
+    </button>
+    <button class="filter-tab" style="margin-left: auto; background: var(--purple); color: #fff;" onclick="openStatsModal()">
+      <span>📈 Estadísticas</span>
     </button>
   </div>
 
@@ -1281,6 +1316,77 @@
   </div>
 </div>
 
+<!-- Modal Estadísticas -->
+<div class="modal-overlay" id="statsModal" style="z-index: 2000;">
+  <div class="modal-content" style="max-width: 1400px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header">
+      <h2>📈 Dashboard de Estadísticas</h2>
+      <button class="modal-close" onclick="closeStatsModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 24px;">
+      
+      <!-- Métricas Principales -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px;">
+        <div class="stat-card">
+          <div class="stat-label">Total Trades</div>
+          <div class="stat-value" id="statTotalTrades">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value" id="statWinRate" style="color: var(--purple);">0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">PNL Total</div>
+          <div class="stat-value" id="statTotalPNL">$0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">R Promedio</div>
+          <div class="stat-value" id="statAvgR">0R</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Profit Factor</div>
+          <div class="stat-value" id="statProfitFactor" style="color: var(--blue);">0</div>
+        </div>
+      </div>
+
+      <!-- Gráficos -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+        <div class="chart-container">
+          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Win Rate por Sector</h3>
+          <canvas id="chartWRSector" style="max-height: 300px;"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Win Rate por Float</h3>
+          <canvas id="chartWRFloat" style="max-height: 300px;"></canvas>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+        <div class="chart-container">
+          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">PNL por Día</h3>
+          <canvas id="chartPNLDaily" style="max-height: 300px;"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Distribución de R</h3>
+          <canvas id="chartRDistribution" style="max-height: 300px;"></canvas>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div class="chart-container">
+          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Win Rate: Noticia SI vs NO</h3>
+          <canvas id="chartWRNoticia" style="max-height: 250px;"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Top 5 Countries por Win Rate</h3>
+          <canvas id="chartWRCountry" style="max-height: 250px;"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- Time Alert Overlay -->
 <div class="time-alert-overlay" id="timeAlertOverlay">
   <div class="time-alert-content">
@@ -1303,7 +1409,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 let allTrades = [];
 let editingTradeId = null;
@@ -2031,31 +2136,52 @@ async function handleChartFile() {
   document.getElementById('chartUploading').style.display = 'block';
   document.getElementById('chartPreview').style.display = 'none';
   
-  // Comprimir y subir a Storage
+  // Comprimir y subir a Imgur
   return new Promise((resolve, reject) => {
     compressImageToBlob(file, async (blob) => {
       try {
-        // Subir a Firebase Storage
-        const fileName = `charts/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
-        const storageRef = storage.ref(fileName);
-        const uploadTask = await storageRef.put(blob);
+        // Convertir blob a base64 para Imgur
+        const reader = new FileReader();
+        reader.onloadend = async function() {
+          const base64data = reader.result.split(',')[1]; // Remove data:image/jpeg;base64,
+          
+          // Subir a Imgur
+          const formData = new FormData();
+          formData.append('image', base64data);
+          formData.append('type', 'base64');
+          
+          const response = await fetch('https://api.imgur.com/3/image', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Client-ID 4e1c30c50f8bb23' // Client ID público de Imgur
+            },
+            body: formData
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            const imageURL = data.data.link;
+            
+            // Guardar la URL
+            chartImageData = imageURL;
+            
+            // Ocultar indicador de carga y mostrar preview
+            document.getElementById('chartUploading').style.display = 'none';
+            document.getElementById('chartPreview').style.display = 'block';
+            
+            // Mostrar el gráfico
+            displayChart(imageURL);
+            
+            console.log('✅ Gráfico subido a Imgur:', imageURL);
+            console.log('✅ chartImageData actualizado:', chartImageData);
+            resolve(imageURL);
+          } else {
+            throw new Error('Error subiendo a Imgur');
+          }
+        };
+        reader.readAsDataURL(blob);
         
-        // Obtener URL de descarga
-        const downloadURL = await uploadTask.ref.getDownloadURL();
-        
-        // Guardar la URL en lugar del base64
-        chartImageData = downloadURL;
-        
-        // Ocultar indicador de carga y mostrar preview
-        document.getElementById('chartUploading').style.display = 'none';
-        document.getElementById('chartPreview').style.display = 'block';
-        
-        // Mostrar el gráfico
-        displayChart(downloadURL);
-        
-        console.log('✅ Gráfico subido a Storage:', downloadURL);
-        console.log('✅ chartImageData actualizado:', chartImageData);
-        resolve(downloadURL);
       } catch (error) {
         console.error('❌ Error subiendo gráfico:', error);
         
@@ -2175,19 +2301,8 @@ function zoomChartFromTable(tradeIdx) {
 async function deleteChartFromTable(tradeIdx) {
   if (!confirm('¿Eliminar el gráfico de este trade?')) return;
   
-  const chartURL = allTrades[tradeIdx].chartImage;
-  
-  // Eliminar de Storage si es una URL de Firebase Storage
-  if (chartURL && chartURL.includes('firebasestorage.googleapis.com')) {
-    try {
-      const storageRef = storage.refFromURL(chartURL);
-      await storageRef.delete();
-      console.log('Gráfico eliminado de Storage');
-    } catch (error) {
-      console.log('Error eliminando de Storage (puede que ya no exista):', error);
-    }
-  }
-  
+  // Solo eliminamos la referencia en Firestore
+  // (Imgur no permite eliminar con Client ID público, pero el espacio es ilimitado)
   allTrades[tradeIdx].chartImage = null;
   await saveTrades();
   renderDashboard();
@@ -2458,6 +2573,383 @@ function updateSortIcon() {
     icon.textContent = '⇅';
     icon.style.color = 'var(--muted)';
   }
+}
+
+// ── STATISTICS DASHBOARD ───────────────────────────────────────────────────────
+
+let statsCharts = {};
+
+function openStatsModal() {
+  document.getElementById('statsModal').classList.add('open');
+  generateStatistics();
+}
+
+function closeStatsModal() {
+  document.getElementById('statsModal').classList.remove('open');
+  // Destruir gráficos para liberar memoria
+  Object.values(statsCharts).forEach(chart => chart.destroy());
+  statsCharts = {};
+}
+
+function generateStatistics() {
+  const finalizados = allTrades.filter(t => t.estado === 'finalizado');
+  
+  if (finalizados.length === 0) {
+    alert('No hay trades finalizados para generar estadísticas');
+    closeStatsModal();
+    return;
+  }
+
+  // Calcular métricas principales
+  const totalTrades = finalizados.length;
+  const wins = finalizados.filter(t => (t.pnl || 0) > 0 || (t.pnlShort || 0) + (t.pnlLong || 0) > 0).length;
+  const winRate = totalTrades > 0 ? Math.round((wins / totalTrades) * 100) : 0;
+  
+  const totalPNL = finalizados.reduce((sum, t) => {
+    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
+    return sum + pnl;
+  }, 0);
+  
+  const avgR = finalizados.reduce((sum, t) => {
+    const r = parseFloat(t.rr || t.rrShort || t.rrLong || 0);
+    return sum + r;
+  }, 0) / totalTrades;
+  
+  const grossWins = finalizados.filter(t => (t.pnl || 0) > 0 || (t.pnlShort || 0) + (t.pnlLong || 0) > 0)
+    .reduce((sum, t) => sum + (t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0)), 0);
+  const grossLosses = Math.abs(finalizados.filter(t => (t.pnl || 0) < 0 || (t.pnlShort || 0) + (t.pnlLong || 0) < 0)
+    .reduce((sum, t) => sum + (t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0)), 0));
+  const profitFactor = grossLosses > 0 ? (grossWins / grossLosses).toFixed(2) : grossWins > 0 ? '∞' : '0';
+  
+  // Actualizar métricas
+  document.getElementById('statTotalTrades').textContent = totalTrades;
+  document.getElementById('statWinRate').textContent = winRate + '%';
+  document.getElementById('statTotalPNL').textContent = formatPNL(totalPNL);
+  document.getElementById('statTotalPNL').style.color = totalPNL >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('statAvgR').textContent = avgR.toFixed(2) + 'R';
+  document.getElementById('statProfitFactor').textContent = profitFactor;
+  
+  // Generar gráficos
+  generateWRBySector(finalizados);
+  generateWRByFloat(finalizados);
+  generatePNLDaily(finalizados);
+  generateRDistribution(finalizados);
+  generateWRByNoticia(finalizados);
+  generateWRByCountry(finalizados);
+}
+
+function generateWRBySector(trades) {
+  const sectorStats = {};
+  trades.forEach(t => {
+    const sector = t.sector || 'Sin Sector';
+    if (!sectorStats[sector]) {
+      sectorStats[sector] = { total: 0, wins: 0 };
+    }
+    sectorStats[sector].total++;
+    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
+    if (pnl > 0) sectorStats[sector].wins++;
+  });
+  
+  const labels = Object.keys(sectorStats);
+  const data = labels.map(sector => {
+    const wr = (sectorStats[sector].wins / sectorStats[sector].total) * 100;
+    return wr.toFixed(1);
+  });
+  
+  if (statsCharts.wrSector) statsCharts.wrSector.destroy();
+  
+  const ctx = document.getElementById('chartWRSector').getContext('2d');
+  statsCharts.wrSector = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Win Rate %',
+        data: data,
+        backgroundColor: 'rgba(177, 106, 255, 0.6)',
+        borderColor: 'rgba(177, 106, 255, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { color: '#7a8599' },
+          grid: { color: '#1e2530' }
+        },
+        x: {
+          ticks: { color: '#7a8599' },
+          grid: { color: '#1e2530' }
+        }
+      }
+    }
+  });
+}
+
+function generateWRByFloat(trades) {
+  const floatStats = {};
+  trades.forEach(t => {
+    const float = t.float || 'Sin Float';
+    if (!floatStats[float]) {
+      floatStats[float] = { total: 0, wins: 0 };
+    }
+    floatStats[float].total++;
+    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
+    if (pnl > 0) floatStats[float].wins++;
+  });
+  
+  const labels = Object.keys(floatStats);
+  const data = labels.map(float => {
+    const wr = (floatStats[float].wins / floatStats[float].total) * 100;
+    return wr.toFixed(1);
+  });
+  
+  if (statsCharts.wrFloat) statsCharts.wrFloat.destroy();
+  
+  const ctx = document.getElementById('chartWRFloat').getContext('2d');
+  statsCharts.wrFloat = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Win Rate %',
+        data: data,
+        backgroundColor: 'rgba(0, 230, 118, 0.6)',
+        borderColor: 'rgba(0, 230, 118, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { color: '#7a8599' },
+          grid: { color: '#1e2530' }
+        },
+        x: {
+          ticks: { color: '#7a8599', maxRotation: 45, minRotation: 45 },
+          grid: { color: '#1e2530' }
+        }
+      }
+    }
+  });
+}
+
+function generatePNLDaily(trades) {
+  const dailyPNL = {};
+  trades.forEach(t => {
+    const fecha = t.fecha;
+    if (!dailyPNL[fecha]) dailyPNL[fecha] = 0;
+    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
+    dailyPNL[fecha] += pnl;
+  });
+  
+  const sortedDates = Object.keys(dailyPNL).sort();
+  const data = sortedDates.map(date => dailyPNL[date]);
+  
+  if (statsCharts.pnlDaily) statsCharts.pnlDaily.destroy();
+  
+  const ctx = document.getElementById('chartPNLDaily').getContext('2d');
+  statsCharts.pnlDaily = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sortedDates.map(d => d.substring(5)), // MM-DD
+      datasets: [{
+        label: 'PNL Diario',
+        data: data,
+        borderColor: 'rgba(68, 138, 255, 1)',
+        backgroundColor: 'rgba(68, 138, 255, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          ticks: { color: '#7a8599' },
+          grid: { color: '#1e2530' }
+        },
+        x: {
+          ticks: { color: '#7a8599' },
+          grid: { color: '#1e2530' }
+        }
+      }
+    }
+  });
+}
+
+function generateRDistribution(trades) {
+  const rValues = trades.map(t => {
+    const r = parseFloat(t.rr || t.rrShort || t.rrLong || 0);
+    return r;
+  });
+  
+  // Crear bins para el histograma
+  const bins = { '<-2R': 0, '-2R a -1R': 0, '-1R a 0R': 0, '0R a 1R': 0, '1R a 2R': 0, '>2R': 0 };
+  rValues.forEach(r => {
+    if (r < -2) bins['<-2R']++;
+    else if (r < -1) bins['-2R a -1R']++;
+    else if (r < 0) bins['-1R a 0R']++;
+    else if (r < 1) bins['0R a 1R']++;
+    else if (r < 2) bins['1R a 2R']++;
+    else bins['>2R']++;
+  });
+  
+  if (statsCharts.rDist) statsCharts.rDist.destroy();
+  
+  const ctx = document.getElementById('chartRDistribution').getContext('2d');
+  statsCharts.rDist = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(bins),
+      datasets: [{
+        label: 'Número de Trades',
+        data: Object.values(bins),
+        backgroundColor: 'rgba(255, 214, 0, 0.6)',
+        borderColor: 'rgba(255, 214, 0, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#7a8599', stepSize: 1 },
+          grid: { color: '#1e2530' }
+        },
+        x: {
+          ticks: { color: '#7a8599' },
+          grid: { color: '#1e2530' }
+        }
+      }
+    }
+  });
+}
+
+function generateWRByNoticia(trades) {
+  const noticiaStats = { 'SI': { total: 0, wins: 0 }, 'NO': { total: 0, wins: 0 } };
+  
+  trades.forEach(t => {
+    const noticia = t.noticia === 'SI' ? 'SI' : 'NO';
+    noticiaStats[noticia].total++;
+    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
+    if (pnl > 0) noticiaStats[noticia].wins++;
+  });
+  
+  const labels = Object.keys(noticiaStats);
+  const data = labels.map(key => {
+    const wr = noticiaStats[key].total > 0 ? (noticiaStats[key].wins / noticiaStats[key].total) * 100 : 0;
+    return wr.toFixed(1);
+  });
+  
+  if (statsCharts.wrNoticia) statsCharts.wrNoticia.destroy();
+  
+  const ctx = document.getElementById('chartWRNoticia').getContext('2d');
+  statsCharts.wrNoticia = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels.map(l => `${l} (${data[labels.indexOf(l)]}%)`),
+      datasets: [{
+        data: data,
+        backgroundColor: ['rgba(0, 230, 118, 0.6)', 'rgba(255, 61, 87, 0.6)'],
+        borderColor: ['rgba(0, 230, 118, 1)', 'rgba(255, 61, 87, 1)'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#7a8599' }
+        }
+      }
+    }
+  });
+}
+
+function generateWRByCountry(trades) {
+  const countryStats = {};
+  trades.forEach(t => {
+    const country = t.pais || 'Sin País';
+    if (!countryStats[country]) {
+      countryStats[country] = { total: 0, wins: 0 };
+    }
+    countryStats[country].total++;
+    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
+    if (pnl > 0) countryStats[country].wins++;
+  });
+  
+  // Top 5 países por número de trades
+  const sortedCountries = Object.keys(countryStats)
+    .sort((a, b) => countryStats[b].total - countryStats[a].total)
+    .slice(0, 5);
+  
+  const data = sortedCountries.map(country => {
+    const wr = (countryStats[country].wins / countryStats[country].total) * 100;
+    return wr.toFixed(1);
+  });
+  
+  if (statsCharts.wrCountry) statsCharts.wrCountry.destroy();
+  
+  const ctx = document.getElementById('chartWRCountry').getContext('2d');
+  statsCharts.wrCountry = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sortedCountries,
+      datasets: [{
+        label: 'Win Rate %',
+        data: data,
+        backgroundColor: 'rgba(255, 61, 87, 0.6)',
+        borderColor: 'rgba(255, 61, 87, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { color: '#7a8599' },
+          grid: { color: '#1e2530' }
+        },
+        y: {
+          ticks: { color: '#7a8599' },
+          grid: { color: '#1e2530' }
+        }
+      }
+    }
+  });
 }
 
 </script>
