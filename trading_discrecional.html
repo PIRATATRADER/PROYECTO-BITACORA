@@ -1088,11 +1088,15 @@
           <div class="form-grid-2" style="margin-top: 16px;">
             <div class="form-group">
               <label class="form-label">Sector</label>
-              <input type="text" class="form-input" id="inputSector" placeholder="Tech, Biotech, Energy...">
+              <input type="text" class="form-input" id="inputSector" list="sectorList" placeholder="Tech, Biotech, Energy...">
+              <datalist id="sectorList">
+              </datalist>
             </div>
             <div class="form-group">
               <label class="form-label">Industry</label>
-              <input type="text" class="form-input" id="inputIndustry" placeholder="Software, Pharmaceuticals...">
+              <input type="text" class="form-input" id="inputIndustry" list="industryList" placeholder="Software, Pharmaceuticals...">
+              <datalist id="industryList">
+              </datalist>
             </div>
           </div>
         </div>
@@ -1192,96 +1196,23 @@
                   <input type="checkbox" id="dilucionConvertiblePreferred" value="CONVERTIBLE PREFERRED">
                   <span>CONVERTIBLE PREFERRED</span>
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
                   <input type="checkbox" id="dilucionEquityLine" value="EQUITY LINE">
                   <span>EQUITY LINE</span>
+                  <input type="number" step="0.1" id="equityLineAmount" class="form-input" placeholder="M" style="width: 80px; padding: 4px 8px; font-size: 12px; margin-left: auto;">
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
                   <input type="checkbox" id="dilucionATM" value="ATM">
                   <span>ATM</span>
+                  <input type="number" step="0.1" id="atmAmount" class="form-input" placeholder="M" style="width: 80px; padding: 4px 8px; font-size: 12px; margin-left: auto;">
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
                   <input type="checkbox" id="dilucionShelf" value="SHELF">
                   <span>SHELF</span>
+                  <input type="number" step="0.1" id="shelfAmount" class="form-input" placeholder="M" style="width: 80px; padding: 4px 8px; font-size: 12px; margin-left: auto;">
                 </label>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- GESTIÓN Y PSICOLOGÍA -->
-        <div class="form-section">
-          <div class="form-section-title">Gestión y Psicología</div>
-          <div class="form-grid-3">
-            <div class="form-group">
-              <label class="form-label">Convicción (1-5)</label>
-              <select class="form-select" id="inputConviccion">
-                <option value="">Seleccionar...</option>
-                <option value="1">1 - Muy Baja</option>
-                <option value="2">2 - Baja</option>
-                <option value="3">3 - Media</option>
-                <option value="4">4 - Alta</option>
-                <option value="5">5 - Muy Alta</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Ejecución (1-5)</label>
-              <select class="form-select" id="inputEjecucionCalidad">
-                <option value="">Seleccionar...</option>
-                <option value="1">1 - Muy Mala</option>
-                <option value="2">2 - Mala</option>
-                <option value="3">3 - Aceptable</option>
-                <option value="4">4 - Buena</option>
-                <option value="5">5 - Excelente</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Emociones</label>
-              <select class="form-select" id="inputEmociones">
-                <option value="">Seleccionar...</option>
-                <option value="Neutral">Neutral</option>
-                <option value="Confiado">Confiado</option>
-                <option value="FOMO">FOMO</option>
-                <option value="Miedo">Miedo</option>
-                <option value="Revenge">Revenge Trading</option>
-                <option value="Impaciente">Impaciente</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- ERRORES COMUNES (CHECKBOXES) -->
-        <div class="form-section">
-          <div class="form-section-title">Errores Cometidos</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <label class="checkbox-label">
-              <input type="checkbox" id="errorOversize" value="oversize">
-              <span>Oversize (tamaño excesivo)</span>
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="errorFOMO" value="fomo">
-              <span>FOMO (entrada tardía)</span>
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="errorNoStop" value="nostop">
-              <span>No respetó stop loss</span>
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="errorOvertrading" value="overtrading">
-              <span>Overtrading</span>
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="errorRevenge" value="revenge">
-              <span>Revenge trading</span>
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="errorProfitEarly" value="profitearly">
-              <span>Salida anticipada</span>
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="errorNoAnalisis" value="noanalisis">
-              <span>No analicé el Stock</span>
-            </label>
           </div>
         </div>
 
@@ -1379,6 +1310,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initChartUpload();
   loadCountryList();
   initCountryInput();
+  loadSectorList();
+  initSectorInput();
+  loadIndustryList();
+  initIndustryInput();
   startCountdownTimers();
 });
 
@@ -1661,6 +1596,10 @@ function renderDays() {
                 const globalIdx = allTrades.findIndex(t => t === trade);
                 const dilucionText = trade.dilucion && trade.dilucion.length > 0 ? trade.dilucion.join(', ') : '-';
                 
+                // Formatear dilución para mostrarlo en múltiples líneas si es muy largo
+                const dilucionFormatted = dilucionText === '-' ? '-' : 
+                  `<div style="max-width: 180px; white-space: normal; word-wrap: break-word; line-height: 1.4;">${dilucionText}</div>`;
+                
                 // Generar contenido PNL o contador
                 let pnlContent = '-';
                 if (trade.estado === 'ejecucion' && trade.ejecucionStartTime) {
@@ -1717,7 +1656,7 @@ function renderDays() {
                   <td class="td-mono" style="${trade.insiders === '>50%' ? 'color: var(--red); font-weight: 600;' : ''}">${trade.insiders || '-'}</td>
                   <td class="td-mono">${trade.instOwn || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
-                  <td class="td-mono" style="font-size: 10px;">${dilucionText}</td>
+                  <td class="td-mono" style="font-size: 9px; padding: 8px;">${dilucionFormatted}</td>
                   <td class="td-mono">${pnlContent}</td>
                   <td class="td-chart">
                     ${trade.chartImage ? `
@@ -1826,29 +1765,35 @@ function editTrade(globalIdx) {
   
   // Dilución (checkboxes)
   const dilucion = trade.dilucion || [];
-  document.getElementById('dilucionNoTiene').checked = dilucion.includes('• NO TIENE DILUCIÓN');
-  document.getElementById('dilucionS1').checked = dilucion.includes('S-1 OFFERING');
-  document.getElementById('dilucionWarrants').checked = dilucion.includes('WARRANTS');
-  document.getElementById('dilucionConvertibleNote').checked = dilucion.includes('CONVERTIBLE NOTE');
-  document.getElementById('dilucionConvertiblePreferred').checked = dilucion.includes('CONVERTIBLE PREFERRED');
-  document.getElementById('dilucionEquityLine').checked = dilucion.includes('EQUITY LINE');
-  document.getElementById('dilucionATM').checked = dilucion.includes('ATM');
-  document.getElementById('dilucionShelf').checked = dilucion.includes('SHELF');
+  document.getElementById('dilucionNoTiene').checked = dilucion.some(d => d.includes('• NO TIENE DILUCIÓN'));
+  document.getElementById('dilucionS1').checked = dilucion.some(d => d.includes('S-1 OFFERING'));
+  document.getElementById('dilucionWarrants').checked = dilucion.some(d => d.includes('WARRANTS'));
+  document.getElementById('dilucionConvertibleNote').checked = dilucion.some(d => d.includes('CONVERTIBLE NOTE'));
+  document.getElementById('dilucionConvertiblePreferred').checked = dilucion.some(d => d.includes('CONVERTIBLE PREFERRED'));
   
-  // Gestión y psicología
-  document.getElementById('inputConviccion').value = trade.conviccion || '';
-  document.getElementById('inputEjecucionCalidad').value = trade.ejecucionCalidad || '';
-  document.getElementById('inputEmociones').value = trade.emociones || '';
+  // EQUITY LINE con cantidad
+  const equityLineItem = dilucion.find(d => d.includes('EQUITY LINE'));
+  if (equityLineItem) {
+    document.getElementById('dilucionEquityLine').checked = true;
+    const match = equityLineItem.match(/EQUITY LINE ([\d.]+) M/);
+    if (match) document.getElementById('equityLineAmount').value = match[1];
+  }
   
-  // Errores (checkboxes)
-  const errores = trade.errores || [];
-  document.getElementById('errorOversize').checked = errores.includes('oversize');
-  document.getElementById('errorFOMO').checked = errores.includes('fomo');
-  document.getElementById('errorNoStop').checked = errores.includes('nostop');
-  document.getElementById('errorOvertrading').checked = errores.includes('overtrading');
-  document.getElementById('errorRevenge').checked = errores.includes('revenge');
-  document.getElementById('errorProfitEarly').checked = errores.includes('profitearly');
-  document.getElementById('errorNoAnalisis').checked = errores.includes('noanalisis');
+  // ATM con cantidad
+  const atmItem = dilucion.find(d => d.includes('ATM'));
+  if (atmItem) {
+    document.getElementById('dilucionATM').checked = true;
+    const match = atmItem.match(/ATM ([\d.]+) M/);
+    if (match) document.getElementById('atmAmount').value = match[1];
+  }
+  
+  // SHELF con cantidad
+  const shelfItem = dilucion.find(d => d.includes('SHELF'));
+  if (shelfItem) {
+    document.getElementById('dilucionShelf').checked = true;
+    const match = shelfItem.match(/SHELF ([\d.]+) M/);
+    if (match) document.getElementById('shelfAmount').value = match[1];
+  }
   
   // Notas
   document.getElementById('inputNotas').value = trade.notas || '';
@@ -1893,16 +1838,6 @@ function closeModal() {
 document.getElementById('tradeForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  // Recoger errores seleccionados
-  const errores = [];
-  if (document.getElementById('errorOversize').checked) errores.push('oversize');
-  if (document.getElementById('errorFOMO').checked) errores.push('fomo');
-  if (document.getElementById('errorNoStop').checked) errores.push('nostop');
-  if (document.getElementById('errorOvertrading').checked) errores.push('overtrading');
-  if (document.getElementById('errorRevenge').checked) errores.push('revenge');
-  if (document.getElementById('errorProfitEarly').checked) errores.push('profitearly');
-  if (document.getElementById('errorNoAnalisis').checked) errores.push('noanalisis');
-
   // Recoger dilución seleccionada
   const dilucion = [];
   if (document.getElementById('dilucionNoTiene').checked) dilucion.push('• NO TIENE DILUCIÓN');
@@ -1910,9 +1845,20 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
   if (document.getElementById('dilucionWarrants').checked) dilucion.push('WARRANTS');
   if (document.getElementById('dilucionConvertibleNote').checked) dilucion.push('CONVERTIBLE NOTE');
   if (document.getElementById('dilucionConvertiblePreferred').checked) dilucion.push('CONVERTIBLE PREFERRED');
-  if (document.getElementById('dilucionEquityLine').checked) dilucion.push('EQUITY LINE');
-  if (document.getElementById('dilucionATM').checked) dilucion.push('ATM');
-  if (document.getElementById('dilucionShelf').checked) dilucion.push('SHELF');
+  
+  // EQUITY LINE, ATM y SHELF con cantidades
+  if (document.getElementById('dilucionEquityLine').checked) {
+    const amount = document.getElementById('equityLineAmount').value;
+    dilucion.push(amount ? `EQUITY LINE ${amount} M` : 'EQUITY LINE');
+  }
+  if (document.getElementById('dilucionATM').checked) {
+    const amount = document.getElementById('atmAmount').value;
+    dilucion.push(amount ? `ATM ${amount} M` : 'ATM');
+  }
+  if (document.getElementById('dilucionShelf').checked) {
+    const amount = document.getElementById('shelfAmount').value;
+    dilucion.push(amount ? `SHELF ${amount} M` : 'SHELF');
+  }
 
   const newEstado = document.getElementById('inputEstado').value;
   const oldEstado = editingTradeId !== null ? allTrades[editingTradeId].estado : null;
@@ -1952,12 +1898,6 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     overhead: document.getElementById('inputOverhead').value || '',
     cashNeed: document.getElementById('inputCashNeed').value || '',
     dilucion: dilucion,
-    
-    // Gestión y psicología
-    conviccion: document.getElementById('inputConviccion').value || '',
-    ejecucionCalidad: document.getElementById('inputEjecucionCalidad').value || '',
-    emociones: document.getElementById('inputEmociones').value || '',
-    errores: errores,
     
     // Notas
     notas: document.getElementById('inputNotas').value || '',
@@ -2198,6 +2138,114 @@ function saveCountryToList(country) {
     const datalist = document.getElementById('paisList');
     const option = document.createElement('option');
     option.value = country;
+    datalist.appendChild(option);
+  }
+}
+
+// ── INDUSTRY LIST FUNCTIONS ────────────────────────────────────────────────────
+function loadIndustryList() {
+  const savedIndustries = localStorage.getItem('customIndustries');
+  if (savedIndustries) {
+    const industries = JSON.parse(savedIndustries);
+    const datalist = document.getElementById('industryList');
+    
+    // Añadir las industries guardadas al datalist
+    industries.forEach(industry => {
+      // Comprobar si ya existe para no duplicar
+      const exists = Array.from(datalist.options).some(opt => opt.value === industry);
+      if (!exists) {
+        const option = document.createElement('option');
+        option.value = industry;
+        datalist.appendChild(option);
+      }
+    });
+  }
+}
+
+function initIndustryInput() {
+  const inputIndustry = document.getElementById('inputIndustry');
+  
+  inputIndustry.addEventListener('blur', function() {
+    const value = this.value.trim();
+    if (value) {
+      saveIndustryToList(value);
+    }
+  });
+}
+
+function saveIndustryToList(industry) {
+  if (!industry) return;
+  
+  // Obtener lista actual
+  let industries = [];
+  const savedIndustries = localStorage.getItem('customIndustries');
+  if (savedIndustries) {
+    industries = JSON.parse(savedIndustries);
+  }
+  
+  // Añadir solo si no existe
+  if (!industries.includes(industry)) {
+    industries.push(industry);
+    localStorage.setItem('customIndustries', JSON.stringify(industries));
+    
+    // Añadir al datalist
+    const datalist = document.getElementById('industryList');
+    const option = document.createElement('option');
+    option.value = industry;
+    datalist.appendChild(option);
+  }
+}
+
+// ── SECTOR LIST FUNCTIONS ────────────────────────────────────────────────────
+function loadSectorList() {
+  const savedSectors = localStorage.getItem('customSectors');
+  if (savedSectors) {
+    const sectors = JSON.parse(savedSectors);
+    const datalist = document.getElementById('sectorList');
+    
+    // Añadir los sectores guardados al datalist
+    sectors.forEach(sector => {
+      // Comprobar si ya existe para no duplicar
+      const exists = Array.from(datalist.options).some(opt => opt.value === sector);
+      if (!exists) {
+        const option = document.createElement('option');
+        option.value = sector;
+        datalist.appendChild(option);
+      }
+    });
+  }
+}
+
+function initSectorInput() {
+  const inputSector = document.getElementById('inputSector');
+  
+  inputSector.addEventListener('blur', function() {
+    const value = this.value.trim();
+    if (value) {
+      saveSectorToList(value);
+    }
+  });
+}
+
+function saveSectorToList(sector) {
+  if (!sector) return;
+  
+  // Obtener lista actual
+  let sectors = [];
+  const savedSectors = localStorage.getItem('customSectors');
+  if (savedSectors) {
+    sectors = JSON.parse(savedSectors);
+  }
+  
+  // Añadir solo si no existe
+  if (!sectors.includes(sector)) {
+    sectors.push(sector);
+    localStorage.setItem('customSectors', JSON.stringify(sectors));
+    
+    // Añadir al datalist
+    const datalist = document.getElementById('sectorList');
+    const option = document.createElement('option');
+    option.value = sector;
     datalist.appendChild(option);
   }
 }
