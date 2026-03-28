@@ -1642,6 +1642,7 @@ function renderDays() {
                   Ticker <span id="tickerSortIcon" style="font-size: 10px;">⇅</span>
                 </th>
                 <th>Noticia</th>
+                <th>M.Cap</th>
                 <th>Float</th>
                 <th>País</th>
                 <th>Sector</th>
@@ -1707,7 +1708,8 @@ function renderDays() {
                 <tr onclick="editTrade(${globalIdx})">
                   <td>${getEstadoBadge(trade.estado)}</td>
                   <td class="td-mono">${trade.ticker}</td>
-                  <td class="td-mono">${trade.noticia || '-'}</td>
+                  <td class="td-mono" style="${trade.noticia === 'SI' ? 'color: var(--green); font-weight: 600;' : trade.noticia === 'NO' ? 'color: var(--red); font-weight: 600;' : ''}">${trade.noticia || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px;">${trade.marketCap || '-'}</td>
                   <td class="td-mono" style="font-size: 10px; ${trade.float === 'Micro Low Float (<1M)' ? 'color: #ff1744; font-weight: 700;' : ''}">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
                   <td class="td-mono">${trade.sector || '-'}</td>
