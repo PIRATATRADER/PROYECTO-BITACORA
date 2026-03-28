@@ -6,6 +6,7 @@
 <title>Trading Discrecional</title>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-storage-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1295,6 +1296,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 let allTrades = [];
 let editingTradeId = null;
@@ -1423,6 +1425,18 @@ async function saveTrades() {
       tradesByDay[dayKey].push(trade);
     });
     
+    // Verificar tamaño de cada día y advertir si es muy grande
+    for (const [dayKey, trades] of Object.entries(tradesByDay)) {
+      const daySize = JSON.stringify(trades).length;
+      const maxSize = 950000; // 950KB
+      
+      if (daySize > maxSize) {
+        const tradesWithCharts = trades.filter(t => t.chartImage).length;
+        alert(`⚠️ Error: El día ${dayKey} tiene demasiados datos (${Math.round(daySize/1024)}KB / 950KB max).\n\nTienes ${trades.length} trades ese día, ${tradesWithCharts} con gráficos.\n\nPor favor:\n1. Elimina algunos gráficos de ese día (botón ✕)\n2. O asegúrate de tomar capturas más pequeñas`);
+        return;
+      }
+    }
+    
     // Guardar cada día en un documento separado (uno por uno)
     for (const [dayKey, trades] of Object.entries(tradesByDay)) {
       await db.collection('trading_discrecional').doc(`trades_${dayKey}`).set({
@@ -1442,7 +1456,7 @@ async function saveTrades() {
     allTrades = cleanedTrades;
   } catch (error) {
     console.error('Error saving trades:', error);
-    alert('⚠️ Error al guardar los datos. Por favor, intenta de nuevo.');
+    alert('⚠️ Error al guardar los datos.\n\nDetalles: ' + error.message + '\n\nIntenta eliminar algunos gráficos del día actual.');
   }
 }
 
@@ -2003,28 +2017,81 @@ function handleChartFile() {
   const file = document.getElementById('chartInput').files[0];
   if (!file) return;
   
+  // Mostrar preview inmediato mientras se sube
   const reader = new FileReader();
   reader.onload = function(e) {
-    // Comprimir la imagen antes de guardarla
-    compressImage(e.target.result, (compressedImage) => {
-      chartImageData = compressedImage;
-      displayChart(chartImageData);
-    });
+    displayChart(e.target.result);
+  };
+  reader.readAsDataURL(file);
+  
+  // Comprimir y subir a Storage
+  compressImageToBlob(file, async (blob) => {
+    try {
+      // Subir a Firebase Storage
+      const fileName = `charts/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
+      const storageRef = storage.ref(fileName);
+      const uploadTask = await storageRef.put(blob);
+      
+      // Obtener URL de descarga
+      const downloadURL = await uploadTask.ref.getDownloadURL();
+      
+      // Guardar la URL en lugar del base64
+      chartImageData = downloadURL;
+      
+      console.log('Gráfico subido a Storage:', downloadURL);
+    } catch (error) {
+      console.error('Error subiendo gráfico:', error);
+      alert('Error al subir el gráfico. Por favor, intenta de nuevo.');
+    }
+  });
+}
+
+// Función para comprimir imágenes y devolver Blob (para Storage)
+function compressImageToBlob(file, callback) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Redimensionar a un tamaño razonable (800px es suficiente con Storage)
+      let width = img.width;
+      let height = img.height;
+      const maxWidth = 800;
+      
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Dibujar imagen redimensionada
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convertir a Blob con calidad 0.7 (buena calidad ya que Storage no tiene límite de tamaño por imagen)
+      canvas.toBlob((blob) => {
+        callback(blob);
+      }, 'image/jpeg', 0.7);
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-// Función para comprimir imágenes
+// Función legacy para comprimir imágenes (mantener por compatibilidad)
 function compressImage(base64Image, callback) {
   const img = new Image();
   img.onload = function() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // Redimensionar a un tamaño mucho más pequeño (máximo 600px de ancho)
+    // Redimensionar a un tamaño muy pequeño (máximo 500px de ancho)
     let width = img.width;
     let height = img.height;
-    const maxWidth = 600;
+    const maxWidth = 500;
     
     if (width > maxWidth) {
       height = (height * maxWidth) / width;
@@ -2037,8 +2104,8 @@ function compressImage(base64Image, callback) {
     // Dibujar imagen redimensionada
     ctx.drawImage(img, 0, 0, width, height);
     
-    // Comprimir a JPEG con calidad muy baja (0.3) para reducir al máximo el tamaño
-    const compressedImage = canvas.toDataURL('image/jpeg', 0.3);
+    // Comprimir a JPEG con calidad ultra baja (0.2) para reducir al máximo el tamaño
+    const compressedImage = canvas.toDataURL('image/jpeg', 0.2);
     callback(compressedImage);
   };
   img.src = base64Image;
@@ -2082,6 +2149,19 @@ function zoomChartFromTable(tradeIdx) {
 // Eliminar gráfico desde la tabla
 async function deleteChartFromTable(tradeIdx) {
   if (!confirm('¿Eliminar el gráfico de este trade?')) return;
+  
+  const chartURL = allTrades[tradeIdx].chartImage;
+  
+  // Eliminar de Storage si es una URL de Firebase Storage
+  if (chartURL && chartURL.includes('firebasestorage.googleapis.com')) {
+    try {
+      const storageRef = storage.refFromURL(chartURL);
+      await storageRef.delete();
+      console.log('Gráfico eliminado de Storage');
+    } catch (error) {
+      console.log('Error eliminando de Storage (puede que ya no exista):', error);
+    }
+  }
   
   allTrades[tradeIdx].chartImage = null;
   await saveTrades();
