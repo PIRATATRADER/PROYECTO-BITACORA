@@ -1135,6 +1135,7 @@
                 <option value="0%-25%">0%-25%</option>
                 <option value="25%-50%">25%-50%</option>
                 <option value=">50%">>50%</option>
+                <option value="NO DISPONIBLE">NO DISPONIBLE</option>
               </select>
             </div>
           </div>
@@ -1146,6 +1147,7 @@
                 <option value="0%-30%">0%-30%</option>
                 <option value="30%-60%">30%-60%</option>
                 <option value=">60%">>60%</option>
+                <option value="NO DISPONIBLE">NO DISPONIBLE</option>
               </select>
             </div>
             <div class="form-group">
@@ -1370,6 +1372,8 @@ let allTrades = [];
 let editingTradeId = null;
 let currentFilter = 'all'; // Filtro activo
 let chartImageData = null; // Para almacenar la imagen del gráfico
+let sortBy = 'estado'; // Puede ser 'estado' o 'ticker'
+let sortOrder = 'asc'; // Puede ser 'asc' o 'desc'
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -1542,10 +1546,17 @@ function renderDays() {
   sortedDates.forEach(fecha => {
     const dayTrades = tradesByDay[fecha];
     
-    // Ordenar trades por estado: finalizado > ejecucion > estudio
+    // Ordenar trades según la opción seleccionada
     const sortedDayTrades = dayTrades.sort((a, b) => {
-      const estadoOrder = { 'finalizado': 1, 'ejecucion': 2, 'estudio': 3 };
-      return estadoOrder[a.estado] - estadoOrder[b.estado];
+      if (sortBy === 'ticker') {
+        // Ordenar por ticker alfabéticamente
+        const comparison = a.ticker.localeCompare(b.ticker);
+        return sortOrder === 'asc' ? comparison : -comparison;
+      } else {
+        // Ordenar por estado: finalizado > ejecucion > estudio
+        const estadoOrder = { 'finalizado': 1, 'ejecucion': 2, 'estudio': 3 };
+        return estadoOrder[a.estado] - estadoOrder[b.estado];
+      }
     });
     
     const finalizados = sortedDayTrades.filter(t => t.estado === 'finalizado');
@@ -1577,13 +1588,16 @@ function renderDays() {
             <thead>
               <tr>
                 <th>Estado</th>
-                <th>Ticker</th>
+                <th style="cursor: pointer; user-select: none;" onclick="toggleTickerSort()">
+                  Ticker <span id="tickerSortIcon" style="font-size: 10px;">⇅</span>
+                </th>
                 <th>Dir</th>
                 <th>Noticia</th>
                 <th>Float</th>
                 <th>País</th>
                 <th>Sector</th>
                 <th>Insiders</th>
+                <th>Inst. Own</th>
                 <th>Overhead</th>
                 <th>Dilución</th>
                 <th>PNL</th>
@@ -1627,6 +1641,7 @@ function renderDays() {
                   <td class="td-mono">${trade.pais || '-'}</td>
                   <td class="td-mono">${trade.sector || '-'}</td>
                   <td class="td-mono">${trade.insiders || '-'}</td>
+                  <td class="td-mono">${trade.instOwn || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${dilucionText}</td>
                   <td class="td-mono">${pnlContent}</td>
@@ -1651,6 +1666,9 @@ function renderDays() {
   
   // Actualizar contadores después de renderizar
   setTimeout(updateAllCountdowns, 100);
+  
+  // Actualizar icono de ordenamiento
+  updateSortIcon();
 }
 
 // Get estado badge HTML
@@ -2179,6 +2197,37 @@ function showTimeAlert(ticker) {
 
 function closeTimeAlert() {
   document.getElementById('timeAlertOverlay').classList.remove('show');
+}
+
+// ── TICKER SORT FUNCTIONS ──────────────────────────────────────────────────
+function toggleTickerSort() {
+  if (sortBy === 'ticker') {
+    // Si ya estamos ordenando por ticker, cambiar el orden
+    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    // Cambiar a ordenar por ticker
+    sortBy = 'ticker';
+    sortOrder = 'asc';
+  }
+  
+  // Actualizar icono
+  updateSortIcon();
+  
+  // Re-renderizar el dashboard
+  renderDashboard();
+}
+
+function updateSortIcon() {
+  const icon = document.getElementById('tickerSortIcon');
+  if (!icon) return;
+  
+  if (sortBy === 'ticker') {
+    icon.textContent = sortOrder === 'asc' ? '↑' : '↓';
+    icon.style.color = 'var(--purple)';
+  } else {
+    icon.textContent = '⇅';
+    icon.style.color = 'var(--muted)';
+  }
 }
 
 </script>
