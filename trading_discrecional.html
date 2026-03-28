@@ -984,23 +984,15 @@
         <!-- DATOS DE ENTRADA -->
         <div class="form-section">
           <div class="form-section-title">Datos de Entrada</div>
-          <div class="form-grid-3">
-            <div class="form-group">
-              <label class="form-label">Dirección</label>
-              <select class="form-select" id="inputDireccion">
-                <option value="">Seleccionar...</option>
-                <option value="LONG">LONG</option>
-                <option value="SHORT">SHORT</option>
-              </select>
-            </div>
+          <div class="form-grid-2">
             <div class="form-group">
               <label class="form-label">Setup</label>
               <select class="form-select" id="inputSetupEntrada">
                 <option value="">— Seleccionar —</option>
-                <option value="SETUP A ($1200 - $1400)">SETUP A ($1200 - $1400)</option>
-                <option value="SETUP B ($1000 - $1200)">SETUP B ($1000 - $1200)</option>
-                <option value="SETUP C ($800 - $1000)">SETUP C ($800 - $1000)</option>
-                <option value="BABY SIZE (>$800)">BABY SIZE (>$800)</option>
+                <option value="SETUP A ($1000 - $1200)">SETUP A ($1000 - $1200)</option>
+                <option value="SETUP B ($800 - $1000)">SETUP B ($800 - $1000)</option>
+                <option value="SETUP C ($600 - $800)">SETUP C ($600 - $800)</option>
+                <option value="BABY SIZE (<$600)">BABY SIZE (<$600)</option>
                 <option value="Otro (escribir)">Otro (escribir)</option>
               </select>
             </div>
@@ -1120,7 +1112,8 @@
               <label class="form-label">Float</label>
               <select class="form-select" id="inputFloat">
                 <option value="">Seleccionar...</option>
-                <option value="Ultra Low Float (<5M)">Ultra Low Float (<5M)</option>
+                <option value="Micro Low Float (<1M)">Micro Low Float (<1M)</option>
+                <option value="Ultra Low Float (1M-5M)">Ultra Low Float (1M-5M)</option>
                 <option value="Low Float (5M-10M)">Low Float (5M-10M)</option>
                 <option value="Medium Low Float (10M-20M)">Medium Low Float (10M-20M)</option>
                 <option value="Medium Float (20M-50M)">Medium Float (20M-50M)</option>
@@ -1393,35 +1386,68 @@ function setDefaultDate() {
 // Load trades from Firebase
 async function loadTrades() {
   try {
-    const doc = await db.collection('trading_discrecional').doc('trades_data').get();
-    if (doc.exists && doc.data().trades) {
-      allTrades = doc.data().trades;
-      
-      // Inicializar timestamp para trades en ejecución que no lo tengan
-      let needsSave = false;
-      allTrades.forEach(trade => {
-        if (trade.estado === 'ejecucion' && !trade.ejecucionStartTime) {
-          trade.ejecucionStartTime = Date.now();
-          needsSave = true;
-        }
-      });
-      
-      // Guardar si hubo cambios
-      if (needsSave) {
-        await saveTrades();
-      }
-      
-      renderDashboard();
-    } else {
+    // Primero intentar cargar desde el sistema nuevo (particionado por semana)
+    const indexDoc = await db.collection('trading_discrecional').doc('_index').get();
+    
+    if (indexDoc.exists && indexDoc.data().weeks) {
+      // Sistema nuevo por semanas: cargar todas las semanas
+      const weeks = indexDoc.data().weeks;
       allTrades = [];
-      renderDashboard();
+      
+      for (const week of weeks) {
+        const weekDoc = await db.collection('trading_discrecional').doc(`trades_${week}`).get();
+        if (weekDoc.exists && weekDoc.data().trades) {
+          allTrades = allTrades.concat(weekDoc.data().trades);
+        }
+      }
+    } else if (indexDoc.exists && indexDoc.data().months) {
+      // Sistema anterior por meses: cargar todos los meses
+      const months = indexDoc.data().months;
+      allTrades = [];
+      
+      for (const month of months) {
+        const monthDoc = await db.collection('trading_discrecional').doc(`trades_${month}`).get();
+        if (monthDoc.exists && monthDoc.data().trades) {
+          allTrades = allTrades.concat(monthDoc.data().trades);
+        }
+      }
+      // Migrar al nuevo sistema por semanas
+      await saveTrades();
+    } else {
+      // Sistema muy antiguo: intentar cargar desde documento único
+      const oldDoc = await db.collection('trading_discrecional').doc('trades_data').get();
+      if (oldDoc.exists && oldDoc.data().trades) {
+        allTrades = oldDoc.data().trades;
+        // Migrar al nuevo sistema por semanas
+        await saveTrades();
+      } else {
+        allTrades = [];
+      }
     }
+    
+    // Inicializar timestamp para trades en ejecución que no lo tengan
+    let needsSave = false;
+    allTrades.forEach(trade => {
+      if (trade.estado === 'ejecucion' && !trade.ejecucionStartTime) {
+        trade.ejecucionStartTime = Date.now();
+        needsSave = true;
+      }
+    });
+    
+    // Guardar si hubo cambios
+    if (needsSave) {
+      await saveTrades();
+    }
+    
+    renderDashboard();
   } catch (error) {
     console.error('Error loading trades:', error);
+    allTrades = [];
+    renderDashboard();
   }
 }
 
-// Save trades to Firebase
+// Save trades to Firebase con particionamiento por semana
 async function saveTrades() {
   try {
     // Limpiar undefined de todos los trades (Firestore no acepta undefined)
@@ -1435,17 +1461,36 @@ async function saveTrades() {
       return cleanTrade;
     });
     
-    // Calcular tamaño aproximado de los datos
-    const dataSize = JSON.stringify(cleanedTrades).length;
-    const maxSize = 1048576; // 1MB en bytes (límite de Firestore)
-    
-    if (dataSize > maxSize) {
-      alert('⚠️ Los datos son demasiado grandes.\n\nAlgunos gráficos son muy pesados. Por favor, reduce el tamaño de las imágenes o elimina algunos gráficos.');
-      return;
+    // Función para obtener el número de semana del año
+    function getWeekKey(dateString) {
+      const date = new Date(dateString);
+      const yearStart = new Date(date.getFullYear(), 0, 1);
+      const weekNum = Math.ceil((((date - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
+      return `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
     }
     
-    await db.collection('trading_discrecional').doc('trades_data').set({
-      trades: cleanedTrades,
+    // Agrupar trades por semana (YYYY-W01, YYYY-W02, etc.)
+    const tradesByWeek = {};
+    cleanedTrades.forEach(trade => {
+      const weekKey = getWeekKey(trade.fecha);
+      if (!tradesByWeek[weekKey]) {
+        tradesByWeek[weekKey] = [];
+      }
+      tradesByWeek[weekKey].push(trade);
+    });
+    
+    // Guardar cada semana en un documento separado (uno por uno)
+    for (const [weekKey, trades] of Object.entries(tradesByWeek)) {
+      await db.collection('trading_discrecional').doc(`trades_${weekKey}`).set({
+        trades: trades,
+        week: weekKey,
+        lastUpdate: new Date().toISOString()
+      });
+    }
+    
+    // Guardar índice de semanas disponibles
+    await db.collection('trading_discrecional').doc('_index').set({
+      weeks: Object.keys(tradesByWeek),
       lastUpdate: new Date().toISOString()
     });
     
@@ -1453,11 +1498,7 @@ async function saveTrades() {
     allTrades = cleanedTrades;
   } catch (error) {
     console.error('Error saving trades:', error);
-    if (error.code === 'resource-exhausted' || error.message.includes('maximum size')) {
-      alert('⚠️ Error: Los datos exceden el límite de Firebase.\n\nLos gráficos son demasiado grandes. Intenta:\n1. Usar imágenes más pequeñas\n2. Eliminar algunos gráficos antiguos');
-    } else {
-      alert('Error al guardar. Por favor intenta de nuevo.\n\n' + error.message);
-    }
+    alert('⚠️ Error al guardar los datos. Por favor, intenta de nuevo.');
   }
 }
 
@@ -1591,7 +1632,6 @@ function renderDays() {
                 <th style="cursor: pointer; user-select: none;" onclick="toggleTickerSort()">
                   Ticker <span id="tickerSortIcon" style="font-size: 10px;">⇅</span>
                 </th>
-                <th>Dir</th>
                 <th>Noticia</th>
                 <th>Float</th>
                 <th>País</th>
@@ -1635,12 +1675,11 @@ function renderDays() {
                 <tr onclick="editTrade(${globalIdx})">
                   <td>${getEstadoBadge(trade.estado)}</td>
                   <td class="td-mono">${trade.ticker}</td>
-                  <td>${trade.direccion ? `<span class="badge ${trade.direccion === 'LONG' ? 'badge-long' : 'badge-short'}">${trade.direccion}</span>` : '-'}</td>
                   <td class="td-mono">${trade.noticia || '-'}</td>
-                  <td class="td-mono" style="font-size: 10px;">${trade.float || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px; ${trade.float === 'Micro Low Float (<1M)' ? 'color: #ff1744; font-weight: 700;' : ''}">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
                   <td class="td-mono">${trade.sector || '-'}</td>
-                  <td class="td-mono">${trade.insiders || '-'}</td>
+                  <td class="td-mono" style="${trade.insiders === '>50%' ? 'color: var(--red); font-weight: 600;' : ''}">${trade.insiders || '-'}</td>
                   <td class="td-mono">${trade.instOwn || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${dilucionText}</td>
@@ -1721,7 +1760,6 @@ function editTrade(globalIdx) {
   document.getElementById('inputTicker').value = trade.ticker;
   
   // Datos de entrada
-  document.getElementById('inputDireccion').value = trade.direccion || '';
   document.getElementById('inputSetupEntrada').value = trade.setupEntrada || '';
   document.getElementById('inputInicio').value = trade.inicio || '';
   document.getElementById('inputClosed').value = trade.closed || '';
@@ -1847,7 +1885,6 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     ticker: document.getElementById('inputTicker').value.toUpperCase(),
     
     // Datos de entrada
-    direccion: document.getElementById('inputDireccion').value || null,
     setupEntrada: document.getElementById('inputSetupEntrada').value || '',
     inicio: document.getElementById('inputInicio').value || '',
     closed: document.getElementById('inputClosed').value || '',
@@ -2004,10 +2041,10 @@ function compressImage(base64Image, callback) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // Redimensionar si es muy grande (máximo 1200px de ancho)
+    // Redimensionar a un tamaño mucho más pequeño (máximo 600px de ancho)
     let width = img.width;
     let height = img.height;
-    const maxWidth = 1200;
+    const maxWidth = 600;
     
     if (width > maxWidth) {
       height = (height * maxWidth) / width;
@@ -2020,8 +2057,8 @@ function compressImage(base64Image, callback) {
     // Dibujar imagen redimensionada
     ctx.drawImage(img, 0, 0, width, height);
     
-    // Comprimir a JPEG con calidad 0.7
-    const compressedImage = canvas.toDataURL('image/jpeg', 0.7);
+    // Comprimir a JPEG con calidad muy baja (0.3) para reducir al máximo el tamaño
+    const compressedImage = canvas.toDataURL('image/jpeg', 0.3);
     callback(compressedImage);
   };
   img.src = base64Image;
