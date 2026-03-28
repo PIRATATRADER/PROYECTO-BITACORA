@@ -1090,6 +1090,10 @@
               <label class="form-label">Sector</label>
               <input type="text" class="form-input" id="inputSector" placeholder="Tech, Biotech, Energy...">
             </div>
+            <div class="form-group">
+              <label class="form-label">Industry</label>
+              <input type="text" class="form-input" id="inputIndustry" placeholder="Software, Pharmaceuticals...">
+            </div>
           </div>
         </div>
 
@@ -1641,6 +1645,7 @@ function renderDays() {
                 <th>Float</th>
                 <th>País</th>
                 <th>Sector</th>
+                <th>Industry</th>
                 <th>Insiders</th>
                 <th>Inst. Own</th>
                 <th>Overhead</th>
@@ -1684,6 +1689,7 @@ function renderDays() {
                   <td class="td-mono" style="font-size: 10px; ${trade.float === 'Micro Low Float (<1M)' ? 'color: #ff1744; font-weight: 700;' : ''}">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
                   <td class="td-mono">${trade.sector || '-'}</td>
+                  <td class="td-mono">${trade.industry || '-'}</td>
                   <td class="td-mono" style="${trade.insiders === '>50%' ? 'color: var(--red); font-weight: 600;' : ''}">${trade.insiders || '-'}</td>
                   <td class="td-mono">${trade.instOwn || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
@@ -1781,6 +1787,7 @@ function editTrade(globalIdx) {
   document.getElementById('inputPais').value = trade.pais || '';
   document.getElementById('inputCatalizador').value = trade.catalizador || '';
   document.getElementById('inputSector').value = trade.sector || '';
+  document.getElementById('inputIndustry').value = trade.industry || '';
   
   // Fundamentales
   document.getElementById('inputMarketCap').value = trade.marketCap || '';
@@ -1908,6 +1915,7 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     pais: document.getElementById('inputPais').value || '',
     catalizador: document.getElementById('inputCatalizador').value || '',
     sector: document.getElementById('inputSector').value || '',
+    industry: document.getElementById('inputIndustry').value || '',
     
     // Fundamentales
     marketCap: document.getElementById('inputMarketCap').value || '',
