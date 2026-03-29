@@ -629,6 +629,8 @@ function renderProfitsStats(yearDocs) {
   const yearStats = [];
 
   for (const { year, doc } of yearDocs) {
+    // Verificar que doc exista antes de acceder a sus propiedades
+    if (!doc) continue;
     if (!doc.exists && !doc.rows) continue;
     const rows = doc.exists ? (doc.data().rows || []) : (doc.rows || []);
     if (!rows.length) continue;

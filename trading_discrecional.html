@@ -2064,6 +2064,10 @@ async function deleteTrade() {
 
 // Format helpers
 function formatPNL(val) {
+  // Manejar casos donde val es undefined, null o no es un número
+  if (val === null || val === undefined || isNaN(val)) {
+    return '-';
+  }
   const sign = val >= 0 ? '+' : '';
   return sign + '$' + val.toFixed(2);
 }
