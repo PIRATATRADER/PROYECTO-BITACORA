@@ -1419,6 +1419,11 @@ let sortOrder = 'asc'; // Puede ser 'asc' o 'desc'
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('=== INICIANDO APLICACIÓN ===');
+  console.log('Firebase configurado:', !!firebase);
+  console.log('Firestore disponible:', !!db);
+  console.log('Colección:', 'trading_discrecional');
+  
   loadTrades();
   setDefaultDate();
   initChartUpload();
@@ -1429,6 +1434,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadIndustryList();
   initIndustryInput();
   startCountdownTimers();
+  
+  console.log('=== INICIALIZACIÓN COMPLETA ===');
 });
 
 function setDefaultDate() {
@@ -1439,17 +1446,34 @@ function setDefaultDate() {
 // Load trades from Firebase
 async function loadTrades() {
   try {
-    console.log('🔄 Cargando trades desde Firestore...');
+    console.log('🔄 === CARGANDO TRADES ===');
+    console.log('Accediendo a Firestore...');
+    console.log('Base de datos:', db);
+    console.log('Colección:', 'trading_discrecional');
     
     // Cargar todos los documentos de la colección (cada documento = 1 trade)
     const snapshot = await db.collection('trading_discrecional').get();
     
+    console.log('✅ Snapshot recibido');
+    console.log('Número de documentos:', snapshot.size);
+    console.log('Documentos vacíos:', snapshot.empty);
+    
     allTrades = [];
+    let skipped = 0;
+    
     snapshot.forEach(doc => {
+      console.log(`📄 Documento: ${doc.id}`);
+      
       // Saltar documentos del sistema anterior
-      if (doc.id === '_index' || doc.id.startsWith('trades_')) return;
+      if (doc.id === '_index' || doc.id.startsWith('trades_')) {
+        console.log(`⏭️  Saltando documento del sistema anterior: ${doc.id}`);
+        skipped++;
+        return;
+      }
       
       const data = doc.data();
+      console.log(`✅ Trade cargado: ${doc.id}`, data);
+      
       // Añadir el ID del documento al trade
       allTrades.push({
         ...data,
@@ -1457,11 +1481,20 @@ async function loadTrades() {
       });
     });
     
-    console.log(`✅ ${allTrades.length} trades cargados correctamente`);
+    console.log(`✅ === CARGA COMPLETADA ===`);
+    console.log(`Trades cargados: ${allTrades.length}`);
+    console.log(`Documentos saltados: ${skipped}`);
+    console.log('Trades:', allTrades);
+    
     renderDashboard();
   } catch (error) {
-    console.error('❌ Error cargando trades:', error);
-    alert(`Error al cargar datos:\n\n${error.message}\n\nPor favor verifica las reglas de Firestore.`);
+    console.error('❌ === ERROR CARGANDO TRADES ===');
+    console.error('Tipo:', error.name);
+    console.error('Mensaje:', error.message);
+    console.error('Código:', error.code);
+    console.error('Stack:', error.stack);
+    
+    alert(`Error al cargar datos:\n\n${error.message}\n\nPor favor verifica las reglas de Firestore.\n\nAbre la consola (F12) para más detalles.`);
     allTrades = [];
     renderDashboard();
   }
