@@ -906,6 +906,327 @@
     padding: 20px;
   }
 
+  /* ── STATS MODAL ENHANCED ─────────────────────────────── */
+  #statsModal .modal-content {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 1400px;
+    max-height: 92vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stats-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 16px 24px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+    border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
+  }
+
+  .stats-tab {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+  }
+
+  .stats-tab:hover { color: var(--text); }
+
+  .stats-tab.active {
+    color: var(--purple);
+    border-bottom-color: var(--purple);
+  }
+
+  .stats-panel { display: none; }
+  .stats-panel.active { display: block; }
+
+  .stats-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stats-kpi {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stats-kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--purple);
+  }
+
+  .stats-kpi-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .stats-kpi-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .stats-kpi-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted2);
+    margin-top: 4px;
+  }
+
+  .stats-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .stats-charts-grid.cols3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .stats-chart-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  .stats-chart-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin-bottom: 14px;
+  }
+
+  .stats-chart-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  /* Breakdown table */
+  .breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .breakdown-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 12px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .breakdown-table th.right { text-align: right; }
+
+  .breakdown-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+  }
+
+  .breakdown-table td.right { text-align: right; }
+
+  .breakdown-table tr:last-child td { border-bottom: none; }
+
+  .breakdown-table tr:hover td { background: var(--bg2); }
+
+  /* Win rate bar inline */
+  .wr-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wr-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .wr-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--purple);
+    transition: width 0.4s ease;
+  }
+
+  .wr-bar-fill.green { background: var(--green); }
+  .wr-bar-fill.red { background: var(--red); }
+
+  .sl-vs-l-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .direction-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  .direction-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dir-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .dir-kpi {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .dir-kpi-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .dir-kpi-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+
+  /* Setup performance pills */
+  .setup-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+  }
+
+  .setup-pill-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .setup-pill-stats {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .pill-stat {
+    text-align: right;
+  }
+
+  .pill-stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .pill-stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Cumulative equity curve container */
+  .equity-full {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+
+  /* Dilucion breakdown */
+  .dilucion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .dilucion-item:last-child { border-bottom: none; }
+
+  .stats-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted2);
+    font-size: 14px;
+  }
+
+  .no-data-msg {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    padding: 20px;
+  }
 
 </style>
 </head>
@@ -1316,70 +1637,153 @@
   </div>
 </div>
 
-<!-- Modal Estadísticas -->
-<div class="modal-overlay" id="statsModal" style="z-index: 2000;">
-  <div class="modal-content" style="max-width: 1400px; max-height: 90vh; overflow-y: auto;">
-    <div class="modal-header">
-      <h2>📈 Dashboard de Estadísticas</h2>
+<!-- Modal Estadísticas ENHANCED -->
+<div class="modal-overlay" id="statsModal" style="z-index: 2000; align-items: flex-start; padding-top: 24px;">
+  <div class="modal-content" style="max-width: 1400px; width: 96%; border-radius: 16px; background: var(--bg2); border: 1px solid var(--border); display: flex; flex-direction: column; max-height: 92vh;">
+
+    <!-- Header fijo -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding: 20px 28px 0; flex-shrink:0;">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:3px; color:var(--purple);">ANALYTICS</div>
+        <div style="font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--muted2); text-transform:uppercase; margin-top:2px;">Trades finalizados · Solo lectura</div>
+      </div>
       <button class="modal-close" onclick="closeStatsModal()">✕</button>
     </div>
-    <div class="modal-body" style="padding: 24px;">
-      
-      <!-- Métricas Principales -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px;">
-        <div class="stat-card">
-          <div class="stat-label">Total Trades</div>
-          <div class="stat-value" id="statTotalTrades">0</div>
+
+    <!-- Tabs -->
+    <div class="stats-tabs">
+      <button class="stats-tab active" onclick="switchStatsTab('global',this)">Global</button>
+      <button class="stats-tab" onclick="switchStatsTab('pnl',this)">PNL &amp; Equity</button>
+      <button class="stats-tab" onclick="switchStatsTab('breakdown',this)">Breakdowns</button>
+      <button class="stats-tab" onclick="switchStatsTab('direction',this)">Short vs Long</button>
+      <button class="stats-tab" onclick="switchStatsTab('setup',this)">Setup</button>
+    </div>
+
+    <!-- Body scrollable -->
+    <div style="overflow-y:auto; padding: 24px 28px; flex:1;">
+
+      <!-- ══════════════════ TAB: GLOBAL ══════════════════ -->
+      <div class="stats-panel active" id="statsPanel-global">
+
+        <div class="stats-kpi-row" id="statsKpiRow"></div>
+
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Distribución de R (histograma)</div>
+            <div class="stats-chart-wrap" style="height:220px"><canvas id="s_chartRDist"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Win Rate por Noticia</div>
+            <div class="stats-chart-wrap" style="height:220px"><canvas id="s_chartNoticia"></canvas></div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Win Rate</div>
-          <div class="stat-value" id="statWinRate" style="color: var(--purple);">0%</div>
+
+        <div class="stats-charts-grid cols3">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Trades por Setup (volumen)</div>
+            <div class="stats-chart-wrap" style="height:200px"><canvas id="s_chartSetupVol"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Win Rate por Market Cap</div>
+            <div class="stats-chart-wrap" style="height:200px"><canvas id="s_chartMcap"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Win Rate por Inicio</div>
+            <div class="stats-chart-wrap" style="height:200px"><canvas id="s_chartInicio"></canvas></div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">PNL Total</div>
-          <div class="stat-value" id="statTotalPNL">$0</div>
+
+      </div>
+
+      <!-- ══════════════════ TAB: PNL & EQUITY ══════════════════ -->
+      <div class="stats-panel" id="statsPanel-pnl">
+
+        <div class="equity-full">
+          <div class="stats-chart-title">Equity curve acumulada (PNL $)</div>
+          <div class="stats-chart-wrap" style="height:260px"><canvas id="s_chartEquity"></canvas></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">R Promedio</div>
-          <div class="stat-value" id="statAvgR">0R</div>
+
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">PNL por día</div>
+            <div class="stats-chart-wrap" style="height:220px"><canvas id="s_chartPNLDay"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Dispersión R por trade (orden cronológico)</div>
+            <div class="stats-chart-wrap" style="height:220px"><canvas id="s_chartRScatter"></canvas></div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Profit Factor</div>
-          <div class="stat-value" id="statProfitFactor" style="color: var(--blue);">0</div>
+
+      </div>
+
+      <!-- ══════════════════ TAB: BREAKDOWNS ══════════════════ -->
+      <div class="stats-panel" id="statsPanel-breakdown">
+
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Win Rate por Sector</div>
+            <div class="stats-chart-wrap" style="height:240px"><canvas id="s_chartSector"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Win Rate por Float</div>
+            <div class="stats-chart-wrap" style="height:240px"><canvas id="s_chartFloat"></canvas></div>
+          </div>
+        </div>
+
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Top países por Win Rate</div>
+            <div class="stats-chart-wrap" style="height:200px"><canvas id="s_chartPais"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Dilución — PNL promedio por tipo</div>
+            <div class="stats-chart-wrap" style="height:200px"><canvas id="s_chartDilucion"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Tabla breakdown por sector -->
+        <div class="stats-chart-box" style="margin-top:0">
+          <div class="stats-chart-title">Tabla detallada por sector</div>
+          <div id="s_tablaSector"></div>
+        </div>
+
+      </div>
+
+      <!-- ══════════════════ TAB: SHORT vs LONG ══════════════════ -->
+      <div class="stats-panel" id="statsPanel-direction">
+        <div class="sl-vs-l-row">
+          <div class="direction-card">
+            <div class="direction-title" style="color: var(--red);">🔴 SHORT</div>
+            <div class="dir-kpis" id="dirKpiShort"></div>
+            <div class="stats-chart-wrap" style="height:180px"><canvas id="s_chartShortR"></canvas></div>
+          </div>
+          <div class="direction-card">
+            <div class="direction-title" style="color: var(--green);">🟢 LONG</div>
+            <div class="dir-kpis" id="dirKpiLong"></div>
+            <div class="stats-chart-wrap" style="height:180px"><canvas id="s_chartLongR"></canvas></div>
+          </div>
+        </div>
+        <div class="stats-chart-box">
+          <div class="stats-chart-title">PNL Short vs Long por día</div>
+          <div class="stats-chart-wrap" style="height:220px"><canvas id="s_chartSLDay"></canvas></div>
         </div>
       </div>
 
-      <!-- Gráficos -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-        <div class="chart-container">
-          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Win Rate por Sector</h3>
-          <canvas id="chartWRSector" style="max-height: 300px;"></canvas>
+      <!-- ══════════════════ TAB: SETUP ══════════════════ -->
+      <div class="stats-panel" id="statsPanel-setup">
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">PNL promedio por Setup</div>
+            <div class="stats-chart-wrap" style="height:240px"><canvas id="s_chartSetupPNL"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Win Rate por Setup</div>
+            <div class="stats-chart-wrap" style="height:240px"><canvas id="s_chartSetupWR"></canvas></div>
+          </div>
         </div>
-        <div class="chart-container">
-          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Win Rate por Float</h3>
-          <canvas id="chartWRFloat" style="max-height: 300px;"></canvas>
-        </div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-        <div class="chart-container">
-          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">PNL por Día</h3>
-          <canvas id="chartPNLDaily" style="max-height: 300px;"></canvas>
-        </div>
-        <div class="chart-container">
-          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Distribución de R</h3>
-          <canvas id="chartRDistribution" style="max-height: 300px;"></canvas>
-        </div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-        <div class="chart-container">
-          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Win Rate: Noticia SI vs NO</h3>
-          <canvas id="chartWRNoticia" style="max-height: 250px;"></canvas>
-        </div>
-        <div class="chart-container">
-          <h3 style="margin-bottom: 16px; color: var(--text); font-size: 14px; font-weight: 600;">Top 5 Countries por Win Rate</h3>
-          <canvas id="chartWRCountry" style="max-height: 250px;"></canvas>
+        <div class="stats-chart-box">
+          <div class="stats-chart-title">Performance por Setup (tabla)</div>
+          <div id="s_tablaSetup"></div>
         </div>
       </div>
 
@@ -2559,381 +2963,474 @@ function updateSortIcon() {
   }
 }
 
-// ── STATISTICS DASHBOARD ───────────────────────────────────────────────────────
+// ── STATISTICS DASHBOARD v2 ────────────────────────────────────────────────────
 
 let statsCharts = {};
+let currentStatsTab = 'global';
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function sPNL(t) {
+  if (t.pnl != null) return t.pnl;
+  return (t.pnlShort || 0) + (t.pnlLong || 0);
+}
+
+function sR(t) {
+  const r = parseFloat(t.rr || t.rrShort || t.rrLong || 0);
+  return isNaN(r) ? 0 : r;
+}
+
+function sWins(trades) {
+  return trades.filter(t => sPNL(t) > 0).length;
+}
+
+function sWR(trades) {
+  if (!trades.length) return 0;
+  return Math.round((sWins(trades) / trades.length) * 100);
+}
+
+function sPF(trades) {
+  const wins = trades.filter(t => sPNL(t) > 0).reduce((s, t) => s + sPNL(t), 0);
+  const losses = Math.abs(trades.filter(t => sPNL(t) < 0).reduce((s, t) => s + sPNL(t), 0));
+  if (!losses) return wins > 0 ? '∞' : '0';
+  return (wins / losses).toFixed(2);
+}
+
+function sAvgR(trades) {
+  if (!trades.length) return 0;
+  return trades.reduce((s, t) => s + sR(t), 0) / trades.length;
+}
+
+function sMaxDD(trades) {
+  let peak = 0, maxDD = 0, cum = 0;
+  trades.forEach(t => {
+    cum += sPNL(t);
+    if (cum > peak) peak = cum;
+    const dd = peak - cum;
+    if (dd > maxDD) maxDD = dd;
+  });
+  return maxDD;
+}
+
+function sWRBarHTML(wr) {
+  const color = wr >= 60 ? 'green' : wr >= 40 ? '' : 'red';
+  return `<div class="wr-bar-wrap"><div class="wr-bar-bg"><div class="wr-bar-fill ${color}" style="width:${wr}%"></div></div><span style="font-family:'DM Mono',monospace;font-size:11px;min-width:36px;text-align:right;">${wr}%</span></div>`;
+}
+
+function sMakeChart(id, cfg) {
+  if (statsCharts[id]) { statsCharts[id].destroy(); }
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  statsCharts[id] = new Chart(canvas.getContext('2d'), cfg);
+}
+
+const C = {
+  purple: 'rgba(177,106,255,0.7)',
+  purpleB: '#b16aff',
+  green: 'rgba(0,230,118,0.7)',
+  greenB: '#00e676',
+  red: 'rgba(255,61,87,0.7)',
+  redB: '#ff3d57',
+  blue: 'rgba(68,138,255,0.7)',
+  blueB: '#448aff',
+  yellow: 'rgba(255,214,0,0.7)',
+  yellowB: '#ffd600',
+  grid: '#1e2530',
+  tick: '#7a8599'
+};
+
+const baseScales = (yMax) => ({
+  y: { beginAtZero: true, ...(yMax ? { max: yMax } : {}), ticks: { color: C.tick }, grid: { color: C.grid } },
+  x: { ticks: { color: C.tick, maxRotation: 40 }, grid: { color: C.grid } }
+});
+
+const baseOpts = (yMax) => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: baseScales(yMax)
+});
+
+function groupBy(trades, key, getter) {
+  const map = {};
+  trades.forEach(t => {
+    const k = (getter ? getter(t) : t[key]) || `Sin ${key}`;
+    if (!map[k]) map[k] = [];
+    map[k].push(t);
+  });
+  return map;
+}
+
+// ── Switch tabs ────────────────────────────────────────────────────────────────
+
+function switchStatsTab(tab, btn) {
+  document.querySelectorAll('.stats-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stats-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('statsPanel-' + tab).classList.add('active');
+  currentStatsTab = tab;
+
+  const fin = allTrades.filter(t => t.estado === 'finalizado');
+  if (tab === 'pnl') buildPNLTab(fin);
+  else if (tab === 'breakdown') buildBreakdownTab(fin);
+  else if (tab === 'direction') buildDirectionTab(fin);
+  else if (tab === 'setup') buildSetupTab(fin);
+}
+
+// ── Open / Close ───────────────────────────────────────────────────────────────
 
 function openStatsModal() {
+  const fin = allTrades.filter(t => t.estado === 'finalizado');
+  if (!fin.length) { alert('No hay trades finalizados todavía.'); return; }
   document.getElementById('statsModal').classList.add('open');
-  generateStatistics();
+  // reset to global tab
+  document.querySelectorAll('.stats-tab').forEach((b,i) => b.classList.toggle('active', i===0));
+  document.querySelectorAll('.stats-panel').forEach((p,i) => p.classList.toggle('active', i===0));
+  currentStatsTab = 'global';
+  buildGlobalTab(fin);
 }
 
 function closeStatsModal() {
   document.getElementById('statsModal').classList.remove('open');
-  // Destruir gráficos para liberar memoria
-  Object.values(statsCharts).forEach(chart => chart.destroy());
+  Object.values(statsCharts).forEach(c => { try { c.destroy(); } catch(e){} });
   statsCharts = {};
 }
 
-function generateStatistics() {
-  const finalizados = allTrades.filter(t => t.estado === 'finalizado');
-  
-  if (finalizados.length === 0) {
-    alert('No hay trades finalizados para generar estadísticas');
-    closeStatsModal();
-    return;
-  }
+// ── TAB: GLOBAL ────────────────────────────────────────────────────────────────
 
-  // Calcular métricas principales
-  const totalTrades = finalizados.length;
-  const wins = finalizados.filter(t => (t.pnl || 0) > 0 || (t.pnlShort || 0) + (t.pnlLong || 0) > 0).length;
-  const winRate = totalTrades > 0 ? Math.round((wins / totalTrades) * 100) : 0;
-  
-  const totalPNL = finalizados.reduce((sum, t) => {
-    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
-    return sum + pnl;
-  }, 0);
-  
-  const avgR = finalizados.reduce((sum, t) => {
-    const r = parseFloat(t.rr || t.rrShort || t.rrLong || 0);
-    return sum + r;
-  }, 0) / totalTrades;
-  
-  const grossWins = finalizados.filter(t => (t.pnl || 0) > 0 || (t.pnlShort || 0) + (t.pnlLong || 0) > 0)
-    .reduce((sum, t) => sum + (t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0)), 0);
-  const grossLosses = Math.abs(finalizados.filter(t => (t.pnl || 0) < 0 || (t.pnlShort || 0) + (t.pnlLong || 0) < 0)
-    .reduce((sum, t) => sum + (t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0)), 0));
-  const profitFactor = grossLosses > 0 ? (grossWins / grossLosses).toFixed(2) : grossWins > 0 ? '∞' : '0';
-  
-  // Actualizar métricas
-  document.getElementById('statTotalTrades').textContent = totalTrades;
-  document.getElementById('statWinRate').textContent = winRate + '%';
-  document.getElementById('statTotalPNL').textContent = formatPNL(totalPNL);
-  document.getElementById('statTotalPNL').style.color = totalPNL >= 0 ? 'var(--green)' : 'var(--red)';
-  document.getElementById('statAvgR').textContent = avgR.toFixed(2) + 'R';
-  document.getElementById('statProfitFactor').textContent = profitFactor;
-  
-  // Generar gráficos
-  generateWRBySector(finalizados);
-  generateWRByFloat(finalizados);
-  generatePNLDaily(finalizados);
-  generateRDistribution(finalizados);
-  generateWRByNoticia(finalizados);
-  generateWRByCountry(finalizados);
-}
+function buildGlobalTab(fin) {
+  const total = fin.length;
+  const wins = sWins(fin);
+  const wr = sWR(fin);
+  const totalPNL = fin.reduce((s,t) => s + sPNL(t), 0);
+  const avgR = sAvgR(fin);
+  const pf = sPF(fin);
+  const maxDD = sMaxDD(fin);
+  const bestTrade = fin.reduce((best, t) => sPNL(t) > sPNL(best) ? t : best, fin[0]);
+  const worstTrade = fin.reduce((worst, t) => sPNL(t) < sPNL(worst) ? t : worst, fin[0]);
 
-function generateWRBySector(trades) {
-  const sectorStats = {};
-  trades.forEach(t => {
-    const sector = t.sector || 'Sin Sector';
-    if (!sectorStats[sector]) {
-      sectorStats[sector] = { total: 0, wins: 0 };
-    }
-    sectorStats[sector].total++;
-    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
-    if (pnl > 0) sectorStats[sector].wins++;
-  });
-  
-  const labels = Object.keys(sectorStats);
-  const data = labels.map(sector => {
-    const wr = (sectorStats[sector].wins / sectorStats[sector].total) * 100;
-    return wr.toFixed(1);
-  });
-  
-  if (statsCharts.wrSector) statsCharts.wrSector.destroy();
-  
-  const ctx = document.getElementById('chartWRSector').getContext('2d');
-  statsCharts.wrSector = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Win Rate %',
-        data: data,
-        backgroundColor: 'rgba(177, 106, 255, 0.6)',
-        borderColor: 'rgba(177, 106, 255, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100,
-          ticks: { color: '#7a8599' },
-          grid: { color: '#1e2530' }
-        },
-        x: {
-          ticks: { color: '#7a8599' },
-          grid: { color: '#1e2530' }
-        }
-      }
-    }
-  });
-}
+  const kpis = [
+    { label: 'Trades', val: total, sub: `${wins}W / ${total-wins}L` },
+    { label: 'Win Rate', val: wr + '%', sub: '', color: wr >= 50 ? C.greenB : C.redB },
+    { label: 'PNL Total', val: formatPNL(totalPNL), sub: '', color: totalPNL >= 0 ? C.greenB : C.redB },
+    { label: 'Avg R', val: avgR.toFixed(2) + 'R', sub: '', color: avgR >= 0 ? C.greenB : C.redB },
+    { label: 'Profit Factor', val: pf, sub: '', color: C.blueB },
+    { label: 'Max Drawdown', val: '$' + maxDD.toFixed(0), sub: '', color: C.redB },
+    { label: 'Mejor Trade', val: bestTrade ? bestTrade.ticker : '-', sub: bestTrade ? formatPNL(sPNL(bestTrade)) : '', color: C.greenB },
+  ];
 
-function generateWRByFloat(trades) {
-  const floatStats = {};
-  trades.forEach(t => {
-    const float = t.float || 'Sin Float';
-    if (!floatStats[float]) {
-      floatStats[float] = { total: 0, wins: 0 };
-    }
-    floatStats[float].total++;
-    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
-    if (pnl > 0) floatStats[float].wins++;
-  });
-  
-  const labels = Object.keys(floatStats);
-  const data = labels.map(float => {
-    const wr = (floatStats[float].wins / floatStats[float].total) * 100;
-    return wr.toFixed(1);
-  });
-  
-  if (statsCharts.wrFloat) statsCharts.wrFloat.destroy();
-  
-  const ctx = document.getElementById('chartWRFloat').getContext('2d');
-  statsCharts.wrFloat = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Win Rate %',
-        data: data,
-        backgroundColor: 'rgba(0, 230, 118, 0.6)',
-        borderColor: 'rgba(0, 230, 118, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100,
-          ticks: { color: '#7a8599' },
-          grid: { color: '#1e2530' }
-        },
-        x: {
-          ticks: { color: '#7a8599', maxRotation: 45, minRotation: 45 },
-          grid: { color: '#1e2530' }
-        }
-      }
-    }
-  });
-}
+  document.getElementById('statsKpiRow').innerHTML = kpis.map(k => `
+    <div class="stats-kpi">
+      <div class="stats-kpi-label">${k.label}</div>
+      <div class="stats-kpi-val" style="${k.color ? 'color:' + k.color : ''}">${k.val}</div>
+      ${k.sub ? `<div class="stats-kpi-sub">${k.sub}</div>` : ''}
+    </div>
+  `).join('');
 
-function generatePNLDaily(trades) {
-  const dailyPNL = {};
-  trades.forEach(t => {
-    const fecha = t.fecha;
-    if (!dailyPNL[fecha]) dailyPNL[fecha] = 0;
-    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
-    dailyPNL[fecha] += pnl;
-  });
-  
-  const sortedDates = Object.keys(dailyPNL).sort();
-  const data = sortedDates.map(date => dailyPNL[date]);
-  
-  if (statsCharts.pnlDaily) statsCharts.pnlDaily.destroy();
-  
-  const ctx = document.getElementById('chartPNLDaily').getContext('2d');
-  statsCharts.pnlDaily = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: sortedDates.map(d => d.substring(5)), // MM-DD
-      datasets: [{
-        label: 'PNL Diario',
-        data: data,
-        borderColor: 'rgba(68, 138, 255, 1)',
-        backgroundColor: 'rgba(68, 138, 255, 0.1)',
-        tension: 0.4,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          ticks: { color: '#7a8599' },
-          grid: { color: '#1e2530' }
-        },
-        x: {
-          ticks: { color: '#7a8599' },
-          grid: { color: '#1e2530' }
-        }
-      }
-    }
-  });
-}
-
-function generateRDistribution(trades) {
-  const rValues = trades.map(t => {
-    const r = parseFloat(t.rr || t.rrShort || t.rrLong || 0);
-    return r;
-  });
-  
-  // Crear bins para el histograma
-  const bins = { '<-2R': 0, '-2R a -1R': 0, '-1R a 0R': 0, '0R a 1R': 0, '1R a 2R': 0, '>2R': 0 };
-  rValues.forEach(r => {
+  // R distribution
+  const bins = { '<-2R': 0, '-2 a -1': 0, '-1 a 0': 0, '0 a 1': 0, '1 a 2': 0, '>2R': 0 };
+  fin.forEach(t => {
+    const r = sR(t);
     if (r < -2) bins['<-2R']++;
-    else if (r < -1) bins['-2R a -1R']++;
-    else if (r < 0) bins['-1R a 0R']++;
-    else if (r < 1) bins['0R a 1R']++;
-    else if (r < 2) bins['1R a 2R']++;
+    else if (r < -1) bins['-2 a -1']++;
+    else if (r < 0) bins['-1 a 0']++;
+    else if (r < 1) bins['0 a 1']++;
+    else if (r < 2) bins['1 a 2']++;
     else bins['>2R']++;
   });
-  
-  if (statsCharts.rDist) statsCharts.rDist.destroy();
-  
-  const ctx = document.getElementById('chartRDistribution').getContext('2d');
-  statsCharts.rDist = new Chart(ctx, {
+  const binColors = [C.red, C.red, C.yellow, C.green, C.green, C.green];
+  sMakeChart('s_chartRDist', {
     type: 'bar',
-    data: {
-      labels: Object.keys(bins),
-      datasets: [{
-        label: 'Número de Trades',
-        data: Object.values(bins),
-        backgroundColor: 'rgba(255, 214, 0, 0.6)',
-        borderColor: 'rgba(255, 214, 0, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { color: '#7a8599', stepSize: 1 },
-          grid: { color: '#1e2530' }
-        },
-        x: {
-          ticks: { color: '#7a8599' },
-          grid: { color: '#1e2530' }
-        }
-      }
-    }
+    data: { labels: Object.keys(bins), datasets: [{ data: Object.values(bins), backgroundColor: binColors }] },
+    options: { ...baseOpts(), plugins: { legend: { display: false } } }
   });
-}
 
-function generateWRByNoticia(trades) {
-  const noticiaStats = { 'SI': { total: 0, wins: 0 }, 'NO': { total: 0, wins: 0 } };
-  
-  trades.forEach(t => {
-    const noticia = t.noticia === 'SI' ? 'SI' : 'NO';
-    noticiaStats[noticia].total++;
-    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
-    if (pnl > 0) noticiaStats[noticia].wins++;
+  // Noticia doughnut
+  const noticiaMap = {};
+  fin.forEach(t => {
+    const k = t.noticia || 'N/D';
+    if (!noticiaMap[k]) noticiaMap[k] = { total: 0, wins: 0 };
+    noticiaMap[k].total++;
+    if (sPNL(t) > 0) noticiaMap[k].wins++;
   });
-  
-  const labels = Object.keys(noticiaStats);
-  const data = labels.map(key => {
-    const wr = noticiaStats[key].total > 0 ? (noticiaStats[key].wins / noticiaStats[key].total) * 100 : 0;
-    return wr.toFixed(1);
-  });
-  
-  if (statsCharts.wrNoticia) statsCharts.wrNoticia.destroy();
-  
-  const ctx = document.getElementById('chartWRNoticia').getContext('2d');
-  statsCharts.wrNoticia = new Chart(ctx, {
+  const nLabels = Object.keys(noticiaMap);
+  const nData = nLabels.map(k => Math.round((noticiaMap[k].wins / noticiaMap[k].total) * 100));
+  const nColors = nLabels.map(k => k === 'SI' ? C.green : k === 'NO' ? C.red : C.yellow);
+  sMakeChart('s_chartNoticia', {
     type: 'doughnut',
     data: {
-      labels: labels.map(l => `${l} (${data[labels.indexOf(l)]}%)`),
-      datasets: [{
-        data: data,
-        backgroundColor: ['rgba(0, 230, 118, 0.6)', 'rgba(255, 61, 87, 0.6)'],
-        borderColor: ['rgba(0, 230, 118, 1)', 'rgba(255, 61, 87, 1)'],
-        borderWidth: 1
-      }]
+      labels: nLabels.map((l, i) => `${l} — ${nData[i]}% WR (${noticiaMap[l].total})`),
+      datasets: [{ data: nData, backgroundColor: nColors, borderWidth: 0 }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: '#7a8599' }
-        }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: C.tick, boxWidth: 12, font: { size: 11 } } } } }
+  });
+
+  // Setup volumen
+  const setupVol = groupBy(fin, 'setupEntrada');
+  const svLabels = Object.keys(setupVol);
+  sMakeChart('s_chartSetupVol', {
+    type: 'bar',
+    data: { labels: svLabels, datasets: [{ data: svLabels.map(k => setupVol[k].length), backgroundColor: C.purple }] },
+    options: { ...baseOpts(), indexAxis: 'y', scales: { y: { ticks: { color: C.tick }, grid: { color: C.grid } }, x: { ticks: { color: C.tick }, grid: { color: C.grid } } } }
+  });
+
+  // Mcap WR
+  const mcapMap = groupBy(fin, 'marketCap');
+  const mcLabels = Object.keys(mcapMap);
+  sMakeChart('s_chartMcap', {
+    type: 'bar',
+    data: { labels: mcLabels, datasets: [{ data: mcLabels.map(k => sWR(mcapMap[k])), backgroundColor: C.blue }] },
+    options: { ...baseOpts(100) }
+  });
+
+  // Inicio WR
+  const inicioMap = groupBy(fin, 'inicio');
+  const iLabels = Object.keys(inicioMap);
+  sMakeChart('s_chartInicio', {
+    type: 'bar',
+    data: { labels: iLabels, datasets: [{ data: iLabels.map(k => sWR(inicioMap[k])), backgroundColor: C.yellow }] },
+    options: { ...baseOpts(100) }
+  });
+}
+
+// ── TAB: PNL & EQUITY ─────────────────────────────────────────────────────────
+
+function buildPNLTab(fin) {
+  const sorted = [...fin].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+
+  // Equity curve
+  let cum = 0;
+  const eqData = sorted.map(t => { cum += sPNL(t); return parseFloat(cum.toFixed(2)); });
+  const eqLabels = sorted.map(t => t.ticker || t.fecha || '?');
+  sMakeChart('s_chartEquity', {
+    type: 'line',
+    data: { labels: eqLabels, datasets: [{
+      data: eqData,
+      borderColor: C.blueB,
+      backgroundColor: 'rgba(68,138,255,0.08)',
+      tension: 0.3, fill: true, pointRadius: 3,
+      pointBackgroundColor: eqData.map(v => v >= 0 ? C.greenB : C.redB)
+    }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { y: { ticks: { color: C.tick, callback: v => '$' + v }, grid: { color: C.grid } },
+                x: { ticks: { color: C.tick, maxRotation: 40 }, grid: { color: C.grid } } } }
+  });
+
+  // PNL por día
+  const dayPNL = {};
+  sorted.forEach(t => { const d = t.fecha || '?'; dayPNL[d] = (dayPNL[d] || 0) + sPNL(t); });
+  const dayLabels = Object.keys(dayPNL).sort();
+  const dayVals = dayLabels.map(d => parseFloat(dayPNL[d].toFixed(2)));
+  sMakeChart('s_chartPNLDay', {
+    type: 'bar',
+    data: { labels: dayLabels.map(d => d.substring(5)), datasets: [{
+      data: dayVals,
+      backgroundColor: dayVals.map(v => v >= 0 ? C.green : C.red),
+      borderColor: dayVals.map(v => v >= 0 ? C.greenB : C.redB),
+      borderWidth: 1
+    }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { y: { ticks: { color: C.tick, callback: v => '$' + v }, grid: { color: C.grid } },
+                x: { ticks: { color: C.tick }, grid: { color: C.grid } } } }
+  });
+
+  // R scatter (cronológico)
+  const rVals = sorted.map((t, i) => ({ x: i + 1, y: sR(t), ticker: t.ticker || '?' }));
+  sMakeChart('s_chartRScatter', {
+    type: 'scatter',
+    data: { datasets: [{
+      data: rVals,
+      backgroundColor: rVals.map(p => p.y >= 0 ? C.green : C.red),
+      pointRadius: 5
+    }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${rVals[ctx.dataIndex].ticker}: ${ctx.parsed.y.toFixed(2)}R` } } },
+      scales: {
+        y: { ticks: { color: C.tick, callback: v => v + 'R' }, grid: { color: C.grid },
+             title: { display: true, text: 'R conseguido', color: C.tick } },
+        x: { ticks: { color: C.tick }, grid: { color: C.grid },
+             title: { display: true, text: 'Nº trade', color: C.tick } }
       }
     }
   });
 }
 
-function generateWRByCountry(trades) {
-  const countryStats = {};
-  trades.forEach(t => {
-    const country = t.pais || 'Sin País';
-    if (!countryStats[country]) {
-      countryStats[country] = { total: 0, wins: 0 };
-    }
-    countryStats[country].total++;
-    const pnl = t.pnl || (t.pnlShort || 0) + (t.pnlLong || 0);
-    if (pnl > 0) countryStats[country].wins++;
+// ── TAB: BREAKDOWNS ───────────────────────────────────────────────────────────
+
+function buildBreakdownTab(fin) {
+  // Sector chart
+  const sectorMap = groupBy(fin, 'sector');
+  const sLabels = Object.keys(sectorMap).sort((a,b) => sectorMap[b].length - sectorMap[a].length);
+  sMakeChart('s_chartSector', {
+    type: 'bar',
+    data: { labels: sLabels, datasets: [{ data: sLabels.map(k => sWR(sectorMap[k])), backgroundColor: C.purple }] },
+    options: { ...baseOpts(100) }
   });
-  
-  // Top 5 países por número de trades
-  const sortedCountries = Object.keys(countryStats)
-    .sort((a, b) => countryStats[b].total - countryStats[a].total)
-    .slice(0, 5);
-  
-  const data = sortedCountries.map(country => {
-    const wr = (countryStats[country].wins / countryStats[country].total) * 100;
-    return wr.toFixed(1);
+
+  // Float chart
+  const floatOrder = ['Micro Low Float (<1M)','Ultra Low Float (1M-5M)','Low Float (5M-10M)','Medium Low Float (10M-20M)','Medium Float (20M-50M)','High Float Small Cap (50M-100M)','Large Float (>100M)'];
+  const floatMap = groupBy(fin, 'float');
+  const fLabels = floatOrder.filter(k => floatMap[k]).concat(Object.keys(floatMap).filter(k => !floatOrder.includes(k)));
+  sMakeChart('s_chartFloat', {
+    type: 'bar',
+    data: { labels: fLabels, datasets: [{ data: fLabels.map(k => floatMap[k] ? sWR(floatMap[k]) : 0), backgroundColor: C.green }] },
+    options: { ...baseOpts(100), scales: { y: { beginAtZero: true, max: 100, ticks: { color: C.tick }, grid: { color: C.grid } }, x: { ticks: { color: C.tick, maxRotation: 45, font: { size: 9 } }, grid: { color: C.grid } } } }
   });
-  
-  if (statsCharts.wrCountry) statsCharts.wrCountry.destroy();
-  
-  const ctx = document.getElementById('chartWRCountry').getContext('2d');
-  statsCharts.wrCountry = new Chart(ctx, {
+
+  // País chart (top 6 by trades)
+  const paisMap = groupBy(fin, 'pais');
+  const pTop = Object.keys(paisMap).sort((a,b) => paisMap[b].length - paisMap[a].length).slice(0,6);
+  sMakeChart('s_chartPais', {
+    type: 'bar',
+    data: { labels: pTop, datasets: [{ data: pTop.map(k => sWR(paisMap[k])), backgroundColor: C.blue }] },
+    options: { ...baseOpts(100), indexAxis: 'y', scales: { x: { beginAtZero: true, max: 100, ticks: { color: C.tick }, grid: { color: C.grid } }, y: { ticks: { color: C.tick }, grid: { color: C.grid } } } }
+  });
+
+  // Dilución PNL promedio
+  const dilTypes = ['• NO TIENE DILUCIÓN','S-1 OFFERING','WARRANTS','CONVERTIBLE NOTE','CONVERTIBLE PREFERRED','EQUITY LINE','ATM','SHELF'];
+  const dilPNL = {};
+  dilTypes.forEach(dt => {
+    const matching = fin.filter(t => (t.dilucion || []).some(d => d.includes(dt.replace('• ',''))));
+    if (matching.length) dilPNL[dt.replace('• ','')] = matching.reduce((s,t) => s + sPNL(t), 0) / matching.length;
+  });
+  const dKeys = Object.keys(dilPNL);
+  sMakeChart('s_chartDilucion', {
+    type: 'bar',
+    data: { labels: dKeys, datasets: [{ data: dKeys.map(k => parseFloat(dilPNL[k].toFixed(2))), backgroundColor: dKeys.map(k => dilPNL[k] >= 0 ? C.green : C.red) }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { y: { ticks: { color: C.tick, callback: v => '$' + v }, grid: { color: C.grid } }, x: { ticks: { color: C.tick, maxRotation: 45, font: { size: 9 } }, grid: { color: C.grid } } } }
+  });
+
+  // Tabla sector
+  const rows = sLabels.map(k => {
+    const ts = sectorMap[k];
+    const wr = sWR(ts);
+    const pnlTot = ts.reduce((s,t) => s + sPNL(t), 0);
+    return `<tr>
+      <td>${k}</td>
+      <td class="right">${ts.length}</td>
+      <td>${sWRBarHTML(wr)}</td>
+      <td class="right" style="color:${pnlTot>=0?C.greenB:C.redB}">${formatPNL(pnlTot)}</td>
+      <td class="right">${sAvgR(ts).toFixed(2)}R</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('s_tablaSector').innerHTML = `
+    <table class="breakdown-table">
+      <thead><tr><th>Sector</th><th class="right">Trades</th><th>Win Rate</th><th class="right">PNL</th><th class="right">Avg R</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── TAB: SHORT vs LONG ────────────────────────────────────────────────────────
+
+function buildDirectionTab(fin) {
+  const hasShort = fin.filter(t => t.pnlShort != null);
+  const hasLong  = fin.filter(t => t.pnlLong != null);
+
+  function dirKPIs(trades, pnlKey, rrKey, containerId) {
+    const pnls = trades.map(t => t[pnlKey] || 0);
+    const rrs  = trades.map(t => parseFloat(t[rrKey] || 0));
+    const wins  = pnls.filter(p => p > 0).length;
+    const wr    = trades.length ? Math.round(wins/trades.length*100) : 0;
+    const totPNL = pnls.reduce((s,v)=>s+v,0);
+    const avgR  = rrs.length ? rrs.reduce((s,v)=>s+v,0)/rrs.length : 0;
+    const gWins = pnls.filter(p=>p>0).reduce((s,v)=>s+v,0);
+    const gLoss = Math.abs(pnls.filter(p=>p<0).reduce((s,v)=>s+v,0));
+    const pf    = gLoss>0 ? (gWins/gLoss).toFixed(2) : gWins>0?'∞':'0';
+
+    document.getElementById(containerId).innerHTML = [
+      { label:'Trades', val: trades.length },
+      { label:'Win Rate', val: wr+'%' },
+      { label:'PNL', val: formatPNL(totPNL) },
+      { label:'Avg R', val: avgR.toFixed(2)+'R' },
+      { label:'Prof. Factor', val: pf },
+      { label:'Wins', val: wins },
+    ].map(k=>`<div class="dir-kpi"><div class="dir-kpi-label">${k.label}</div><div class="dir-kpi-val">${k.val}</div></div>`).join('');
+  }
+
+  dirKPIs(hasShort, 'pnlShort', 'rrShort', 'dirKpiShort');
+  dirKPIs(hasLong,  'pnlLong',  'rrLong',  'dirKpiLong');
+
+  // R histograms per direction
+  function rHist(trades, rrKey, canvasId, color) {
+    const bins = { '<-2R':0, '-2 a -1':0, '-1 a 0':0, '0 a 1':0, '1 a 2':0, '>2R':0 };
+    trades.forEach(t => {
+      const r = parseFloat(t[rrKey]||0);
+      if(r<-2) bins['<-2R']++; else if(r<-1) bins['-2 a -1']++; else if(r<0) bins['-1 a 0']++;
+      else if(r<1) bins['0 a 1']++; else if(r<2) bins['1 a 2']++; else bins['>2R']++;
+    });
+    sMakeChart(canvasId, { type:'bar', data:{ labels:Object.keys(bins), datasets:[{ data:Object.values(bins), backgroundColor:color }] }, options: baseOpts() });
+  }
+
+  rHist(hasShort, 'rrShort', 's_chartShortR', C.red);
+  rHist(hasLong,  'rrLong',  's_chartLongR',  C.green);
+
+  // PNL Short vs Long por día
+  const dayMap = {};
+  fin.forEach(t => {
+    const d = t.fecha || '?';
+    if (!dayMap[d]) dayMap[d] = { s: 0, l: 0 };
+    dayMap[d].s += (t.pnlShort || 0);
+    dayMap[d].l += (t.pnlLong  || 0);
+  });
+  const dKeys = Object.keys(dayMap).sort();
+  sMakeChart('s_chartSLDay', {
     type: 'bar',
     data: {
-      labels: sortedCountries,
-      datasets: [{
-        label: 'Win Rate %',
-        data: data,
-        backgroundColor: 'rgba(255, 61, 87, 0.6)',
-        borderColor: 'rgba(255, 61, 87, 1)',
-        borderWidth: 1
-      }]
+      labels: dKeys.map(d=>d.substring(5)),
+      datasets: [
+        { label:'Short', data: dKeys.map(k=>parseFloat(dayMap[k].s.toFixed(2))), backgroundColor: C.red },
+        { label:'Long',  data: dKeys.map(k=>parseFloat(dayMap[k].l.toFixed(2))), backgroundColor: C.green }
+      ]
     },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          max: 100,
-          ticks: { color: '#7a8599' },
-          grid: { color: '#1e2530' }
-        },
-        y: {
-          ticks: { color: '#7a8599' },
-          grid: { color: '#1e2530' }
-        }
-      }
-    }
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position:'top', labels:{ color:C.tick, boxWidth:12 } } },
+      scales: { y: { ticks:{color:C.tick, callback:v=>'$'+v}, grid:{color:C.grid} }, x: { ticks:{color:C.tick}, grid:{color:C.grid} } } }
   });
+}
+
+// ── TAB: SETUP ────────────────────────────────────────────────────────────────
+
+function buildSetupTab(fin) {
+  const setupMap = groupBy(fin, 'setupEntrada');
+  const sKeys = Object.keys(setupMap).sort((a,b) => setupMap[b].length - setupMap[a].length);
+
+  sMakeChart('s_chartSetupPNL', {
+    type: 'bar',
+    data: { labels: sKeys, datasets: [{ data: sKeys.map(k => parseFloat((setupMap[k].reduce((s,t)=>s+sPNL(t),0)/setupMap[k].length).toFixed(2))), backgroundColor: sKeys.map(k=>setupMap[k].reduce((s,t)=>s+sPNL(t),0)>=0?C.green:C.red) }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}},
+      scales:{ y:{ticks:{color:C.tick,callback:v=>'$'+v},grid:{color:C.grid}}, x:{ticks:{color:C.tick,maxRotation:40},grid:{color:C.grid}} } }
+  });
+
+  sMakeChart('s_chartSetupWR', {
+    type: 'bar',
+    data: { labels: sKeys, datasets: [{ data: sKeys.map(k=>sWR(setupMap[k])), backgroundColor: C.purple }] },
+    options: { ...baseOpts(100) }
+  });
+
+  const rows = sKeys.map(k => {
+    const ts = setupMap[k];
+    const wr = sWR(ts);
+    const totPNL = ts.reduce((s,t)=>s+sPNL(t),0);
+    const avgPNL = totPNL / ts.length;
+    const pf = sPF(ts);
+    return `<tr>
+      <td>${k || 'Sin setup'}</td>
+      <td class="right">${ts.length}</td>
+      <td>${sWRBarHTML(wr)}</td>
+      <td class="right" style="color:${avgPNL>=0?C.greenB:C.redB}">${formatPNL(avgPNL)}</td>
+      <td class="right" style="color:${totPNL>=0?C.greenB:C.redB}">${formatPNL(totPNL)}</td>
+      <td class="right">${pf}</td>
+      <td class="right">${sAvgR(ts).toFixed(2)}R</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('s_tablaSetup').innerHTML = `
+    <table class="breakdown-table">
+      <thead><tr><th>Setup</th><th class="right">Trades</th><th>Win Rate</th><th class="right">Avg PNL</th><th class="right">PNL Total</th><th class="right">P.Factor</th><th class="right">Avg R</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 </script>
