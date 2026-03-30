@@ -1890,6 +1890,50 @@ async function loadTrades() {
     console.log(`Documentos saltados: ${skipped}`);
     console.log('Trades:', allTrades);
     
+    // ── ELIMINAR DUPLICADOS DE FIREBASE ──────────────────────────────────────
+    // Agrupa por ticker+fecha. Si hay más de uno, conserva el más avanzado
+    // (finalizado > ejecucion > estudio) y borra los demás.
+    const estadoRank = { finalizado: 3, ejecucion: 2, estudio: 1 };
+    const groupMap = new Map();
+
+    allTrades.forEach(trade => {
+      const key = (trade.ticker || '') + '|' + (trade.fecha || '');
+      if (!groupMap.has(key)) {
+        groupMap.set(key, []);
+      }
+      groupMap.get(key).push(trade);
+    });
+
+    const toDelete = [];
+    const keepIds = new Set();
+
+    groupMap.forEach(group => {
+      if (group.length === 1) {
+        keepIds.add(group[0].id);
+        return;
+      }
+      // Ordenar: el más avanzado primero, luego por lastUpdate desc
+      group.sort((a, b) => {
+        const rankDiff = (estadoRank[b.estado] || 0) - (estadoRank[a.estado] || 0);
+        if (rankDiff !== 0) return rankDiff;
+        return (b.lastUpdate || '').localeCompare(a.lastUpdate || '');
+      });
+      keepIds.add(group[0].id); // conservar el primero
+      group.slice(1).forEach(t => toDelete.push(t.id));
+    });
+
+    if (toDelete.length > 0) {
+      console.log(`🧹 Eliminando ${toDelete.length} duplicados de Firebase...`);
+      const batch = db.batch();
+      toDelete.forEach(id => {
+        if (id) batch.delete(db.collection('trading_discrecional').doc(id));
+      });
+      await batch.commit();
+      allTrades = allTrades.filter(t => keepIds.has(t.id));
+      console.log(`✅ Duplicados eliminados. Trades restantes: ${allTrades.length}`);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     renderDashboard();
   } catch (error) {
     console.error('❌ === ERROR CARGANDO TRADES ===');
@@ -1904,43 +1948,27 @@ async function loadTrades() {
   }
 }
 
-// Save trades to Firebase - CADA TRADE ES UN DOCUMENTO INDIVIDUAL
-async function saveTrades() {
-  try {
-    console.log('💾 Guardando trades en Firestore...');
-    
-    // Guardar cada trade como un documento individual
-    const batch = db.batch();
-    
-    allTrades.forEach(trade => {
-      // Limpiar undefined (Firestore no los acepta)
-      const cleanTrade = {};
-      Object.keys(trade).forEach(key => {
-        if (trade[key] !== undefined) {
-          cleanTrade[key] = trade[key];
-        }
-      });
-      
-      // Si el trade ya tiene ID, actualizar ese documento
-      // Si no, crear uno nuevo con ID automático
-      const tradeId = cleanTrade.id || db.collection('trading_discrecional').doc().id;
-      
-      // Asegurarse de que el ID esté en el trade
-      cleanTrade.id = tradeId;
-      cleanTrade.lastUpdate = new Date().toISOString();
-      
-      const docRef = db.collection('trading_discrecional').doc(tradeId);
-      batch.set(docRef, cleanTrade);
-    });
-    
-    // Ejecutar todos los guardados en batch
-    await batch.commit();
-    
-    console.log(`✅ ${allTrades.length} trades guardados correctamente`);
-  } catch (error) {
-    console.error('❌ Error guardando trades:', error);
-    alert(`Error al guardar:\n\n${error.message}`);
+// Guarda UN solo trade en Firestore (update si tiene id, add si es nuevo)
+async function saveSingleTrade(trade) {
+  const cleanTrade = {};
+  Object.keys(trade).forEach(key => {
+    if (trade[key] !== undefined) cleanTrade[key] = trade[key];
+  });
+  cleanTrade.lastUpdate = new Date().toISOString();
+
+  if (cleanTrade.id) {
+    await db.collection('trading_discrecional').doc(cleanTrade.id).set(cleanTrade);
+    return cleanTrade.id;
+  } else {
+    const docRef = await db.collection('trading_discrecional').add(cleanTrade);
+    cleanTrade.id = docRef.id;
+    await docRef.set(cleanTrade);
+    return docRef.id;
   }
+}
+
+async function saveTrades() {
+  for (const trade of allTrades) { await saveSingleTrade(trade); }
 }
 
 // Render dashboard
@@ -1955,8 +1983,8 @@ function updateKPIs() {
   const ejecucion = allTrades.filter(t => t.estado === 'ejecucion').length;
   const finalizado = allTrades.filter(t => t.estado === 'finalizado').length;
   const totalPNL = allTrades
-    .filter(t => t.estado === 'finalizado' && t.pnl != null)
-    .reduce((sum, t) => sum + (t.pnl || 0), 0);
+    .filter(t => t.estado === 'finalizado')
+    .reduce((sum, t) => sum + sPNL(t), 0);
 
   document.getElementById('kpiEstudio').textContent = estudio;
   document.getElementById('kpiEjecucion').textContent = ejecucion;
@@ -2077,7 +2105,7 @@ function renderDays() {
                 <th>M.Cap</th>
                 <th>Float</th>
                 <th>País</th>
-                <th>Sector</th>
+                <th>Setup</th>
                 <th>Industry</th>
                 <th>Insiders</th>
                 <th>Inst. Own</th>
@@ -2148,7 +2176,7 @@ function renderDays() {
                   <td class="td-mono" style="font-size: 10px;">${trade.marketCap || '-'}</td>
                   <td class="td-mono" style="font-size: 10px; ${trade.float === 'Micro Low Float (<1M)' ? 'color: #ff1744; font-weight: 700;' : ''}">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
-                  <td class="td-mono">${trade.sector || '-'}</td>
+                  <td class="td-mono">${trade.setupEntrada || '-'}</td>
                   <td class="td-mono">${trade.industry || '-'}</td>
                   <td class="td-mono" style="${trade.insiders === '>50%' ? 'color: var(--red); font-weight: 600;' : ''}">${trade.insiders || '-'}</td>
                   <td class="td-mono">${trade.instOwn || '-'}</td>
@@ -2418,12 +2446,24 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
   });
 
   if (editingTradeId !== null) {
+    trade.id = allTrades[editingTradeId].id || null;
     allTrades[editingTradeId] = trade;
   } else {
     allTrades.push(trade);
   }
 
-  await saveTrades();
+  try {
+    const savedId = await saveSingleTrade(trade);
+    if (editingTradeId !== null) {
+      allTrades[editingTradeId].id = savedId;
+    } else {
+      allTrades[allTrades.length - 1].id = savedId;
+    }
+  } catch (error) {
+    console.error('❌ Error guardando trade:', error);
+    alert(`Error al guardar:\n\n${error.message}`);
+  }
+
   renderDashboard();
   closeModal();
 });
@@ -2971,8 +3011,10 @@ let currentStatsTab = 'global';
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function sPNL(t) {
-  if (t.pnl != null) return t.pnl;
-  return (t.pnlShort || 0) + (t.pnlLong || 0);
+  if (t.pnlShort != null || t.pnlLong != null) {
+    return (t.pnlShort || 0) + (t.pnlLong || 0);
+  }
+  return t.pnl || 0;
 }
 
 function sR(t) {
