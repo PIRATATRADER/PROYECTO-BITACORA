@@ -478,12 +478,17 @@ const DOC_REF = db.collection('capital_tracker').doc('main_data');
 const SK = 'pirata_bitacora_2026';
 
 const HOLIDAYS = {
-  "01/01/2026": { name: "AÑO NUEVO", desc: "Fiesta · No hay mercado" },
-  "19/01/2026": { name: "MARTIN LUTHER KING JR. DAY", desc: "Festivo federal · No hay mercado" },
+  "01/01/2026": { name: "AÑO NUEVO",              desc: "New Year's Day · No hay mercado" },
+  "19/01/2026": { name: "MARTIN LUTHER KING JR.", desc: "MLK Day · No hay mercado" },
   "16/02/2026": { name: "DÍA DE LOS PRESIDENTES", desc: "Presidents Day · No hay mercado" },
+  "03/04/2026": { name: "GOOD FRIDAY",             desc: "Viernes Santo · NYSE cerrado" },
+  "03/07/2026": { name: "INDEPENDENCE DAY",        desc: "4 de Julio observado · No hay mercado" },
+  "07/09/2026": { name: "LABOR DAY",               desc: "Día del Trabajo · No hay mercado" },
+  "26/11/2026": { name: "THANKSGIVING",            desc: "Acción de Gracias · No hay mercado" },
+  "25/12/2026": { name: "NAVIDAD",                 desc: "Christmas Day · No hay mercado" },
 };
 
-const MONTHS = [{"num": 1, "name": "ENERO", "days": ["01/01/2026", "02/01/2026", "05/01/2026", "06/01/2026", "07/01/2026", "08/01/2026", "09/01/2026", "12/01/2026", "13/01/2026", "14/01/2026", "15/01/2026", "16/01/2026", "19/01/2026", "20/01/2026", "21/01/2026", "22/01/2026", "23/01/2026", "26/01/2026", "27/01/2026", "28/01/2026", "29/01/2026", "30/01/2026"]}, {"num": 2, "name": "FEBRERO", "days": ["02/02/2026", "03/02/2026", "04/02/2026", "05/02/2026", "06/02/2026", "09/02/2026", "10/02/2026", "11/02/2026", "12/02/2026", "13/02/2026", "16/02/2026", "17/02/2026", "18/02/2026", "19/02/2026", "20/02/2026", "23/02/2026", "24/02/2026", "25/02/2026", "26/02/2026", "27/02/2026"]}, {"num": 3, "name": "MARZO", "days": ["02/03/2026", "03/03/2026", "04/03/2026", "05/03/2026", "06/03/2026", "09/03/2026", "10/03/2026", "11/03/2026", "12/03/2026", "13/03/2026", "16/03/2026", "17/03/2026", "18/03/2026", "19/03/2026", "20/03/2026", "23/03/2026", "24/03/2026", "25/03/2026", "26/03/2026", "27/03/2026", "30/03/2026", "31/03/2026"]}, {"num": 4, "name": "ABRIL", "days": ["01/04/2026", "02/04/2026", "03/04/2026", "06/04/2026", "07/04/2026", "08/04/2026", "09/04/2026", "10/04/2026", "13/04/2026", "14/04/2026", "15/04/2026", "16/04/2026", "17/04/2026", "20/04/2026", "21/04/2026", "22/04/2026", "23/04/2026", "24/04/2026", "27/04/2026", "28/04/2026", "29/04/2026", "30/04/2026"]}, {"num": 5, "name": "MAYO", "days": ["01/05/2026", "04/05/2026", "05/05/2026", "06/05/2026", "07/05/2026", "08/05/2026", "11/05/2026", "12/05/2026", "13/05/2026", "14/05/2026", "15/05/2026", "18/05/2026", "19/05/2026", "20/05/2026", "21/05/2026", "22/05/2026", "25/05/2026", "26/05/2026", "27/05/2026", "28/05/2026", "29/05/2026"]}, {"num": 6, "name": "JUNIO", "days": ["01/06/2026", "02/06/2026", "03/06/2026", "04/06/2026", "05/06/2026", "08/06/2026", "09/06/2026", "10/06/2026", "11/06/2026", "12/06/2026", "15/06/2026", "16/06/2026", "17/06/2026", "18/06/2026", "19/06/2026", "22/06/2026", "23/06/2026", "24/06/2026", "25/06/2026", "26/06/2026", "29/06/2026", "30/06/2026"]}, {"num": 7, "name": "JULIO", "days": ["01/07/2026", "02/07/2026", "03/07/2026", "06/07/2026", "07/07/2026", "08/07/2026", "09/07/2026", "10/07/2026", "13/07/2026", "14/07/2026", "15/07/2026", "16/07/2026", "17/07/2026", "20/07/2026", "21/07/2026", "22/07/2026", "23/07/2026", "24/07/2026", "27/07/2026", "28/07/2026", "29/07/2026", "30/07/2026", "31/07/2026"]}, {"num": 8, "name": "AGOSTO", "days": ["03/08/2026", "04/08/2026", "05/08/2026", "06/08/2026", "07/08/2026", "10/08/2026", "11/08/2026", "12/08/2026", "13/08/2026", "14/08/2026", "17/08/2026", "18/08/2026", "19/08/2026", "20/08/2026", "21/08/2026", "24/08/2026", "25/08/2026", "26/08/2026", "27/08/2026", "28/08/2026", "31/08/2026"]}, {"num": 9, "name": "SEPTIEMBRE", "days": ["01/09/2026", "02/09/2026", "03/09/2026", "04/09/2026", "07/09/2026", "08/09/2026", "09/09/2026", "10/09/2026", "11/09/2026", "14/09/2026", "15/09/2026", "16/09/2026", "17/09/2026", "18/09/2026", "21/09/2026", "22/09/2026", "23/09/2026", "24/09/2026", "25/09/2026", "28/09/2026", "29/09/2026", "30/09/2026"]}, {"num": 10, "name": "OCTUBRE", "days": ["01/10/2026", "02/10/2026", "05/10/2026", "06/10/2026", "07/10/2026", "08/10/2026", "09/10/2026", "12/10/2026", "13/10/2026", "14/10/2026", "15/10/2026", "16/10/2026", "19/10/2026", "20/10/2026", "21/10/2026", "22/10/2026", "23/10/2026", "26/10/2026", "27/10/2026", "28/10/2026", "29/10/2026", "30/10/2026"]}, {"num": 11, "name": "NOVIEMBRE", "days": ["02/11/2026", "03/11/2026", "04/11/2026", "05/11/2026", "06/11/2026", "09/11/2026", "10/11/2026", "11/11/2026", "12/11/2026", "13/11/2026", "16/11/2026", "17/11/2026", "18/11/2026", "19/11/2026", "20/11/2026", "23/11/2026", "24/11/2026", "25/11/2026", "26/11/2026", "27/11/2026", "30/11/2026"]}, {"num": 12, "name": "DICIEMBRE", "days": ["01/12/2026", "02/12/2026", "03/12/2026", "04/12/2026", "07/12/2026", "08/12/2026", "09/12/2026", "10/12/2026", "11/12/2026", "14/12/2026", "15/12/2026", "16/12/2026", "17/12/2026", "18/12/2026", "21/12/2026", "22/12/2026", "23/12/2026", "24/12/2026", "25/12/2026", "28/12/2026", "29/12/2026", "30/12/2026", "31/12/2026"]}];
+const MONTHS = [{"num": 1, "name": "ENERO", "days": ["02/01/2026", "05/01/2026", "06/01/2026", "07/01/2026", "08/01/2026", "09/01/2026", "12/01/2026", "13/01/2026", "14/01/2026", "15/01/2026", "16/01/2026", "19/01/2026", "20/01/2026", "21/01/2026", "22/01/2026", "23/01/2026", "26/01/2026", "27/01/2026", "28/01/2026", "29/01/2026", "30/01/2026"]}, {"num": 2, "name": "FEBRERO", "days": ["02/02/2026", "03/02/2026", "04/02/2026", "05/02/2026", "06/02/2026", "09/02/2026", "10/02/2026", "11/02/2026", "12/02/2026", "13/02/2026", "16/02/2026", "17/02/2026", "18/02/2026", "19/02/2026", "20/02/2026", "23/02/2026", "24/02/2026", "25/02/2026", "26/02/2026", "27/02/2026"]}, {"num": 3, "name": "MARZO", "days": ["02/03/2026", "03/03/2026", "04/03/2026", "05/03/2026", "06/03/2026", "09/03/2026", "10/03/2026", "11/03/2026", "12/03/2026", "13/03/2026", "16/03/2026", "17/03/2026", "18/03/2026", "19/03/2026", "20/03/2026", "23/03/2026", "24/03/2026", "25/03/2026", "26/03/2026", "27/03/2026", "30/03/2026", "31/03/2026"]}, {"num": 4, "name": "ABRIL", "days": ["01/04/2026", "02/04/2026", "06/04/2026", "07/04/2026", "08/04/2026", "09/04/2026", "10/04/2026", "13/04/2026", "14/04/2026", "15/04/2026", "16/04/2026", "17/04/2026", "20/04/2026", "21/04/2026", "22/04/2026", "23/04/2026", "24/04/2026", "27/04/2026", "28/04/2026", "29/04/2026", "30/04/2026"]}, {"num": 5, "name": "MAYO", "days": ["01/05/2026", "04/05/2026", "05/05/2026", "06/05/2026", "07/05/2026", "08/05/2026", "11/05/2026", "12/05/2026", "13/05/2026", "14/05/2026", "15/05/2026", "18/05/2026", "19/05/2026", "20/05/2026", "21/05/2026", "22/05/2026", "25/05/2026", "26/05/2026", "27/05/2026", "28/05/2026", "29/05/2026"]}, {"num": 6, "name": "JUNIO", "days": ["01/06/2026", "02/06/2026", "03/06/2026", "04/06/2026", "05/06/2026", "08/06/2026", "09/06/2026", "10/06/2026", "11/06/2026", "12/06/2026", "15/06/2026", "16/06/2026", "17/06/2026", "18/06/2026", "19/06/2026", "22/06/2026", "23/06/2026", "24/06/2026", "25/06/2026", "26/06/2026", "29/06/2026", "30/06/2026"]}, {"num": 7, "name": "JULIO", "days": ["01/07/2026", "02/07/2026", "06/07/2026", "07/07/2026", "08/07/2026", "09/07/2026", "10/07/2026", "13/07/2026", "14/07/2026", "15/07/2026", "16/07/2026", "17/07/2026", "20/07/2026", "21/07/2026", "22/07/2026", "23/07/2026", "24/07/2026", "27/07/2026", "28/07/2026", "29/07/2026", "30/07/2026", "31/07/2026"]}, {"num": 8, "name": "AGOSTO", "days": ["03/08/2026", "04/08/2026", "05/08/2026", "06/08/2026", "07/08/2026", "10/08/2026", "11/08/2026", "12/08/2026", "13/08/2026", "14/08/2026", "17/08/2026", "18/08/2026", "19/08/2026", "20/08/2026", "21/08/2026", "24/08/2026", "25/08/2026", "26/08/2026", "27/08/2026", "28/08/2026", "31/08/2026"]}, {"num": 9, "name": "SEPTIEMBRE", "days": ["01/09/2026", "02/09/2026", "03/09/2026", "04/09/2026", "08/09/2026", "09/09/2026", "10/09/2026", "11/09/2026", "14/09/2026", "15/09/2026", "16/09/2026", "17/09/2026", "18/09/2026", "21/09/2026", "22/09/2026", "23/09/2026", "24/09/2026", "25/09/2026", "28/09/2026", "29/09/2026", "30/09/2026"]}, {"num": 10, "name": "OCTUBRE", "days": ["01/10/2026", "02/10/2026", "05/10/2026", "06/10/2026", "07/10/2026", "08/10/2026", "09/10/2026", "12/10/2026", "13/10/2026", "14/10/2026", "15/10/2026", "16/10/2026", "19/10/2026", "20/10/2026", "21/10/2026", "22/10/2026", "23/10/2026", "26/10/2026", "27/10/2026", "28/10/2026", "29/10/2026", "30/10/2026"]}, {"num": 11, "name": "NOVIEMBRE", "days": ["02/11/2026", "03/11/2026", "04/11/2026", "05/11/2026", "06/11/2026", "09/11/2026", "10/11/2026", "11/11/2026", "12/11/2026", "13/11/2026", "16/11/2026", "17/11/2026", "18/11/2026", "19/11/2026", "20/11/2026", "23/11/2026", "24/11/2026", "25/11/2026", "27/11/2026", "30/11/2026"]}, {"num": 12, "name": "DICIEMBRE", "days": ["01/12/2026", "02/12/2026", "03/12/2026", "04/12/2026", "07/12/2026", "08/12/2026", "09/12/2026", "10/12/2026", "11/12/2026", "14/12/2026", "15/12/2026", "16/12/2026", "17/12/2026", "18/12/2026", "21/12/2026", "22/12/2026", "23/12/2026", "24/12/2026", "28/12/2026", "29/12/2026", "30/12/2026", "31/12/2026"]}];
 let month = new Date().getMonth();
 let D = {};
 
@@ -3944,10 +3949,150 @@ document.addEventListener('DOMContentLoaded', () => {
           {symbol:"YYGH", pnl:40.31,   realR:0.43,  direction:"short"}
         ]
       }
+    },
+    {
+      key: 'ai_day_2_2026-03-26',
+      data: {
+        date: '26/03/2026',
+        summary: { totalPnl: -807.69, totalR: -8.67, htbCost: 46.02, totalShares: 26436 },
+        trades: [
+          {symbol:"AIFF", pnl:-268.39, realR:-2.88, direction:"short"},
+          {symbol:"AIFF", pnl:-1.00,   realR:-0.01, direction:"long"},
+          {symbol:"AKAN", pnl:50.86,   realR:0.55,  direction:"short"},
+          {symbol:"BATL", pnl:-37.32,  realR:-0.40, direction:"short"},
+          {symbol:"BATL", pnl:-45.59,  realR:-0.49, direction:"long"},
+          {symbol:"BOXL", pnl:32.77,   realR:0.35,  direction:"short"},
+          {symbol:"DXST", pnl:48.21,   realR:0.52,  direction:"short"},
+          {symbol:"EEIQ", pnl:-26.28,  realR:-0.28, direction:"long"},
+          {symbol:"FCHL", pnl:21.28,   realR:0.23,  direction:"short"},
+          {symbol:"GLND", pnl:8.00,    realR:0.09,  direction:"long"},
+          {symbol:"HCTI", pnl:83.25,   realR:0.89,  direction:"short"},
+          {symbol:"INEO", pnl:44.33,   realR:0.48,  direction:"short"},
+          {symbol:"LNAI", pnl:6.73,    realR:0.07,  direction:"short"},
+          {symbol:"MARA", pnl:0.01,    realR:0.00,  direction:"short"},
+          {symbol:"MKDW", pnl:-2.00,   realR:-0.02, direction:"short"},
+          {symbol:"RBNE", pnl:76.81,   realR:0.82,  direction:"short"},
+          {symbol:"SNGX", pnl:57.64,   realR:0.62,  direction:"short"},
+          {symbol:"TURB", pnl:44.95,   realR:0.48,  direction:"short"},
+          {symbol:"UGRO", pnl:-369.91, realR:-3.97, direction:"short"},
+          {symbol:"UGRO", pnl:-94.05,  realR:-1.01, direction:"long"},
+          {symbol:"VSA",  pnl:-468.45, realR:-5.03, direction:"short"},
+          {symbol:"VSA",  pnl:30.47,   realR:0.33,  direction:"long"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-27',
+      data: {
+        date: '27/03/2026',
+        summary: { totalPnl: 263.15, totalR: 3.04, htbCost: 40.23, totalShares: 36474 },
+        trades: [
+          {symbol:"AIDX", pnl:11.00,    realR:0.13,  direction:"short"},
+          {symbol:"ARTL", pnl:-478.59,  realR:-5.53, direction:"short"},
+          {symbol:"ARTL", pnl:-121.25,  realR:-1.40, direction:"long"},
+          {symbol:"CRE",  pnl:32.68,    realR:0.38,  direction:"short"},
+          {symbol:"CUPR", pnl:189.53,   realR:2.19,  direction:"short"},
+          {symbol:"ELAB", pnl:27.66,    realR:0.32,  direction:"short"},
+          {symbol:"ELAB", pnl:-1.80,    realR:-0.02, direction:"long"},
+          {symbol:"GCTK", pnl:79.24,    realR:0.92,  direction:"short"},
+          {symbol:"GMEX", pnl:57.18,    realR:0.66,  direction:"short"},
+          {symbol:"GVH",  pnl:81.24,    realR:0.94,  direction:"short"},
+          {symbol:"HOLO", pnl:19.25,    realR:0.22,  direction:"short"},
+          {symbol:"IZM",  pnl:103.11,   realR:1.19,  direction:"short"},
+          {symbol:"IZM",  pnl:-2.46,    realR:-0.03, direction:"long"},
+          {symbol:"LBGJ", pnl:35.90,    realR:0.41,  direction:"short"},
+          {symbol:"LTRN", pnl:42.72,    realR:0.49,  direction:"short"},
+          {symbol:"NAMI", pnl:51.67,    realR:0.60,  direction:"short"},
+          {symbol:"ONCO", pnl:25.02,    realR:0.29,  direction:"long"},
+          {symbol:"RBNE", pnl:16.57,    realR:0.19,  direction:"short"},
+          {symbol:"SST",  pnl:-310.74,  realR:-3.59, direction:"short"},
+          {symbol:"TURB", pnl:65.04,    realR:0.75,  direction:"short"},
+          {symbol:"VSA",  pnl:301.53,   realR:3.48,  direction:"short"},
+          {symbol:"VSA",  pnl:38.66,    realR:0.45,  direction:"long"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-30',
+      data: {
+        date: '30/03/2026',
+        summary: { totalPnl: 582.55, totalR: 6.58, htbCost: 63.48, totalShares: 104138 },
+        trades: [
+          {symbol:"APRE", pnl:22.45,    realR:0.25,  direction:"short"},
+          {symbol:"ARTL", pnl:-0.10,    realR:0.00,  direction:"short"},
+          {symbol:"ARTL", pnl:44.09,    realR:0.50,  direction:"short"},
+          {symbol:"ASTC", pnl:36.46,    realR:0.41,  direction:"short"},
+          {symbol:"ASTC", pnl:23.85,    realR:0.27,  direction:"short"},
+          {symbol:"ATPC", pnl:78.55,    realR:0.89,  direction:"short"},
+          {symbol:"BFRG", pnl:-130.51,  realR:-1.47, direction:"short"},
+          {symbol:"CMCT", pnl:39.46,    realR:0.45,  direction:"short"},
+          {symbol:"CMCT", pnl:8.78,     realR:0.10,  direction:"short"},
+          {symbol:"CXAI", pnl:-0.95,    realR:-0.01, direction:"short"},
+          {symbol:"CXAI", pnl:69.27,    realR:0.78,  direction:"short"},
+          {symbol:"FGI",  pnl:26.10,    realR:0.29,  direction:"short"},
+          {symbol:"GV",   pnl:52.50,    realR:0.59,  direction:"short"},
+          {symbol:"HOLO", pnl:39.99,    realR:0.45,  direction:"short"},
+          {symbol:"HXHX", pnl:74.91,    realR:0.85,  direction:"short"},
+          {symbol:"ITRM", pnl:48.76,    realR:0.55,  direction:"short"},
+          {symbol:"JCSE", pnl:-52.35,   realR:-0.59, direction:"short"},
+          {symbol:"PMNT", pnl:0.90,     realR:0.01,  direction:"short"},
+          {symbol:"PMNT", pnl:2.33,     realR:0.03,  direction:"short"},
+          {symbol:"QNCX", pnl:68.29,    realR:0.77,  direction:"short"},
+          {symbol:"RDGT", pnl:61.57,    realR:0.70,  direction:"short"},
+          {symbol:"ROMA", pnl:30.76,    realR:0.35,  direction:"short"},
+          {symbol:"TURB", pnl:17.36,    realR:0.20,  direction:"short"},
+          {symbol:"UGRO", pnl:30.99,    realR:0.35,  direction:"short"},
+          {symbol:"UGRO", pnl:61.07,    realR:0.69,  direction:"short"},
+          {symbol:"VELO", pnl:33.11,    realR:0.37,  direction:"short"},
+          {symbol:"YYGH", pnl:-105.09,  realR:-1.19, direction:"short"}
+        ]
+      }
+    },
+    {
+      key: 'ai_day_2_2026-03-31',
+      data: {
+        date: '31/03/2026',
+        summary: { totalPnl: 440.84, totalR: 5.28, htbCost: 55.99, totalShares: 90404 },
+        trades: [
+          {symbol:"AIIO", pnl:26.91,    realR:0.32,  direction:"short"},
+          {symbol:"ALBT", pnl:119.02,   realR:1.43,  direction:"short"},
+          {symbol:"BCG",  pnl:12.63,    realR:0.15,  direction:"short"},
+          {symbol:"BFRG", pnl:-90.47,   realR:-1.08, direction:"short"},
+          {symbol:"BNRG", pnl:56.00,    realR:0.67,  direction:"short"},
+          {symbol:"DEFT", pnl:-67.54,   realR:-0.81, direction:"short"},
+          {symbol:"ELAB", pnl:42.32,    realR:0.51,  direction:"short"},
+          {symbol:"ELAB", pnl:37.50,    realR:0.45,  direction:"short"},
+          {symbol:"GV",   pnl:14.43,    realR:0.17,  direction:"short"},
+          {symbol:"HKIT", pnl:55.89,    realR:0.67,  direction:"short"},
+          {symbol:"INN",  pnl:30.88,    realR:0.37,  direction:"short"},
+          {symbol:"IMCC", pnl:34.65,    realR:0.41,  direction:"short"},
+          {symbol:"ITRM", pnl:-54.33,   realR:-0.65, direction:"short"},
+          {symbol:"LTRN", pnl:38.48,    realR:0.46,  direction:"short"},
+          {symbol:"MASK", pnl:-146.82,  realR:-1.76, direction:"short"},
+          {symbol:"MASK", pnl:0.50,     realR:0.01,  direction:"short"},
+          {symbol:"NCNO", pnl:0.40,     realR:0.00,  direction:"short"},
+          {symbol:"NPT",  pnl:38.71,    realR:0.46,  direction:"short"},
+          {symbol:"NPT",  pnl:0.10,     realR:0.00,  direction:"short"},
+          {symbol:"NUWE", pnl:46.00,    realR:0.55,  direction:"short"},
+          {symbol:"OXBR", pnl:37.13,    realR:0.44,  direction:"short"},
+          {symbol:"PAVS", pnl:31.82,    realR:0.38,  direction:"short"},
+          {symbol:"POLA", pnl:64.65,    realR:0.77,  direction:"short"},
+          {symbol:"SCYX", pnl:48.97,    realR:0.59,  direction:"short"},
+          {symbol:"SXTP", pnl:33.71,    realR:0.40,  direction:"short"},
+          {symbol:"USBC", pnl:23.25,    realR:0.28,  direction:"short"},
+          {symbol:"VRAX", pnl:-43.89,   realR:-0.53, direction:"short"},
+          {symbol:"VRAX", pnl:-0.00,    realR:0.00,  direction:"short"},
+          {symbol:"WSHP", pnl:13.61,    realR:0.16,  direction:"short"},
+          {symbol:"WSHP", pnl:36.33,    realR:0.44,  direction:"short"}
+        ]
+      }
     }
   ];
   days.forEach(function(d) {
-    if (!localStorage.getItem(d.key)) {
+    // Siempre sobreescribir días con datos nuevos para garantizar datos completos
+    if (d.key === 'ai_day_2_2026-03-26' || d.key === 'ai_day_2_2026-03-27' || d.key === 'ai_day_2_2026-03-30' || d.key === 'ai_day_2_2026-03-31') {
+      localStorage.setItem(d.key, JSON.stringify(d.data));
+    } else if (!localStorage.getItem(d.key)) {
       localStorage.setItem(d.key, JSON.stringify(d.data));
     }
   });

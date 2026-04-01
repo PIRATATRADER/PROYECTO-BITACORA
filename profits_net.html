@@ -1460,10 +1460,13 @@ async function confirmImport() {
     let allRows = rows;
     if (existing.exists && existing.data().rows) {
       const existingRows = existing.data().rows;
-      const existingDates = new Set(existingRows.map(r => r.date));
-      const newRows = rows.filter(r => !existingDates.has(r.date));
-      allRows = [...existingRows, ...newRows].sort((a, b) => new Date(a.date.replace(/(\d+)\/(\d+)\/(\d+)/,'$3/$1/$2')) - new Date(b.date.replace(/(\d+)\/(\d+)\/(\d+)/,'$3/$1/$2')));
-      log(`ℹ Merge: ${existingRows.length} existentes + ${newRows.length} nuevas`, 'var(--muted2)');
+      // Upsert: las filas nuevas sobreescriben las existentes de la misma fecha
+      const newDateSet = new Set(rows.map(r => r.date));
+      const kept    = existingRows.filter(r => !newDateSet.has(r.date));
+      const updated = rows.filter(r => existingRows.some(e => e.date === r.date));
+      const added   = rows.filter(r => !existingRows.some(e => e.date === r.date));
+      allRows = [...kept, ...rows].sort((a, b) => new Date(a.date.replace(/(\d+)\/(\d+)\/(\d+)/,'$3/$1/$2')) - new Date(b.date.replace(/(\d+)\/(\d+)\/(\d+)/,'$3/$1/$2')));
+      log(`ℹ Merge: ${kept.length} sin cambios · ${updated.length} actualizadas · ${added.length} nuevas`, 'var(--muted2)');
     }
     await db.collection('profits_net').doc(docId).set({ rows: allRows, year, savedAt });
     log(`✓ Guardado en Firebase: profits_net/${docId}`, 'var(--green)');

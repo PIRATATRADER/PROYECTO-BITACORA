@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pirata Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090c; --bg2:#0e1117; --bg3:#141820; --border:#1e2738;
+  --green:#00e676; --red:#ff1744; --yellow:#ffd600; --blue:#448aff;
+  --purple:#b16aff; --gold:#f5a623; --text:#e8eaf0; --muted:#4a5568; --muted2:#7a8599;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:100%; max-width:640px; margin:0 auto; min-height:100vh; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; }
+body::-webkit-scrollbar{width:4px} body::-webkit-scrollbar-track{background:var(--bg2)} body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.header { display:flex; align-items:center; gap:10px; padding:14px 16px 12px; border-bottom:1px solid var(--border); background:var(--bg2); position:sticky; top:0; z-index:10; }
+.logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:3px; color:var(--text); }
+.logo span { color:var(--gold); }
+.search-wrap { display:flex; flex:1; gap:8px; align-items:center; }
+#tickerInput { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:8px 14px; color:var(--text); font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:3px; text-transform:uppercase; outline:none; transition:border-color 0.2s; }
+#tickerInput::placeholder { color:var(--muted); font-size:16px; }
+#tickerInput:focus { border-color:var(--gold); }
+#btnScan { background:var(--gold); color:#000; border:none; border-radius:8px; padding:8px 18px; font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:2px; cursor:pointer; transition:opacity 0.2s; }
+#btnScan:hover{opacity:0.85} #btnScan:disabled{opacity:0.4;cursor:not-allowed}
+.source-badge { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:1px; padding:2px 7px; border-radius:4px; background:rgba(245,166,35,0.15); color:var(--gold); border:1px solid rgba(245,166,35,0.3); white-space:nowrap; }
+#status { padding:10px 16px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1.5px; color:var(--muted2); text-align:center; display:none; }
+#status.visible{display:block}
+.spinner { display:inline-block; width:10px; height:10px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle; }
+@keyframes spin{to{transform:rotate(360deg)}}
+.ticker-header { display:flex; align-items:baseline; gap:10px; padding:14px 16px 8px; flex-wrap:wrap; }
+.ticker-name { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px; }
+.ticker-fullname { font-size:11px; color:var(--muted2); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ticker-price { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; }
+.ticker-change { font-family:'DM Mono',monospace; font-size:11px; font-weight:600; padding:2px 7px; border-radius:5px; }
+.pos{color:var(--green);background:rgba(0,230,118,0.1)} .neg{color:var(--red);background:rgba(255,23,68,0.1)}
+.section { margin:0 12px 12px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.section-title { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted2); padding:8px 14px 6px; background:var(--bg3); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px; }
+.section-title .dot { width:5px; height:5px; border-radius:50%; background:var(--gold); flex-shrink:0; }
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); }
+.kpi { background:var(--bg2); padding:10px 12px; text-align:center; }
+.kpi-label { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+.kpi-val { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:1px; line-height:1; color:var(--text); }
+.kpi-val.green{color:var(--green)} .kpi-val.red{color:var(--red)} .kpi-val.gold{color:var(--gold)} .kpi-val.blue{color:var(--blue)}
+.kpi-src { font-family:'DM Mono',monospace; font-size:7px; color:var(--muted); margin-top:3px; letter-spacing:0.5px; }
+.dilucion-wrap { padding:10px 14px; display:flex; flex-wrap:wrap; gap:6px; }
+.dil-badge { font-family:'DM Mono',monospace; font-size:10px; font-weight:600; padding:4px 10px; border-radius:5px; letter-spacing:0.5px; }
+.dil-danger{background:rgba(255,23,68,0.15);color:#ff1744;border:1px solid rgba(255,23,68,0.3)}
+.dil-warn{background:rgba(255,214,0,0.1);color:var(--yellow);border:1px solid rgba(255,214,0,0.25)}
+.dil-ok{background:rgba(0,230,118,0.1);color:var(--green);border:1px solid rgba(0,230,118,0.25)}
+.dil-neutral{background:var(--bg3);color:var(--muted2);border:1px solid var(--border)}
+.filings-list{padding:6px 0}
+.filing-row { display:flex; align-items:center; gap:8px; padding:6px 14px; border-bottom:1px solid var(--bg3); transition:background 0.1s; }
+.filing-row:last-child{border-bottom:none} .filing-row:hover{background:var(--bg3)}
+.filing-type { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:1px; min-width:52px; padding:2px 6px; border-radius:4px; text-align:center; }
+.ft-danger{background:rgba(255,23,68,0.15);color:#ff1744} .ft-warn{background:rgba(255,214,0,0.1);color:var(--yellow)} .ft-blue{background:rgba(68,138,255,0.12);color:var(--blue)} .ft-normal{background:var(--bg3);color:var(--muted2)}
+.filing-desc{flex:1;font-size:11px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filing-date{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);white-space:nowrap}
+.filing-link{color:var(--blue);font-size:9px;text-decoration:none;font-family:'DM Mono',monospace;opacity:0.7;transition:opacity 0.15s}
+.filing-link:hover{opacity:1}
+.news-list{padding:6px 0}
+.news-row { display:flex; align-items:flex-start; gap:10px; padding:8px 14px; border-bottom:1px solid var(--bg3); transition:background 0.1s; }
+.news-row:last-child{border-bottom:none} .news-row:hover{background:var(--bg3)}
+.news-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:4px}
+.news-content{flex:1;min-width:0}
+.news-title{font-size:11px;color:var(--text);line-height:1.4;margin-bottom:3px}
+.news-meta{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);display:flex;gap:8px}
+.news-link{color:var(--blue);font-size:9px;text-decoration:none;font-family:'DM Mono',monospace;opacity:0.7;flex-shrink:0;margin-top:2px}
+.news-link:hover{opacity:1}
+.desc-text{padding:10px 14px;font-size:11px;color:var(--muted2);line-height:1.6}
+.error-box{margin:12px;padding:12px 14px;background:rgba(255,23,68,0.08);border:1px solid rgba(255,23,68,0.2);border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--red);letter-spacing:0.5px}
+.warn-box{margin:0 12px 8px;padding:6px 10px;background:rgba(255,214,0,0.06);border:1px solid rgba(255,214,0,0.2);border-radius:6px;font-family:'DM Mono',monospace;font-size:9px;color:var(--yellow);letter-spacing:0.5px}
+.empty-state{padding:40px 20px;text-align:center}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:0.5}
+.empty-text{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.empty-sub{font-size:11px;color:var(--muted);margin-top:6px}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:28px 28px;opacity:0.18;z-index:0;pointer-events:none}
+.header,.section,#status,.ticker-header,.error-box,.empty-state,.warn-box{position:relative;z-index:1}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">PIRATA <span>SCAN</span></div>
+  <div class="search-wrap">
+    <input type="text" id="tickerInput" placeholder="TICKER" maxlength="10" autocomplete="off" spellcheck="false">
+    <button id="btnScan">SCAN</button>
+  </div>
+  <div class="source-badge">MASSIVE API</div>
+</div>
+
+<div id="status"></div>
+<div id="results">
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-text">Cargando ticker...</div>
+    <div class="empty-sub">Si no arranca solo, introduce el ticker y pulsa SCAN</div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const MASSIVE_KEY = 'Mm9A4kmY0v7ZbjzxXjzD0bEUo5H_XAAq';
+const MBASE = 'https://api.massive.com';
+
+const input   = document.getElementById('tickerInput');
+const btnScan = document.getElementById('btnScan');
+const status  = document.getElementById('status');
+const results = document.getElementById('results');
+
+input.addEventListener('keydown', e => { if(e.key==='Enter') scan(); });
+btnScan.addEventListener('click', scan);
+
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const t = params.get('t') || params.get('ticker') || params.get('symbol') || '';
+  if(t){ input.value = t.toUpperCase(); scan(); }
+  else input.focus();
+});
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function withTimeout(p, ms){ return Promise.race([p, new Promise((_,r)=>setTimeout(()=>r(new Error('Timeout')),ms))]); }
+
+async function mFetch(path) {
+  const r = await fetch(MBASE + path, {
+    headers: { 'Authorization': 'Bearer ' + MASSIVE_KEY, 'Accept': 'application/json' }
+  });
+  if(!r.ok) throw new Error('Massive HTTP ' + r.status);
+  return r.json();
+}
+
+const fmtM = v => { if(v==null||isNaN(v)) return '—'; const n=Number(v); if(Math.abs(n)>=1e9) return (n/1e9).toFixed(2)+'B'; if(Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+'M'; if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K'; return n.toFixed(0); };
+const fmt2 = v => v!=null&&!isNaN(Number(v)) ? Number(v).toFixed(2) : '—';
+const pct  = v => { if(v==null) return '—'; if(typeof v==='string') return v; return (Number(v)*100).toFixed(2)+'%'; };
+const d2   = v => v!=null ? '$'+Number(v).toFixed(2) : '—';
+
+// ── MASSIVE: SNAPSHOT (precio, volumen, bid/ask) ──────────────────────────────
+async function fetchMassiveSnapshot(ticker) {
+  const j = await mFetch(`/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}`);
+  return j?.ticker || null;
+}
+
+// ── MASSIVE: TICKER DETAILS (float, shares, descripción, sector) ──────────────
+async function fetchMassiveDetails(ticker) {
+  const j = await mFetch(`/v3/reference/tickers/${ticker}`);
+  return j?.results || null;
+}
+
+// ── MASSIVE: SHORT INTEREST ───────────────────────────────────────────────────
+async function fetchMassiveShort(ticker) {
+  try {
+    const j = await mFetch(`/v2/reference/financials/${ticker}?limit=1`);
+    return j?.results?.[0] || null;
+  } catch(e) { return null; }
+}
+
+// ── MASSIVE: FINANCIALS / FUNDAMENTALS ───────────────────────────────────────
+async function fetchMassiveFundamentals(ticker) {
+  try {
+    const j = await mFetch(`/vX/reference/financials?ticker=${ticker}&limit=1&timeframe=quarterly`);
+    return j?.results?.[0] || null;
+  } catch(e) { return null; }
+}
+
+// ── MASSIVE: NEWS ─────────────────────────────────────────────────────────────
+async function fetchMassiveNews(ticker) {
+  try {
+    const j = await mFetch(`/v2/reference/news?ticker=${ticker}&limit=8&order=desc&sort=published_utc`);
+    return j?.results || [];
+  } catch(e) { return []; }
+}
+
+// ── SEC EDGAR ─────────────────────────────────────────────────────────────────
+async function fetchCIK(ticker) {
+  const r = await fetch('https://www.sec.gov/files/company_tickers.json', { headers:{'User-Agent':'PirataScanner info@pirata.com'} });
+  if(!r.ok) return null;
+  const data = await r.json();
+  for(const key in data) if(data[key].ticker?.toUpperCase()===ticker.toUpperCase()) return String(data[key].cik_str).padStart(10,'0');
+  return null;
+}
+
+async function fetchFilings(cik) {
+  const r = await fetch(`https://data.sec.gov/submissions/CIK${cik}.json`, { headers:{'User-Agent':'PirataScanner info@pirata.com'} });
+  if(!r.ok) return [];
+  const data = await r.json();
+  const recent = data.filings?.recent;
+  if(!recent) return [];
+  const {form,filingDate,accessionNumber,primaryDocument} = recent;
+  const RELEVANT = new Set(['S-1','S-1/A','S-3','S-3/A','424B1','424B3','424B4','424B5','8-K','6-K','10-K','10-Q','SC 13G','SC 13D','DEF 14A','F-1','F-3']);
+  const filings = [];
+  for(let i=0;i<form.length&&filings.length<20;i++){
+    if(!RELEVANT.has(form[i])) continue;
+    const acc = accessionNumber[i].replace(/-/g,'');
+    filings.push({ type:form[i], date:filingDate[i], url:`https://www.sec.gov/Archives/edgar/data/${parseInt(cik)}/${acc}/${primaryDocument[i]||''}` });
+  }
+  return filings;
+}
+
+// ── FETCH ALL ─────────────────────────────────────────────────────────────────
+async function fetchAll(ticker) {
+  const [snap, details, fundamentals, news, cik] = await Promise.allSettled([
+    withTimeout(fetchMassiveSnapshot(ticker),   10000),
+    withTimeout(fetchMassiveDetails(ticker),    10000),
+    withTimeout(fetchMassiveFundamentals(ticker),10000),
+    withTimeout(fetchMassiveNews(ticker),        10000),
+    withTimeout(fetchCIK(ticker),               10000),
+  ]);
+
+  const snapData   = snap.status==='fulfilled'         ? snap.value         : null;
+  const detData    = details.status==='fulfilled'      ? details.value      : null;
+  const fundData   = fundamentals.status==='fulfilled' ? fundamentals.value : null;
+  const newsData   = news.status==='fulfilled'         ? news.value         : [];
+  const cikVal     = cik.status==='fulfilled'          ? cik.value          : null;
+
+  let filings = [];
+  if(cikVal){ try{ filings = await withTimeout(fetchFilings(cikVal),10000); }catch(e){} }
+
+  return { snap:snapData, details:detData, fundamentals:fundData, news:newsData, filings, cik:cikVal };
+}
+
+// ── SCAN ──────────────────────────────────────────────────────────────────────
+async function scan() {
+  const ticker = input.value.trim().toUpperCase();
+  if(!ticker) return;
+  history.replaceState(null,'','?t='+ticker);
+  setStatus('Conectando con Massive API y SEC EDGAR...');
+  btnScan.disabled = true;
+  results.innerHTML = '';
+  try {
+    const data = await fetchAll(ticker);
+    clearStatus();
+    renderResults(ticker, data);
+  } catch(e) {
+    clearStatus();
+    results.innerHTML = `<div class="error-box">⚠ Error: ${e.message}</div>`;
+  }
+  btnScan.disabled = false;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderResults(ticker, data) {
+  const { snap, details, fundamentals, news, filings } = data;
+
+  if(!snap && !details && (!filings||filings.length===0)) {
+    results.innerHTML = `<div class="error-box">⚠ Sin datos para <strong>${ticker}</strong>. Comprueba que el ticker es correcto.</div>`;
+    return;
+  }
+
+  // ── Extraer datos del snapshot Massive ────────────────────────────────────
+  const day        = snap?.day || {};
+  const prevDay    = snap?.prevDay || {};
+  const lastTrade  = snap?.lastTrade || {};
+  const lastQuote  = snap?.lastQuote || {};
+
+  const price      = lastTrade?.p || day?.c || 0;
+  const prevClose  = prevDay?.c || 0;
+  const changePct  = prevClose ? ((price - prevClose) / prevClose * 100) : null;
+  const changeStr  = changePct != null ? changePct.toFixed(2)+'%' : '—';
+  const isPos      = changePct == null ? true : changePct >= 0;
+  const volume     = day?.v || 0;
+  const vwap       = day?.vw || null;
+  const high       = day?.h || null;
+  const low        = day?.l || null;
+  const open       = day?.o || null;
+  const bid        = lastQuote?.P || null;
+  const ask        = lastQuote?.p || null;
+
+  // ── Extraer datos de Ticker Details Massive ───────────────────────────────
+  const compName   = details?.name || ticker;
+  const description= details?.description || '';
+  const sector     = details?.sic_description || '—';
+  const country    = details?.locale?.toUpperCase() || '—';
+  const employees  = details?.total_employees || null;
+  const homepage   = details?.homepage_url || null;
+  const listDate   = details?.list_date || null;
+  const sharesOut  = details?.weighted_shares_outstanding || details?.share_class_shares_outstanding || null;
+  const marketCap  = details?.market_cap || (price && sharesOut ? price * sharesOut : null);
+  const floatShares= details?.float_shares || null;
+
+  // ── Extraer fundamentals ──────────────────────────────────────────────────
+  const fin        = fundamentals?.financials || {};
+  const incStmt    = fin?.income_statement || {};
+  const balSheet   = fin?.balance_sheet || {};
+  const cashFlow   = fin?.cash_flow_statement || {};
+
+  // ── Warnings de datos faltantes ───────────────────────────────────────────
+  const warnings = [];
+  if(!floatShares) warnings.push('Float no disponible en API');
+
+  const dilFlags = detectDilution(filings || []);
+
+  let html = '';
+
+  // Warnings
+  if(warnings.length > 0) {
+    html += `<div class="warn-box">⚠ ${warnings.join(' · ')}</div>`;
+  }
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  html += `
+  <div class="ticker-header">
+    <div class="ticker-name">${ticker}</div>
+    <div class="ticker-fullname">${compName}</div>
+    <div class="ticker-price" style="color:${isPos?'var(--green)':'var(--red)'}">${price ? '$'+Number(price).toFixed(2) : '—'}</div>
+    ${changePct!=null ? `<div class="ticker-change ${isPos?'pos':'neg'}">${isPos?'+':''}${changeStr}</div>` : ''}
+  </div>`;
+
+  // ── Fundamentales ─────────────────────────────────────────────────────────
+  html += `
+  <div class="section">
+    <div class="section-title"><span class="dot"></span>FUNDAMENTALES</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Market Cap</div><div class="kpi-val gold">${fmtM(marketCap)}</div><div class="kpi-src">MASSIVE</div></div>
+      <div class="kpi"><div class="kpi-label">Float</div><div class="kpi-val blue">${fmtM(floatShares)}</div><div class="kpi-src">MASSIVE</div></div>
+      <div class="kpi"><div class="kpi-label">Shares Out</div><div class="kpi-val">${fmtM(sharesOut)}</div><div class="kpi-src">MASSIVE</div></div>
+      <div class="kpi"><div class="kpi-label">Empleados</div><div class="kpi-val">${employees ? fmtM(employees) : '—'}</div><div class="kpi-src">MASSIVE</div></div>
+    </div>
+  </div>`;
+
+  // ── Precio & Volumen ──────────────────────────────────────────────────────
+  html += `
+  <div class="section">
+    <div class="section-title"><span class="dot" style="background:var(--blue)"></span>PRECIO & VOLUMEN — TIEMPO REAL</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Precio</div><div class="kpi-val ${isPos?'green':'red'}">${d2(price)}</div><div class="kpi-src">MASSIVE RT</div></div>
+      <div class="kpi"><div class="kpi-label">Open</div><div class="kpi-val">${d2(open)}</div></div>
+      <div class="kpi"><div class="kpi-label">High</div><div class="kpi-val green">${d2(high)}</div></div>
+      <div class="kpi"><div class="kpi-label">Low</div><div class="kpi-val red">${d2(low)}</div></div>
+    </div>
+    <div class="kpi-grid" style="border-top:1px solid var(--border)">
+      <div class="kpi"><div class="kpi-label">Vol Hoy</div><div class="kpi-val blue">${fmtM(volume)}</div><div class="kpi-src">MASSIVE RT</div></div>
+      <div class="kpi"><div class="kpi-label">VWAP</div><div class="kpi-val">${d2(vwap)}</div><div class="kpi-src">MASSIVE RT</div></div>
+      <div class="kpi"><div class="kpi-label">Bid</div><div class="kpi-val">${d2(bid)}</div><div class="kpi-src">MASSIVE RT</div></div>
+      <div class="kpi"><div class="kpi-label">Ask</div><div class="kpi-val">${d2(ask)}</div><div class="kpi-src">MASSIVE RT</div></div>
+    </div>
+    <div class="kpi-grid" style="border-top:1px solid var(--border);grid-template-columns:repeat(3,1fr)">
+      <div class="kpi"><div class="kpi-label">Prev Close</div><div class="kpi-val">${d2(prevClose||null)}</div></div>
+      <div class="kpi"><div class="kpi-label">Sector</div><div class="kpi-val" style="font-size:10px;letter-spacing:0">${sector}</div><div class="kpi-src">MASSIVE</div></div>
+      <div class="kpi"><div class="kpi-label">País</div><div class="kpi-val">${country}</div><div class="kpi-src">MASSIVE</div></div>
+    </div>
+  </div>`;
+
+  // ── Dilución ──────────────────────────────────────────────────────────────
+  html += `
+  <div class="section">
+    <div class="section-title"><span class="dot" style="background:var(--red)"></span>DILUCIÓN (FILINGS SEC)</div>
+    <div class="dilucion-wrap">
+      ${dilFlags.length>0 ? dilFlags.map(d=>`<span class="dil-badge ${d.cls}">${d.label}</span>`).join('') : '<span class="dil-badge dil-ok">✓ NO DILUCIÓN DETECTADA</span>'}
+    </div>
+  </div>`;
+
+  // ── Filings SEC ───────────────────────────────────────────────────────────
+  if(filings && filings.length > 0) {
+    html += `
+  <div class="section">
+    <div class="section-title"><span class="dot" style="background:var(--purple)"></span>FILINGS RECIENTES — SEC EDGAR</div>
+    <div class="filings-list">
+      ${filings.slice(0,12).map(f=>`
+      <div class="filing-row">
+        <span class="filing-type ${filingClass(f.type)}">${f.type}</span>
+        <span class="filing-desc">${filingDesc(f.type)}</span>
+        <span class="filing-date">${f.date}</span>
+        <a class="filing-link" href="${f.url}" target="_blank">VER →</a>
+      </div>`).join('')}
+    </div>
+  </div>`;
+  }
+
+  // ── Noticias ──────────────────────────────────────────────────────────────
+  if(news && news.length > 0) {
+    html += `
+  <div class="section">
+    <div class="section-title"><span class="dot" style="background:var(--blue)"></span>NOTICIAS RECIENTES — MASSIVE/BENZINGA</div>
+    <div class="news-list">
+      ${news.slice(0,8).map(n => {
+        const pub = n.published_utc ? new Date(n.published_utc).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+        const src = n.publisher?.name || 'Benzinga';
+        return `
+      <div class="news-row">
+        <div class="news-dot"></div>
+        <div class="news-content">
+          <div class="news-title">${n.title}</div>
+          <div class="news-meta"><span>${src}</span><span>${pub}</span></div>
+        </div>
+        <a class="news-link" href="${n.article_url}" target="_blank">LEER →</a>
+      </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  }
+
+  // ── Descripción ───────────────────────────────────────────────────────────
+  if(description) {
+    const short = description.length > 350 ? description.substring(0,350)+'...' : description;
+    html += `
+  <div class="section" style="margin-bottom:14px">
+    <div class="section-title"><span class="dot" style="background:var(--muted2)"></span>DESCRIPCIÓN</div>
+    <div class="desc-text">${short}${homepage ? ` <a href="${homepage}" target="_blank" style="color:var(--blue);text-decoration:none;font-size:10px">WEB →</a>` : ''}</div>
+  </div>`;
+  }
+
+  results.innerHTML = html;
+}
+
+// ── DILUCIÓN ──────────────────────────────────────────────────────────────────
+function detectDilution(filings){
+  const flags=[],types=filings.map(f=>f.type),seen=new Set();
+  const add=(label,cls)=>{if(!seen.has(label)){seen.add(label);flags.push({label,cls});}};
+  if(types.some(t=>['S-1','S-1/A','F-1'].includes(t)))             add('S-1 OFFERING','dil-danger');
+  if(types.some(t=>['S-3','S-3/A','F-3'].includes(t)))             add('S-3 SHELF','dil-danger');
+  if(types.some(t=>['424B1','424B3','424B4','424B5'].includes(t))) add('PROSPECTO 424B','dil-warn');
+  if(types.some(t=>t==='8-K'))                                      add('8-K RECIENTE','dil-neutral');
+  if(types.some(t=>['SC 13D','SC 13G'].includes(t)))               add('BLOQUE 13D/13G','dil-warn');
+  const hasDanger=flags.some(f=>['dil-danger','dil-warn'].includes(f.cls));
+  if(!hasDanger&&types.some(t=>['10-K','10-Q'].includes(t)))       add('10-K/10-Q OK','dil-ok');
+  return flags;
+}
+function filingClass(t){if(['S-1','S-1/A','S-3','S-3/A','F-1','F-3'].includes(t))return'ft-danger';if(['424B1','424B3','424B4','424B5'].includes(t))return'ft-warn';if(['10-K','10-Q'].includes(t))return'ft-blue';return'ft-normal';}
+function filingDesc(type){const map={'S-1':'Oferta pública inicial','S-1/A':'Enmienda S-1','S-3':'Shelf registration','S-3/A':'Enmienda S-3 shelf','F-1':'Registro inicial (extranjera)','F-3':'Shelf (extranjera)','424B1':'Prospecto definitivo','424B3':'Prospecto suplementario','424B4':'Prospecto definitivo IPO','424B5':'Prospecto suplementario shelf','8-K':'Evento material / comunicado relevante','6-K':'Informe empresa extranjera','10-K':'Informe anual (auditado)','10-Q':'Informe trimestral','SC 13G':'Adquisición >5% (pasivo)','SC 13D':'Adquisición >5% (activo)','DEF 14A':'Proxy / Junta accionistas'};return map[type]||type;}
+function setStatus(msg){status.innerHTML=`<span class="spinner"></span>${msg}`;status.classList.add('visible');}
+function clearStatus(){status.classList.remove('visible');status.innerHTML='';}
+</script>
+</body>
+</html>

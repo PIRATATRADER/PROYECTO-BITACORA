@@ -112,8 +112,12 @@ body::before {
   grid-column: 1 / 2;
 }
 
+.card-pirata-scan {
+  grid-column: 2 / 3;
+}
+
 .card-profits {
-  grid-column: 2 / 4;
+  grid-column: 3 / 4;
 }
 
 /* Mascot column */
@@ -217,6 +221,7 @@ body::before {
 .card-profits   { --card-accent: var(--green); }
 .card-screener  { --card-accent: var(--purple); }
 .card-discrecional { --card-accent: #ff6b6b; } /* Rojo coral */
+.card-pirata-scan  { --card-accent: #ffa726; } /* Naranja */
 
 .card-icon {
   font-size: 32px;
@@ -282,45 +287,6 @@ body::before {
 }
 
 /* ── PROFITS NET SPECIFIC ── */
-.profits-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  margin-top: 4px;
-}
-
-.profits-table th {
-  text-align: left;
-  color: var(--muted2);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border);
-}
-
-.profits-table td {
-  padding: 5px 6px;
-  border-bottom: 1px solid rgba(30,37,48,0.5);
-  color: var(--text);
-  font-size: 11px;
-}
-
-.profits-table tr:last-child td {
-  border-bottom: none;
-}
-
-.profits-table td.pos { color: var(--green); }
-.profits-table td.neg { color: var(--red); }
-
-.profits-table tr.total-row td {
-  border-top: 1px solid var(--border);
-  color: var(--green);
-  font-weight: 500;
-  padding-top: 8px;
-}
-
 .profits-badge {
   display: inline-flex;
   align-items: center;
@@ -453,8 +419,25 @@ body::before {
       <div class="card-arrow">Ver scanner →</div>
     </div>
 
+    <!-- TARJETA 6: PIRATA SCAN (Centro Inferior) -->
+    <div class="mode-card card-pirata-scan" onclick="window.location.href='pirata_scan.html'" style="cursor:pointer;">
+      <div class="card-icon">☠️</div>
+      <div>
+        <div class="card-label">Análisis</div>
+        <div class="card-title">PIRATA SCAN</div>
+      </div>
+      <div class="card-desc">Scanner individual de tickers. Fundamentales, dilución, filings SEC, noticias y datos en tiempo real.</div>
+      <div class="card-stats">
+        <div class="card-stat"><div class="card-stat-val" style="color:#ffa726">SEC</div><div class="card-stat-label">Filings</div></div>
+        <div class="card-stat"><div class="card-stat-val" style="color:#ffa726">API</div><div class="card-stat-label">Massive</div></div>
+        <div class="card-stat"><div class="card-stat-val" style="color:#ffa726">LIVE</div><div class="card-stat-label">Datos</div></div>
+      </div>
+      <div class="card-arrow">Abrir scanner →</div>
+    </div>
+
     <!-- TARJETA 4: PROFITS NET (Inferior Derecha) -->
     <div class="mode-card card-profits" onclick="window.location.href='profits_net.html'" style="cursor:pointer;">
+      <div class="card-icon">💰</div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div>
           <div class="card-label">Historial Broker</div>
@@ -464,40 +447,20 @@ body::before {
           <div class="profits-badge">⟳ Cargando...</div>
         </div>
       </div>
-      <div class="card-desc">Resultados reales del broker por año. Gross P&L, fees, ECN rebates y resultado neto ajustado.</div>
+      <div class="card-desc">Resultados reales del broker. Gross P&L, fees, ECN y resultado neto ajustado por año.</div>
 
-      <table class="profits-table" id="profitsTable">
-        <thead>
-          <tr>
-            <th>Año</th>
-            <th>Días</th>
-            <th>Gross</th>
-            <th>Fees</th>
-            <th>Adj Net</th>
-            <th>WR</th>
-          </tr>
-        </thead>
-        <tbody id="profitsBody">
-          <tr><td colspan="6" style="color:var(--muted2);padding:10px 6px;text-align:center;font-size:10px;letter-spacing:1px;">⟳ Cargando datos...</td></tr>
-        </tbody>
-      </table>
-
-      <div class="card-stats" style="padding-top:12px;border-top:1px solid var(--border);gap:16px;">
+      <div class="card-stats" style="gap:16px;">
         <div class="card-stat">
-          <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalNet">—</div>
+          <div class="card-stat-val" style="font-size:16px;" id="profitsTotalNet">—</div>
           <div class="card-stat-label">Net Total</div>
         </div>
         <div class="card-stat">
-          <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalDias">—</div>
-          <div class="card-stat-label">Días Trading</div>
+          <div class="card-stat-val" style="color:var(--green);font-size:14px;" id="profitsTotalDias">—</div>
+          <div class="card-stat-label">Días</div>
         </div>
         <div class="card-stat">
-          <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalOrders">—</div>
-          <div class="card-stat-label">Órdenes</div>
-        </div>
-        <div class="card-stat">
-          <div class="card-stat-val" style="color:var(--blue);font-size:14px;" id="profitsTotalWR">—</div>
-          <div class="card-stat-label">WR Global</div>
+          <div class="card-stat-val" style="color:var(--green);font-size:14px;" id="profitsTotalWR">—</div>
+          <div class="card-stat-label">WR</div>
         </div>
       </div>
       <div class="card-arrow">Ver detalle completo →</div>
@@ -545,9 +508,14 @@ function fmtPNL(n) {
 
 function calcStats(trades) {
   if (!trades || !trades.length) return null;
+  // Compatible con trading_discrecional (pnlShort+pnlLong) y proyecto_data (pnl)
+  function getPNL(t) {
+    if (t.pnlShort != null || t.pnlLong != null) return (t.pnlShort || 0) + (t.pnlLong || 0);
+    return t.pnl || 0;
+  }
   const total = trades.length;
-  const wins  = trades.filter(t => t.pnl > 0).length;
-  const pnl   = trades.reduce((s, t) => s + (t.pnl || 0), 0);
+  const wins  = trades.filter(t => getPNL(t) > 0).length;
+  const pnl   = trades.reduce((s, t) => s + getPNL(t), 0);
   const wr    = Math.round(wins / total * 100);
   return { total, wr, pnl };
 }
@@ -598,11 +566,15 @@ async function loadAllStats() {
   } catch(e) { console.error('Error loading profits stats:', e); }
 
   // ── Trading Discrecional ──────────────────────────────────────────────────────
+  // Cada trade es un documento independiente en la colección (estructura actual)
   try {
-    const discDoc = await db.collection('trading_discrecional').doc('trades_data').get();
-    if (discDoc.exists && discDoc.data().trades) {
-      renderCardStats('discrecional', calcStats(discDoc.data().trades));
-    }
+    const discSnap = await db.collection('trading_discrecional').get();
+    const discTrades = [];
+    discSnap.forEach(doc => {
+      if (doc.id === '_index' || doc.id.startsWith('trades_')) return;
+      discTrades.push(doc.data());
+    });
+    renderCardStats('discrecional', calcStats(discTrades));
   } catch(e) { console.error('Error loading trading discrecional stats:', e); }
 }
 
@@ -658,33 +630,10 @@ function renderProfitsStats(yearDocs) {
     `<div class="profits-badge">💰 ${s.year}</div>`
   ).join('');
 
-  const bodyEl = document.getElementById('profitsBody');
-  const fmtD = n => (n >= 0 ? '+' : '-') + '$' + Math.abs(n).toFixed(0);
-  const cls  = n => n >= 0 ? 'pos' : 'neg';
-
-  bodyEl.innerHTML = yearStats.map(s => `
-    <tr>
-      <td>${s.year}</td>
-      <td>${s.rows}</td>
-      <td class="${cls(s.gross)}">${fmtD(s.gross)}</td>
-      <td class="neg">-$${s.totalFees.toFixed(0)}</td>
-      <td class="${cls(s.adjNet)}">${fmtD(s.adjNet)}</td>
-      <td style="color:${s.wr >= 50 ? 'var(--green)' : 'var(--muted2)'}">${s.wr}%</td>
-    </tr>`).join('');
-
   const totNet    = yearStats.reduce((s, y) => s + y.adjNet,    0);
   const totDias   = yearStats.reduce((s, y) => s + y.rows,      0);
-  const totOrders = yearStats.reduce((s, y) => s + y.orders,    0);
   const totWins   = yearStats.reduce((s, y) => s + y.wins,      0);
   const totWR     = totDias ? Math.round(totWins / totDias * 100) : 0;
-
-  bodyEl.innerHTML += `<tr class="total-row">
-    <td><strong>TOTAL</strong></td>
-    <td>${totDias}</td>
-    <td>—</td><td>—</td>
-    <td class="${cls(totNet)}">${fmtD(totNet)}</td>
-    <td style="color:${totWR >= 50 ? 'var(--green)' : 'var(--muted2)'}">${totWR}%</td>
-  </tr>`;
 
   const fmtShort = n => {
     const abs = Math.abs(n);
@@ -694,8 +643,6 @@ function renderProfitsStats(yearDocs) {
   document.getElementById('profitsTotalNet').textContent = fmtShort(totNet);
   document.getElementById('profitsTotalNet').style.color = totNet >= 0 ? 'var(--green)' : 'var(--red)';
   document.getElementById('profitsTotalDias').textContent = totDias;
-  document.getElementById('profitsTotalOrders').textContent = totOrders >= 1000
-    ? (totOrders / 1000).toFixed(1) + 'k' : totOrders;
   document.getElementById('profitsTotalWR').textContent = totWR + '%';
   document.getElementById('profitsTotalWR').style.color = totWR >= 50 ? 'var(--green)' : 'var(--muted2)';
 }
@@ -720,6 +667,16 @@ db.collection('capital_tracker').doc('main_data').onSnapshot((snap) => {
     try { renderCapitalStats(JSON.parse(snap.data().data)); } catch(e) {}
   }
 }, (err) => console.warn('onSnapshot capital_tracker:', err));
+
+// 4) Listener en tiempo real para Trading Discrecional
+db.collection('trading_discrecional').onSnapshot((snap) => {
+  const discTrades = [];
+  snap.forEach(doc => {
+    if (doc.id === '_index' || doc.id.startsWith('trades_')) return;
+    discTrades.push(doc.data());
+  });
+  renderCardStats('discrecional', calcStats(discTrades));
+}, (err) => console.warn('onSnapshot trading_discrecional:', err));
 
 // 3) Listeners para Profits Net (3 años) → actualiza tarjeta PROFITS NET
 // Almacena los datos actuales de cada año para re-renderizar cuando uno cambie

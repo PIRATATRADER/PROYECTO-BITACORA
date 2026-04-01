@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trading Discrecional</title>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
@@ -856,22 +856,25 @@
     text-shadow: 0 0 30px rgba(255, 61, 87, 0.5);
   }
 
-  .time-alert-close {
-    background: var(--red);
-    color: #000;
+  .time-alert-btn {
     border: none;
-    padding: 16px 40px;
+    padding: 18px 44px;
     border-radius: 12px;
     font-family: 'DM Sans', sans-serif;
     font-size: 18px;
     font-weight: 700;
     cursor: pointer;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     transition: opacity 0.2s;
   }
-
-  .time-alert-close:hover {
-    opacity: 0.85;
+  .time-alert-btn:hover { opacity: 0.85; }
+  .btn-winning {
+    background: var(--green);
+    color: #000;
+  }
+  .btn-losing {
+    background: var(--red);
+    color: #000;
   }
 
   /* Stats Dashboard */
@@ -1794,10 +1797,16 @@
 <!-- Time Alert Overlay -->
 <div class="time-alert-overlay" id="timeAlertOverlay">
   <div class="time-alert-content">
-    <div class="time-alert-icon">⏰</div>
-    <div class="time-alert-title">¡CIERRA LA POSICIÓN!</div>
+    <div class="time-alert-icon" id="timeAlertIcon">⏰</div>
+    <div class="time-alert-title" id="timeAlertTitle">¡CIERRA LA POSICIÓN!</div>
     <div class="time-alert-ticker" id="timeAlertTicker">TICKER</div>
-    <button class="time-alert-close" onclick="closeTimeAlert()">ENTENDIDO</button>
+    <div class="time-alert-buttons" id="timeAlertButtons" style="display:flex;gap:20px;justify-content:center;margin-top:10px;">
+      <button class="time-alert-btn btn-winning" onclick="alertVoyGanando()">✅ VOY GANANDO</button>
+      <button class="time-alert-btn btn-losing" onclick="alertVoyPerdiendo()">❌ VOY PERDIENDO</button>
+    </div>
+    <div id="timeAlertWarning" style="display:none;">
+      <button class="time-alert-btn btn-losing" onclick="alertCerrarAviso()" style="margin-top:0; background:var(--yellow); color:#000;">⏱ ENTENDIDO — SEGUIR CONTANDO</button>
+    </div>
   </div>
 </div>
 
@@ -2070,8 +2079,8 @@ function renderDays() {
     });
     
     const finalizados = sortedDayTrades.filter(t => t.estado === 'finalizado');
-    const dayPNL = finalizados.reduce((sum, t) => sum + (t.pnl || 0), 0);
-    const dayWins = finalizados.filter(t => t.pnl > 0).length;
+    const dayPNL = finalizados.reduce((sum, t) => sum + sPNL(t), 0);
+    const dayWins = finalizados.filter(t => sPNL(t) > 0).length;
     const dayWR = finalizados.length > 0 ? Math.round((dayWins / finalizados.length) * 100) : 0;
 
     html += `
@@ -2119,16 +2128,34 @@ function renderDays() {
             <tbody>
               ${sortedDayTrades.map((trade, idx) => {
                 const globalIdx = allTrades.findIndex(t => t === trade);
-                const dilucionText = trade.dilucion && trade.dilucion.length > 0 ? trade.dilucion.join(', ') : '-';
-                
-                // Formatear dilución para mostrarlo en múltiples líneas si es muy largo
-                const dilucionFormatted = dilucionText === '-' ? '-' : 
-                  `<div style="max-width: 180px; white-space: normal; word-wrap: break-word; line-height: 1.4;">${dilucionText}</div>`;
+                // Dilución: ATM/SHELF/EQUITY LINE → rojo | NO TIENE DILUCIÓN → verde | resto → gris
+                const dilucionFormatted = (() => {
+                  if (!trade.dilucion || !trade.dilucion.length) return '-';
+                  const items = trade.dilucion.map(item => {
+                    const s = item.trim();
+                    // NO TIENE DILUCIÓN → verde chillón
+                    if (/NO TIENE DILU/i.test(s)) {
+                      return `<span style="display:block;color:#00e676;font-weight:800;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">✓ NO TIENE DILUCIÓN</span>`;
+                    }
+                    // ATM / SHELF / EQUITY LINE → rojo chillón con cantidad
+                    const mAtm   = s.match(/^ATM(?:\s+([\d.,]+)\s*M)?$/i);
+                    const mShelf = s.match(/^SHELF(?:\s+([\d.,]+)\s*M)?$/i);
+                    const mEq    = s.match(/^EQUITY LINE(?:\s+([\d.,]+)\s*M)?$/i);
+                    if (mAtm || mShelf || mEq) {
+                      let label = mAtm ? 'ATM' : mShelf ? 'SHELF' : 'EQUITY LINE';
+                      const qty = (mAtm||mShelf||mEq)[1];
+                      if (qty) label += ` (${qty.replace('.', ',')}M)`;
+                      return `<span style="display:block;color:#ff1744;font-weight:800;font-size:11px;letter-spacing:0.5px;white-space:nowrap;">${label}</span>`;
+                    }
+                    // Resto (WARRANTS, S-1, CONVERTIBLE…) → gris normal
+                    return `<span style="display:block;color:var(--muted2);font-size:9px;">${s}</span>`;
+                  });
+                  return `<div style="display:flex;flex-direction:column;gap:1px;">${items.join('')}</div>`;
+                })();
                 
                 // Generar contenido PNL o contador
                 let pnlContent = '-';
                 if (trade.estado === 'ejecucion' && trade.ejecucionStartTime) {
-                  console.log('Trade en ejecución:', trade.ticker, 'StartTime:', trade.ejecucionStartTime);
                   pnlContent = `<span class="countdown-timer" data-start-time="${trade.ejecucionStartTime}" style="color: var(--green); font-weight: 600;"></span>`;
                 } else if (trade.pnlShort != null || trade.pnlLong != null) {
                   // Mostrar SHORT y LONG separados
@@ -2144,7 +2171,7 @@ function renderDays() {
                   // Compatibilidad con trades antiguos
                   pnlContent = `<span class="badge ${trade.pnl >= 0 ? 'badge-green' : 'badge-red'}">${formatPNL(trade.pnl)}</span>`;
                 } else if (trade.estado === 'ejecucion') {
-                  console.log('Trade en ejecución SIN startTime:', trade.ticker);
+                  pnlContent = '-';
                 }
                 
                 // Verificar si faltan campos obligatorios
@@ -2430,10 +2457,12 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     // Gráfico
     chartImage: chartImageData || null,
     
-    // Timer de ejecución - guardar timestamp si pasa a ejecución
-    ejecucionStartTime: (newEstado === 'ejecucion' && oldEstado !== 'ejecucion') 
-      ? Date.now() 
-      : (editingTradeId !== null && allTrades[editingTradeId].ejecucionStartTime ? allTrades[editingTradeId].ejecucionStartTime : null)
+    // Timer de ejecución - guardar timestamp cuando entra en ejecución
+    ejecucionStartTime: (() => {
+      if (newEstado === 'ejecucion' && oldEstado !== 'ejecucion') return Date.now();
+      if (newEstado === 'ejecucion' && editingTradeId !== null) return allTrades[editingTradeId].ejecucionStartTime || Date.now();
+      return null;
+    })()
   };
 
   console.log('📊 Trade a guardar - chartImage:', trade.chartImage);
@@ -2732,7 +2761,7 @@ async function deleteChartFromTable(tradeIdx) {
   // Solo eliminamos la referencia en Firestore
   // (Las imágenes están en Base64 dentro del documento del trade)
   allTrades[tradeIdx].chartImage = null;
-  await saveTrades();
+  await saveSingleTrade(allTrades[tradeIdx]);
   renderDashboard();
 }
 
@@ -2899,78 +2928,142 @@ function saveSectorToList(sector) {
 }
 
 // ── COUNTDOWN TIMER FUNCTIONS ──────────────────────────────────────────────────
-let alertedTickers = new Set(); // Para no mostrar la alerta repetidamente
+
+// Estado por ticker: { mode: '2h'|'15m', alertShown: bool, phaseStart: timestamp }
+const timerAlertState = {};
 
 function startCountdownTimers() {
-  // Actualizar todos los contadores cada segundo
   setInterval(updateAllCountdowns, 1000);
-  updateAllCountdowns(); // Actualizar inmediatamente
+  updateAllCountdowns();
 }
 
 function updateAllCountdowns() {
   const timers = document.querySelectorAll('.countdown-timer');
-  console.log('Cronómetros encontrados:', timers.length);
-  
   timers.forEach(timer => {
     const startTime = parseInt(timer.getAttribute('data-start-time'));
-    console.log('StartTime:', startTime);
-    const elapsed = Date.now() - startTime;
-    const twoHoursInMs = 2 * 60 * 60 * 1000; // 2 horas en milisegundos
-    const remaining = twoHoursInMs - elapsed;
-    
+    const ticker = getTickerFromTimer(timer);
+    if (!ticker) return;
+
+    // Inicializar estado la primera vez
+    if (!timerAlertState[ticker]) {
+      timerAlertState[ticker] = { mode: '2h', alertShown: false, phaseStart: startTime };
+    }
+    const state = timerAlertState[ticker];
+
+    // Si el usuario dijo "voy ganando", mostrar guión y salir
+    if (state.mode === 'done') {
+      timer.textContent = '—';
+      timer.style.color = 'var(--muted)';
+      return;
+    }
+
+    const duration = state.mode === '2h' ? 2 * 60 * 60 * 1000 : 15 * 60 * 1000;
+    const elapsed  = Date.now() - state.phaseStart;
+    const remaining = duration - elapsed;
+
     if (remaining > 0) {
-      const hours = Math.floor(remaining / (60 * 60 * 1000));
-      const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-      const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
-      
-      timer.textContent = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-      timer.style.color = 'var(--green)';
-      
-      // Resetear alerta si el tiempo vuelve a ser positivo
-      const tickerFromTimer = getTickerFromTimer(timer);
-      if (tickerFromTimer) {
-        alertedTickers.delete(tickerFromTimer);
-      }
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      timer.textContent = state.mode === '2h'
+        ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+        : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      timer.style.color = state.mode === '2h' ? 'var(--green)' : 'var(--yellow)';
+      state.alertShown = false;
     } else {
       timer.textContent = '⏰ TIEMPO';
       timer.style.color = 'var(--red)';
-      
-      // Mostrar alerta solo una vez por ticker
-      const tickerFromTimer = getTickerFromTimer(timer);
-      if (tickerFromTimer && !alertedTickers.has(tickerFromTimer)) {
-        alertedTickers.add(tickerFromTimer);
-        showTimeAlert(tickerFromTimer);
+      if (!state.alertShown) {
+        state.alertShown = true;
+        showTimeAlert(ticker, state.mode);
       }
     }
   });
 }
 
 function getTickerFromTimer(timerElement) {
-  // Buscar el ticker en la misma fila
   const row = timerElement.closest('tr');
   if (row) {
-    const tickerCell = row.querySelector('td:nth-child(2)');
-    return tickerCell ? tickerCell.textContent.trim() : null;
+    const cell = row.querySelector('td:nth-child(2)');
+    return cell ? cell.textContent.trim() : null;
   }
   return null;
 }
 
-function showTimeAlert(ticker) {
+function showTimeAlert(ticker, mode) {
+  const overlay = document.getElementById('timeAlertOverlay');
+  const icon    = document.getElementById('timeAlertIcon');
+  const title   = document.getElementById('timeAlertTitle');
+  const buttons = document.getElementById('timeAlertButtons');
+  const warning = document.getElementById('timeAlertWarning');
+
   document.getElementById('timeAlertTicker').textContent = ticker;
-  document.getElementById('timeAlertOverlay').classList.add('show');
-  
-  // Reproducir sonido de alerta (opcional - navegador puede bloquearlo)
-  try {
-    const beep = new Audio('data:audio/wav;base64,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');
-    beep.play();
-  } catch (e) {
-    // Silenciar error si el navegador bloquea el audio
+  overlay.setAttribute('data-ticker', ticker);
+
+  if (mode === '2h') {
+    icon.textContent  = '⏰';
+    title.textContent = '¡CIERRA LA POSICIÓN!';
+    title.style.fontSize = '72px';
+    title.style.color = 'var(--red)';
+    buttons.style.display = 'flex';
+    warning.style.display  = 'none';
+  } else {
+    // Modo 15m: aviso de pérdida
+    icon.textContent  = '🚨';
+    title.textContent = 'TU TRADE NO SE ESTÁ DANDO, CIÉRRALO';
+    title.style.fontSize = '44px';
+    title.style.color = 'var(--red)';
+    buttons.style.display = 'none';
+    warning.style.display  = 'block';
   }
+
+  overlay.classList.add('show');
+  playBeep();
+}
+
+// Usuario va ganando → cronómetro desaparece
+function alertVoyGanando() {
+  const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
+  if (ticker) timerAlertState[ticker] = { mode: 'done', alertShown: true, phaseStart: 0 };
+  closeTimeAlert();
+}
+
+// Usuario va perdiendo → reiniciar con 15 minutos
+function alertVoyPerdiendo() {
+  const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
+  if (ticker) timerAlertState[ticker] = { mode: '15m', alertShown: false, phaseStart: Date.now() };
+  closeTimeAlert();
+}
+
+// Cerrar alerta de advertencia (15m) y reiniciar otros 15m
+function alertCerrarAviso() {
+  const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
+  if (ticker) timerAlertState[ticker] = { mode: '15m', alertShown: false, phaseStart: Date.now() };
+  closeTimeAlert();
 }
 
 function closeTimeAlert() {
   document.getElementById('timeAlertOverlay').classList.remove('show');
 }
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.3, 0.6].forEach(offset => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.4, ctx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.25);
+      osc.start(ctx.currentTime + offset);
+      osc.stop(ctx.currentTime + offset + 0.25);
+    });
+  } catch(e) {}
+}
+
 
 // ── TICKER SORT FUNCTIONS ──────────────────────────────────────────────────
 function toggleTickerSort() {
