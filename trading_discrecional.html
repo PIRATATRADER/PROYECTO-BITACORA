@@ -1549,17 +1549,23 @@
                   <input type="checkbox" id="dilucionS1" value="S-1 OFFERING">
                   <span>S-1 OFFERING</span>
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 6px;">
                   <input type="checkbox" id="dilucionWarrants" value="WARRANTS">
                   <span>WARRANTS</span>
+                  <input type="number" step="0.01" id="warrantsPrice" class="form-input" placeholder="$" style="width: 60px; padding: 4px 6px; font-size: 11px;">
+                  <input type="number" step="0.1" id="warrantsAmount" class="form-input" placeholder="M" style="width: 55px; padding: 4px 6px; font-size: 11px;">
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 6px;">
                   <input type="checkbox" id="dilucionConvertibleNote" value="CONVERTIBLE NOTE">
-                  <span>CONVERTIBLE NOTE</span>
+                  <span>CONV. NOTE</span>
+                  <input type="number" step="0.01" id="convertibleNotePrice" class="form-input" placeholder="$" style="width: 60px; padding: 4px 6px; font-size: 11px;">
+                  <input type="number" step="0.1" id="convertibleNoteAmount" class="form-input" placeholder="M" style="width: 55px; padding: 4px 6px; font-size: 11px;">
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 6px;">
                   <input type="checkbox" id="dilucionConvertiblePreferred" value="CONVERTIBLE PREFERRED">
-                  <span>CONVERTIBLE PREFERRED</span>
+                  <span>CONV. PREF</span>
+                  <input type="number" step="0.01" id="convertiblePreferredPrice" class="form-input" placeholder="$" style="width: 60px; padding: 4px 6px; font-size: 11px;">
+                  <input type="number" step="0.1" id="convertiblePreferredAmount" class="form-input" placeholder="M" style="width: 55px; padding: 4px 6px; font-size: 11px;">
                 </label>
                 <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
                   <input type="checkbox" id="dilucionEquityLine" value="EQUITY LINE">
@@ -2173,7 +2179,7 @@ function renderDays() {
             <tbody>
               ${sortedDayTrades.map((trade, idx) => {
                 const globalIdx = allTrades.findIndex(t => t === trade);
-                // Dilución: ATM/SHELF/EQUITY LINE → rojo | NO TIENE DILUCIÓN → verde | resto → gris
+                // Dilución: ATM/SHELF/EQUITY LINE → rojo | WARRANTS/CONVERTIBLE → morado | NO TIENE DILUCIÓN → verde | resto → gris
                 const dilucionFormatted = (() => {
                   if (!trade.dilucion || !trade.dilucion.length) return '-';
                   const items = trade.dilucion.map(item => {
@@ -2192,7 +2198,34 @@ function renderDays() {
                       if (qty) label += ` (${qty.replace('.', ',')}M)`;
                       return `<span style="display:block;color:#ff1744;font-weight:800;font-size:11px;letter-spacing:0.5px;white-space:nowrap;">${label}</span>`;
                     }
-                    // Resto (WARRANTS, S-1, CONVERTIBLE…) → gris normal
+                    // WARRANTS con precio y cantidad → morado
+                    if (s.startsWith('WARRANTS')) {
+                      const priceMatch = s.match(/\(\$([^)]+)\)/);
+                      const amountMatch = s.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+                      let label = 'WARRANTS';
+                      if (priceMatch) label += ` ($${priceMatch[1]})`;
+                      if (amountMatch) label += ` <span style="color:#ff9800;font-weight:800;">${amountMatch[1]}M</span>`;
+                      return `<span style="display:block;color:#b16aff;font-weight:700;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">${label}</span>`;
+                    }
+                    // CONVERTIBLE NOTE con precio y cantidad → morado
+                    if (s.startsWith('CONVERTIBLE NOTE')) {
+                      const priceMatch = s.match(/\(\$([^)]+)\)/);
+                      const amountMatch = s.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+                      let label = 'CONV. NOTE';
+                      if (priceMatch) label += ` ($${priceMatch[1]})`;
+                      if (amountMatch) label += ` <span style="color:#ff9800;font-weight:800;">${amountMatch[1]}M</span>`;
+                      return `<span style="display:block;color:#b16aff;font-weight:700;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">${label}</span>`;
+                    }
+                    // CONVERTIBLE PREFERRED con precio y cantidad → morado
+                    if (s.startsWith('CONVERTIBLE PREFERRED')) {
+                      const priceMatch = s.match(/\(\$([^)]+)\)/);
+                      const amountMatch = s.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+                      let label = 'CONV. PREF';
+                      if (priceMatch) label += ` ($${priceMatch[1]})`;
+                      if (amountMatch) label += ` <span style="color:#ff9800;font-weight:800;">${amountMatch[1]}M</span>`;
+                      return `<span style="display:block;color:#b16aff;font-weight:700;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">${label}</span>`;
+                    }
+                    // Resto (S-1, etc.) → gris normal
                     return `<span style="display:block;color:var(--muted2);font-size:9px;">${s}</span>`;
                   });
                   return `<div style="display:flex;flex-direction:column;gap:1px;">${items.join('')}</div>`;
@@ -2366,9 +2399,36 @@ function editTrade(globalIdx) {
   const dilucion = trade.dilucion || [];
   document.getElementById('dilucionNoTiene').checked = dilucion.some(d => d.includes('• NO TIENE DILUCIÓN'));
   document.getElementById('dilucionS1').checked = dilucion.some(d => d.includes('S-1 OFFERING'));
-  document.getElementById('dilucionWarrants').checked = dilucion.some(d => d.includes('WARRANTS'));
-  document.getElementById('dilucionConvertibleNote').checked = dilucion.some(d => d.includes('CONVERTIBLE NOTE'));
-  document.getElementById('dilucionConvertiblePreferred').checked = dilucion.some(d => d.includes('CONVERTIBLE PREFERRED'));
+  
+  // WARRANTS con precio y cantidad
+  const warrantsItem = dilucion.find(d => d.startsWith('WARRANTS'));
+  if (warrantsItem) {
+    document.getElementById('dilucionWarrants').checked = true;
+    const priceMatch = warrantsItem.match(/\(\$([^)]+)\)/);
+    const amountMatch = warrantsItem.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+    if (priceMatch) document.getElementById('warrantsPrice').value = priceMatch[1];
+    if (amountMatch) document.getElementById('warrantsAmount').value = amountMatch[1];
+  }
+  
+  // CONVERTIBLE NOTE con precio y cantidad
+  const convertibleNoteItem = dilucion.find(d => d.startsWith('CONVERTIBLE NOTE'));
+  if (convertibleNoteItem) {
+    document.getElementById('dilucionConvertibleNote').checked = true;
+    const priceMatch = convertibleNoteItem.match(/\(\$([^)]+)\)/);
+    const amountMatch = convertibleNoteItem.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+    if (priceMatch) document.getElementById('convertibleNotePrice').value = priceMatch[1];
+    if (amountMatch) document.getElementById('convertibleNoteAmount').value = amountMatch[1];
+  }
+  
+  // CONVERTIBLE PREFERRED con precio y cantidad
+  const convertiblePreferredItem = dilucion.find(d => d.startsWith('CONVERTIBLE PREFERRED'));
+  if (convertiblePreferredItem) {
+    document.getElementById('dilucionConvertiblePreferred').checked = true;
+    const priceMatch = convertiblePreferredItem.match(/\(\$([^)]+)\)/);
+    const amountMatch = convertiblePreferredItem.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+    if (priceMatch) document.getElementById('convertiblePreferredPrice').value = priceMatch[1];
+    if (amountMatch) document.getElementById('convertiblePreferredAmount').value = amountMatch[1];
+  }
   
   // EQUITY LINE con cantidad
   const equityLineItem = dilucion.find(d => d.includes('EQUITY LINE'));
@@ -2441,9 +2501,34 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
   const dilucion = [];
   if (document.getElementById('dilucionNoTiene').checked) dilucion.push('• NO TIENE DILUCIÓN');
   if (document.getElementById('dilucionS1').checked) dilucion.push('S-1 OFFERING');
-  if (document.getElementById('dilucionWarrants').checked) dilucion.push('WARRANTS');
-  if (document.getElementById('dilucionConvertibleNote').checked) dilucion.push('CONVERTIBLE NOTE');
-  if (document.getElementById('dilucionConvertiblePreferred').checked) dilucion.push('CONVERTIBLE PREFERRED');
+  
+  // WARRANTS con precio y cantidad
+  if (document.getElementById('dilucionWarrants').checked) {
+    const price = document.getElementById('warrantsPrice').value;
+    const amount = document.getElementById('warrantsAmount').value;
+    let label = 'WARRANTS';
+    if (price) label += ` ($${price})`;
+    if (amount) label += ` ${amount}M`;
+    dilucion.push(label);
+  }
+  // CONVERTIBLE NOTE con precio y cantidad
+  if (document.getElementById('dilucionConvertibleNote').checked) {
+    const price = document.getElementById('convertibleNotePrice').value;
+    const amount = document.getElementById('convertibleNoteAmount').value;
+    let label = 'CONVERTIBLE NOTE';
+    if (price) label += ` ($${price})`;
+    if (amount) label += ` ${amount}M`;
+    dilucion.push(label);
+  }
+  // CONVERTIBLE PREFERRED con precio y cantidad
+  if (document.getElementById('dilucionConvertiblePreferred').checked) {
+    const price = document.getElementById('convertiblePreferredPrice').value;
+    const amount = document.getElementById('convertiblePreferredAmount').value;
+    let label = 'CONVERTIBLE PREFERRED';
+    if (price) label += ` ($${price})`;
+    if (amount) label += ` ${amount}M`;
+    dilucion.push(label);
+  }
   
   // EQUITY LINE, ATM y SHELF con cantidades
   if (document.getElementById('dilucionEquityLine').checked) {
