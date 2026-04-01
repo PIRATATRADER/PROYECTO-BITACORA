@@ -1413,6 +1413,11 @@
                 <input type="number" step="0.01" class="form-input" id="inputRRLong" placeholder="2.5">
               </div>
             </div>
+            <!-- Precio de entrada -->
+            <div class="form-group" style="margin-top: 12px;">
+              <label class="form-label">💲 Precio Entrada (avg)</label>
+              <input type="number" step="0.001" class="form-input" id="inputPrecioEntrada" placeholder="2.45" style="max-width: 150px;">
+            </div>
           </div>
         </div>
 
@@ -1660,6 +1665,7 @@
       <button class="stats-tab" onclick="switchStatsTab('breakdown',this)">Breakdowns</button>
       <button class="stats-tab" onclick="switchStatsTab('direction',this)">Short vs Long</button>
       <button class="stats-tab" onclick="switchStatsTab('setup',this)">Setup</button>
+      <button class="stats-tab" onclick="switchStatsTab('precio',this)">💲 Precio</button>
     </div>
 
     <!-- Body scrollable -->
@@ -1788,6 +1794,45 @@
           <div class="stats-chart-title">Performance por Setup (tabla)</div>
           <div id="s_tablaSetup"></div>
         </div>
+      </div>
+
+      <!-- ══════════════════ TAB: PRECIO ══════════════════ -->
+      <div class="stats-panel" id="statsPanel-precio">
+        
+        <!-- KPIs por rango de precio -->
+        <div class="stats-chart-box">
+          <div class="stats-chart-title">📊 Distribución de Trades por Rango de Precio</div>
+          <div class="stats-chart-wrap" style="height:280px"><canvas id="s_chartPrecioTrades"></canvas></div>
+        </div>
+
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Win Rate por Rango de Precio</div>
+            <div class="stats-chart-wrap" style="height:240px"><canvas id="s_chartPrecioWR"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">PNL Total por Rango de Precio</div>
+            <div class="stats-chart-wrap" style="height:240px"><canvas id="s_chartPrecioPNL"></canvas></div>
+          </div>
+        </div>
+
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">R Promedio por Rango de Precio</div>
+            <div class="stats-chart-wrap" style="height:220px"><canvas id="s_chartPrecioR"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Profit Factor por Rango de Precio</div>
+            <div class="stats-chart-wrap" style="height:220px"><canvas id="s_chartPrecioPF"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Tabla detallada por precio -->
+        <div class="stats-chart-box" style="margin-top:0">
+          <div class="stats-chart-title">Tabla detallada por Rango de Precio</div>
+          <div id="s_tablaPrecio"></div>
+        </div>
+
       </div>
 
     </div>
@@ -2181,6 +2226,7 @@ function renderDays() {
                   trade.closed, // closed
                   (trade.pnlShort !== null || trade.pnlLong !== null), // pnl (al menos uno)
                   (trade.rrShort !== null || trade.rrLong !== null), // r (al menos uno)
+                  trade.precioEntrada, // precio de entrada
                   trade.noticia, // noticia
                   trade.pais, // pais
                   trade.sector, // sector
@@ -2299,6 +2345,7 @@ function editTrade(globalIdx) {
   document.getElementById('inputRRShort').value = trade.rrShort || '';
   document.getElementById('inputPNLLong').value = trade.pnlLong != null ? trade.pnlLong : '';
   document.getElementById('inputRRLong').value = trade.rrLong || '';
+  document.getElementById('inputPrecioEntrada').value = trade.precioEntrada != null ? trade.precioEntrada : '';
   
   // Setup y contexto
   document.getElementById('inputNoticia').value = trade.noticia || '';
@@ -2431,6 +2478,9 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     rrShort: parseFloat(document.getElementById('inputRRShort').value) || null,
     pnlLong: parseFloat(document.getElementById('inputPNLLong').value) || null,
     rrLong: parseFloat(document.getElementById('inputRRLong').value) || null,
+    
+    // Precio de entrada promedio
+    precioEntrada: parseFloat(document.getElementById('inputPrecioEntrada').value) || null,
     
     // PNL total combinado (para mantener compatibilidad)
     pnl: (parseFloat(document.getElementById('inputPNLShort').value) || 0) + (parseFloat(document.getElementById('inputPNLLong').value) || 0) || null,
@@ -3210,6 +3260,7 @@ function switchStatsTab(tab, btn) {
   else if (tab === 'breakdown') buildBreakdownTab(fin);
   else if (tab === 'direction') buildDirectionTab(fin);
   else if (tab === 'setup') buildSetupTab(fin);
+  else if (tab === 'precio') buildPrecioTab(fin);
 }
 
 // ── Open / Close ───────────────────────────────────────────────────────────────
@@ -3565,6 +3616,261 @@ function buildSetupTab(fin) {
     <table class="breakdown-table">
       <thead><tr><th>Setup</th><th class="right">Trades</th><th>Win Rate</th><th class="right">Avg PNL</th><th class="right">PNL Total</th><th class="right">P.Factor</th><th class="right">Avg R</th></tr></thead>
       <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── TAB: PRECIO ───────────────────────────────────────────────────────────────
+
+function buildPrecioTab(fin) {
+  // Definir rangos de precio
+  const rangos = [
+    { label: '< $0.50', min: 0, max: 0.50 },
+    { label: '$0.50 - $0.99', min: 0.50, max: 1.00 },
+    { label: '$1.00 - $1.99', min: 1.00, max: 2.00 },
+    { label: '$2.00 - $3.99', min: 2.00, max: 4.00 },
+    { label: '$4.00 - $4.99', min: 4.00, max: 5.00 },
+    { label: '$5.00 - $9.99', min: 5.00, max: 10.00 },
+    { label: '≥ $10.00', min: 10.00, max: Infinity }
+  ];
+
+  // Filtrar trades que tienen precio de entrada
+  const tradesConPrecio = fin.filter(t => t.precioEntrada != null && t.precioEntrada > 0);
+  const tradesSinPrecio = fin.filter(t => t.precioEntrada == null || t.precioEntrada <= 0);
+
+  // Clasificar trades por rango
+  const porRango = {};
+  rangos.forEach(r => porRango[r.label] = []);
+  
+  tradesConPrecio.forEach(t => {
+    const precio = t.precioEntrada;
+    for (const r of rangos) {
+      if (precio >= r.min && precio < r.max) {
+        porRango[r.label].push(t);
+        break;
+      }
+    }
+  });
+
+  const labels = rangos.map(r => r.label);
+  const counts = labels.map(l => porRango[l].length);
+  const wrData = labels.map(l => porRango[l].length ? sWR(porRango[l]) : 0);
+  const pnlData = labels.map(l => porRango[l].reduce((s,t) => s + sPNL(t), 0));
+  const avgRData = labels.map(l => porRango[l].length ? sAvgR(porRango[l]) : 0);
+  const pfData = labels.map(l => {
+    const ts = porRango[l];
+    if (!ts.length) return 0;
+    const gWins = ts.filter(t => sPNL(t) > 0).reduce((s,t) => s + sPNL(t), 0);
+    const gLoss = Math.abs(ts.filter(t => sPNL(t) < 0).reduce((s,t) => s + sPNL(t), 0));
+    return gLoss > 0 ? parseFloat((gWins / gLoss).toFixed(2)) : (gWins > 0 ? 5 : 0);
+  });
+
+  // Colores por rango
+  const coloresBg = [
+    'rgba(255,61,87,0.7)',    // < $0.50 - rojo
+    'rgba(255,152,0,0.7)',    // $0.50-$0.99 - naranja
+    'rgba(255,214,0,0.7)',    // $1.00-$1.99 - amarillo
+    'rgba(0,230,118,0.7)',    // $2.00-$3.99 - verde
+    'rgba(0,176,255,0.7)',    // $4.00-$4.99 - azul claro
+    'rgba(68,138,255,0.7)',   // $5.00-$9.99 - azul
+    'rgba(177,106,255,0.7)'   // ≥ $10.00 - púrpura
+  ];
+
+  // Gráfico: Distribución de trades
+  sMakeChart('s_chartPrecioTrades', {
+    type: 'bar',
+    data: { 
+      labels, 
+      datasets: [{ 
+        label: 'Trades',
+        data: counts, 
+        backgroundColor: coloresBg,
+        borderColor: coloresBg.map(c => c.replace('0.7', '1')),
+        borderWidth: 1
+      }] 
+    },
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false, 
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterLabel: function(ctx) {
+              const idx = ctx.dataIndex;
+              const ts = porRango[labels[idx]];
+              if (!ts.length) return '';
+              const wr = sWR(ts);
+              const pnl = ts.reduce((s,t) => s + sPNL(t), 0);
+              return `WR: ${wr}% · PNL: ${formatPNL(pnl)}`;
+            }
+          }
+        }
+      },
+      scales: { 
+        y: { 
+          beginAtZero: true,
+          ticks: { color: C.tick, stepSize: 1 }, 
+          grid: { color: C.grid },
+          title: { display: true, text: 'Nº Trades', color: C.tick }
+        }, 
+        x: { ticks: { color: C.tick }, grid: { color: C.grid } } 
+      } 
+    }
+  });
+
+  // Gráfico: Win Rate por rango
+  sMakeChart('s_chartPrecioWR', {
+    type: 'bar',
+    data: { 
+      labels, 
+      datasets: [{ 
+        data: wrData, 
+        backgroundColor: wrData.map(v => v >= 50 ? C.green : C.red)
+      }] 
+    },
+    options: { 
+      ...baseOpts(100),
+      plugins: { legend: { display: false } },
+      scales: { 
+        y: { beginAtZero: true, max: 100, ticks: { color: C.tick, callback: v => v + '%' }, grid: { color: C.grid } }, 
+        x: { ticks: { color: C.tick, maxRotation: 45, font: { size: 10 } }, grid: { color: C.grid } } 
+      }
+    }
+  });
+
+  // Gráfico: PNL Total por rango
+  sMakeChart('s_chartPrecioPNL', {
+    type: 'bar',
+    data: { 
+      labels, 
+      datasets: [{ 
+        data: pnlData.map(v => parseFloat(v.toFixed(2))), 
+        backgroundColor: pnlData.map(v => v >= 0 ? C.green : C.red)
+      }] 
+    },
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false, 
+      plugins: { legend: { display: false } },
+      scales: { 
+        y: { ticks: { color: C.tick, callback: v => '$' + v }, grid: { color: C.grid } }, 
+        x: { ticks: { color: C.tick, maxRotation: 45, font: { size: 10 } }, grid: { color: C.grid } } 
+      } 
+    }
+  });
+
+  // Gráfico: R promedio por rango
+  sMakeChart('s_chartPrecioR', {
+    type: 'bar',
+    data: { 
+      labels, 
+      datasets: [{ 
+        data: avgRData.map(v => parseFloat(v.toFixed(2))), 
+        backgroundColor: avgRData.map(v => v >= 0 ? C.green : C.red)
+      }] 
+    },
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false, 
+      plugins: { legend: { display: false } },
+      scales: { 
+        y: { ticks: { color: C.tick, callback: v => v + 'R' }, grid: { color: C.grid } }, 
+        x: { ticks: { color: C.tick, maxRotation: 45, font: { size: 10 } }, grid: { color: C.grid } } 
+      } 
+    }
+  });
+
+  // Gráfico: Profit Factor por rango
+  sMakeChart('s_chartPrecioPF', {
+    type: 'bar',
+    data: { 
+      labels, 
+      datasets: [{ 
+        data: pfData, 
+        backgroundColor: pfData.map(v => v >= 1 ? C.green : C.red)
+      }] 
+    },
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false, 
+      plugins: { legend: { display: false } },
+      scales: { 
+        y: { 
+          beginAtZero: true,
+          ticks: { color: C.tick, callback: v => v + 'x' }, 
+          grid: { color: C.grid } 
+        }, 
+        x: { ticks: { color: C.tick, maxRotation: 45, font: { size: 10 } }, grid: { color: C.grid } } 
+      } 
+    }
+  });
+
+  // Tabla detallada
+  const rows = labels.map((label, idx) => {
+    const ts = porRango[label];
+    if (!ts.length) return `<tr style="opacity:0.4">
+      <td>${label}</td>
+      <td class="right">0</td>
+      <td>—</td>
+      <td class="right">—</td>
+      <td class="right">—</td>
+      <td class="right">—</td>
+      <td class="right">—</td>
+    </tr>`;
+    
+    const wr = sWR(ts);
+    const totPNL = ts.reduce((s,t) => s + sPNL(t), 0);
+    const avgPNL = totPNL / ts.length;
+    const pf = sPF(ts);
+    const avgR = sAvgR(ts);
+    
+    return `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${coloresBg[idx]};margin-right:8px;"></span>${label}</td>
+      <td class="right">${ts.length}</td>
+      <td>${sWRBarHTML(wr)}</td>
+      <td class="right" style="color:${avgPNL>=0?C.greenB:C.redB}">${formatPNL(avgPNL)}</td>
+      <td class="right" style="color:${totPNL>=0?C.greenB:C.redB}">${formatPNL(totPNL)}</td>
+      <td class="right" style="color:${parseFloat(pf)>=1?C.greenB:C.redB}">${pf}</td>
+      <td class="right" style="color:${avgR>=0?C.greenB:C.redB}">${avgR.toFixed(2)}R</td>
+    </tr>`;
+  }).join('');
+
+  // Fila de totales
+  const totalTrades = tradesConPrecio.length;
+  const totalWR = totalTrades ? sWR(tradesConPrecio) : 0;
+  const totalPNL = tradesConPrecio.reduce((s,t) => s + sPNL(t), 0);
+  const totalAvgR = totalTrades ? sAvgR(tradesConPrecio) : 0;
+
+  const sinPrecioRow = tradesSinPrecio.length > 0 ? `<tr style="opacity:0.5;font-style:italic;">
+    <td>⚠️ Sin precio registrado</td>
+    <td class="right">${tradesSinPrecio.length}</td>
+    <td colspan="5" style="color:var(--muted2);font-size:11px;">Añade el precio de entrada para incluirlos en las estadísticas</td>
+  </tr>` : '';
+
+  document.getElementById('s_tablaPrecio').innerHTML = `
+    <table class="breakdown-table">
+      <thead><tr>
+        <th>Rango Precio</th>
+        <th class="right">Trades</th>
+        <th>Win Rate</th>
+        <th class="right">Avg PNL</th>
+        <th class="right">PNL Total</th>
+        <th class="right">P.Factor</th>
+        <th class="right">Avg R</th>
+      </tr></thead>
+      <tbody>
+        ${rows}
+        <tr style="border-top:2px solid var(--border);font-weight:600;">
+          <td>📊 TOTAL (con precio)</td>
+          <td class="right">${totalTrades}</td>
+          <td>${sWRBarHTML(totalWR)}</td>
+          <td class="right">—</td>
+          <td class="right" style="color:${totalPNL>=0?C.greenB:C.redB}">${formatPNL(totalPNL)}</td>
+          <td class="right">${sPF(tradesConPrecio)}</td>
+          <td class="right" style="color:${totalAvgR>=0?C.greenB:C.redB}">${totalAvgR.toFixed(2)}R</td>
+        </tr>
+        ${sinPrecioRow}
+      </tbody>
     </table>`;
 }
 
