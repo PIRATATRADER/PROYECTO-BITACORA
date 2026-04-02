@@ -1413,10 +1413,19 @@
                 <input type="number" step="0.01" class="form-input" id="inputRRLong" placeholder="2.5">
               </div>
             </div>
-            <!-- Precio de entrada -->
-            <div class="form-group" style="margin-top: 12px;">
-              <label class="form-label">💲 Precio Entrada (avg)</label>
-              <input type="number" step="0.001" class="form-input" id="inputPrecioEntrada" placeholder="2.45" style="max-width: 150px;">
+            <!-- Precio de entrada + Locates Reg Sho -->
+            <div style="margin-top: 12px; display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: end;">
+              <div class="form-group">
+                <label class="form-label">💲 Precio Entrada (avg)</label>
+                <input type="number" step="0.001" class="form-input" id="inputPrecioEntrada" placeholder="2.45">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Locates Reg Sho</label>
+                <label class="checkbox-label" style="padding: 10px 0;">
+                  <input type="checkbox" id="inputLocatesRegSho" style="width:18px;height:18px;cursor:pointer;accent-color:var(--purple);">
+                  <span style="font-size:13px;">REG SHO</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -1445,10 +1454,7 @@
                 <option value="Canada">
               </datalist>
             </div>
-            <div class="form-group">
-              <label class="form-label">Catalizador</label>
-              <input type="text" class="form-input" id="inputCatalizador" placeholder="Earnings, FDA, Merger...">
-            </div>
+
           </div>
           <div class="form-grid-2" style="margin-top: 16px;">
             <div class="form-group">
@@ -2170,6 +2176,7 @@ function renderDays() {
                 <th>Insiders</th>
                 <th>Inst. Own</th>
                 <th>Overhead</th>
+                <th>Reg Sho</th>
                 <th>Dilución</th>
                 <th>PNL</th>
                 <th>Gráfico</th>
@@ -2278,7 +2285,7 @@ function renderDays() {
                 <tr onclick="editTrade(${globalIdx})">
                   <td>${getEstadoBadge(trade.estado)}</td>
                   <td class="td-mono">${trade.ticker}</td>
-                  <td class="td-mono" style="${trade.noticia === 'SI' ? 'color: var(--green); font-weight: 600;' : trade.noticia === 'NO' ? 'color: var(--red); font-weight: 600;' : ''}">${trade.noticia || '-'}</td>
+                  <td class="td-mono" style="${trade.noticia === 'SI' ? 'color: var(--green); font-weight: 600;' : trade.noticia === 'NO' ? 'color: var(--red); font-weight: 600;' : trade.noticia === 'NOTICIA DE AYER' ? 'color: var(--yellow); font-weight: 600;' : ''}">${trade.noticia || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.marketCap || '-'}</td>
                   <td class="td-mono" style="font-size: 10px; ${trade.float === 'Micro Low Float (<1M)' ? 'color: #ff1744; font-weight: 700;' : ''}">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
@@ -2287,6 +2294,7 @@ function renderDays() {
                   <td class="td-mono" style="${trade.insiders === '>50%' ? 'color: var(--red); font-weight: 600;' : ''}">${trade.insiders || '-'}</td>
                   <td class="td-mono">${trade.instOwn || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
+                  <td class="td-mono" style="text-align:center;">${trade.locatesRegSho ? '<span style="color:#ff1744;font-weight:800;font-size:10px;letter-spacing:0.5px;">REG SHO</span>' : '<span style="color:var(--muted);font-size:11px;">-</span>'}</td>
                   <td class="td-mono" style="font-size: 9px; padding: 8px;">${dilucionFormatted}</td>
                   <td class="td-mono">${pnlContent}</td>
                   <td class="td-chart">
@@ -2349,6 +2357,20 @@ function openAddModal() {
   editingTradeId = null;
   document.getElementById('modalTitle').textContent = 'NUEVO TRADE';
   document.getElementById('tradeForm').reset();
+  // Reset explícito de todos los checkboxes
+  ['dilucionNoTiene','dilucionS1','dilucionWarrants','dilucionConvertibleNote',
+   'dilucionConvertiblePreferred','dilucionEquityLine','dilucionATM','dilucionShelf',
+   'inputLocatesRegSho'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+  // Reset campos numéricos de dilución
+  ['warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
+   'convertiblePreferredPrice','convertiblePreferredAmount',
+   'equityLineAmount','atmAmount','shelfAmount'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   document.getElementById('btnDelete').style.display = 'none';
   removeChart();
   setDefaultDate();
@@ -2372,18 +2394,17 @@ function editTrade(globalIdx) {
   document.getElementById('inputInicio').value = trade.inicio || '';
   document.getElementById('inputClosed').value = trade.closed || '';
   
-  // Datos de salida
   // Datos de salida - SHORT y LONG
   document.getElementById('inputPNLShort').value = trade.pnlShort != null ? trade.pnlShort : '';
   document.getElementById('inputRRShort').value = trade.rrShort || '';
   document.getElementById('inputPNLLong').value = trade.pnlLong != null ? trade.pnlLong : '';
   document.getElementById('inputRRLong').value = trade.rrLong || '';
   document.getElementById('inputPrecioEntrada').value = trade.precioEntrada != null ? trade.precioEntrada : '';
+  document.getElementById('inputLocatesRegSho').checked = trade.locatesRegSho || false;
   
   // Setup y contexto
   document.getElementById('inputNoticia').value = trade.noticia || '';
   document.getElementById('inputPais').value = trade.pais || '';
-  document.getElementById('inputCatalizador').value = trade.catalizador || '';
   document.getElementById('inputSector').value = trade.sector || '';
   document.getElementById('inputIndustry').value = trade.industry || '';
   
@@ -2573,7 +2594,7 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     // Setup y contexto
     noticia: document.getElementById('inputNoticia').value || '',
     pais: document.getElementById('inputPais').value || '',
-    catalizador: document.getElementById('inputCatalizador').value || '',
+    locatesRegSho: document.getElementById('inputLocatesRegSho').checked,
     sector: document.getElementById('inputSector').value || '',
     industry: document.getElementById('inputIndustry').value || '',
     
