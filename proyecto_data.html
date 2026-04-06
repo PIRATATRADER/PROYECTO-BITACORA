@@ -1335,6 +1335,43 @@
   .status-btn.active-closed { border-color: var(--muted2); color: var(--text); background: var(--bg2); }
   .status-btn.active-open   { border-color: var(--green);  color: var(--green); background: var(--green-dim); }
 
+  /* ── Nuevo modal formulario (discrecional) ── */
+  #discModal .modal { max-width: 860px; }
+  #discModal .modal-header { padding: 22px 28px 18px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg2); z-index: 1; border-radius: 16px 16px 0 0; display: flex; align-items: center; justify-content: space-between; }
+  #discModal .modal-title  { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px; color: var(--green); }
+  #discModal .modal-body   { padding: 24px 28px 28px; }
+  #discModal .form-section { margin-bottom: 28px; }
+  #discModal .form-section-title { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  #discModal .form-grid-2  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  #discModal .form-grid-3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  #discModal .form-group   { display: flex; flex-direction: column; gap: 7px; }
+  #discModal .form-label   { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted2); }
+  #discModal .form-input, #discModal .form-select, #discModal .form-textarea {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 13px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); transition: all 0.2s; width: 100%;
+  }
+  #discModal .form-input:focus, #discModal .form-select:focus, #discModal .form-textarea:focus {
+    outline: none; border-color: var(--green); background: var(--bg2);
+  }
+  #discModal .form-textarea { resize: vertical; min-height: 100px; font-family: 'DM Mono', monospace; font-size: 12px; }
+  #discModal .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); }
+  #discModal .disc-btn       { padding: 10px 22px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
+  #discModal .disc-btn-cancel { background: var(--bg3); color: var(--muted2); border: 1px solid var(--border); }
+  #discModal .disc-btn-cancel:hover { background: var(--bg2); color: var(--text); }
+  #discModal .disc-btn-save   { background: var(--green); color: #000; }
+  #discModal .disc-btn-save:hover { opacity: 0.85; }
+  #discModal .disc-btn-delete { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); margin-right: auto; }
+  #discModal .disc-btn-delete:hover { background: var(--red); color: #fff; }
+  #discModal .checkbox-label { display: flex; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; color: var(--text); font-size: 13px; transition: color 0.2s; }
+  #discModal .checkbox-label:hover { color: var(--green); }
+  #discModal .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--green); flex-shrink: 0; }
+  .disc-chart-upload-area { border: 2px dashed var(--border); border-radius: 12px; background: var(--bg3); transition: all 0.2s; }
+  .disc-chart-upload-area.dragover { border-color: var(--green); background: var(--green-dim); }
+  .disc-chart-zoom-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(8px); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 40px; }
+  .disc-chart-zoom-overlay.open { display: flex; }
+  .disc-chart-zoom-content { position: relative; max-width: 90vw; max-height: 90vh; }
+  .disc-chart-zoom-close { position: absolute; top: -16px; right: -16px; width: 36px; height: 36px; background: var(--bg2); border: 1px solid var(--border); border-radius: 50%; color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
 </style>
 </head>
 <body>
@@ -1654,366 +1691,319 @@
   </div>
 </div>
 
-<!-- Add Trade Modal -->
-<div class="modal-overlay" id="addTradeModal">
-  <div class="form-modal">
-
-    <div class="modal-header">
-      <div class="modal-title">
-        <div>
-          <div class="modal-stock" style="font-size:24px" id="addTradeModalTitle">Nuevo Trade</div>
-          <div class="modal-date" id="addTradeModalSubtitle">Introduce los datos de la operación</div>
-        </div>
-      </div>
-      <button class="modal-close" id="addTradeClose">✕</button>
+<!-- Nuevo Modal Trade (Discrecional) -->
+<div class="modal-overlay" id="discModal">
+  <div class="modal" style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;transform:translateY(20px) scale(0.97);transition:transform 0.25s ease;">
+    <div class="modal-header" id="discModalHeader">
+      <div class="modal-title" id="discModalTitle">NUEVO TRADE</div>
+      <button class="modal-close" onclick="closeDiscModal()">✕</button>
     </div>
+    <div class="modal-body">
+      <form id="discTradeForm">
 
-    <!-- Sección: Datos básicos -->
-    <div class="form-section" style="padding-top:20px;border-top:none">
-      <div class="form-section-title" style="border-top:none;padding-top:0">Datos básicos</div>
-      <div class="form-grid">
-        <div class="form-field">
-          <label class="form-label">Fecha *</label>
-          <input class="form-input" type="text" id="ff_fecha" placeholder="05MAR26">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Stock (ticker) *</label>
-          <input class="form-input" type="text" id="ff_stock" placeholder="AAPL" style="text-transform:uppercase">
-        </div>
-        <div class="form-field">
-          <label class="form-label">PNL ($) <span class="form-label-opt">— opcional</span></label>
-          <input class="form-input" type="number" id="ff_pnl" placeholder="135.50" step="0.01">
-        </div>
-        <div class="form-field">
-          <label class="form-label">% Move</label>
-          <input class="form-input" type="number" id="ff_pct" placeholder="25.00" step="0.01">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Real R</label>
-          <input class="form-input" type="number" id="ff_realR" placeholder="1.91" step="0.01">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Setup</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_setup">
-              <option value="">— Seleccionar —</option>
-              <option>SETUP C ($400 - $500)</option>
-              <option>SETUP B ($500 - $600)</option>
-              <option>SETUP A ($600 - $800)</option>
-              <option value="__custom__">Otro (escribir)</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field" id="ff_setup_custom_wrap" style="display:none;grid-column:span 1">
-          <label class="form-label">Setup (personalizado)</label>
-          <input class="form-input" type="text" id="ff_setup_custom" placeholder="Escribe el setup...">
-        </div>
-      </div>
-    </div>
-
-    <!-- Sección: Play & Contexto -->
-    <div class="form-section">
-      <div class="form-section-title">Play & Contexto</div>
-      <div class="form-grid">
-        <div class="form-field span2">
-          <label class="form-label">Play</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_play">
-              <option value="">— Seleccionar —</option>
-              <option>SIR vs PMH</option>
-              <option>BREAKOUT</option>
-              <option>REVERSAL</option>
-              <option>GAP AND GO</option>
-              <option>PANIC DIP</option>
-              <option value="__custom__">Otro (escribir)</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field" id="ff_play_custom_wrap" style="display:none;grid-column:span 2">
-          <label class="form-label">Play (personalizado)</label>
-          <input class="form-input" type="text" id="ff_play_custom" placeholder="Escribe el play...">
-        </div>
-        <div class="form-field">
-          <label class="form-label">Noticia</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_noticia">
-              <option value="NO">NO</option>
-              <option value="SI">SÍ</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">País</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_pais">
-              <option value="">— Seleccionar —</option>
-              <option>CHINA</option>
-              <option>USA</option>
-              <option>CANADA</option>
-              <option>UK</option>
-              <option>AUSTRALIA</option>
-              <option value="__custom__">Otro</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field" id="ff_pais_custom_wrap" style="display:none">
-          <label class="form-label">País (personalizado)</label>
-          <input class="form-input" type="text" id="ff_pais_custom" placeholder="País...">
-        </div>
-      </div>
-    </div>
-
-    <!-- Sección: Fundamentales -->
-    <div class="form-section">
-      <div class="form-section-title">Fundamentales</div>
-      <div class="form-grid">
-        <div class="form-field">
-          <label class="form-label">M.Cap</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_mcap">
-              <option value="">— Seleccionar —</option>
-              <option value="Nano Cap (<$50M)">Nano Cap (&lt;$50M)</option>
-              <option value="Micro Cap ($50M-$300M)">Micro Cap ($50M-$300M)</option>
-              <option value="Small Cap ($300M-$2B)">Small Cap ($300M-$2B)</option>
-              <option value="Mid Cap ($2B-$10B)">Mid Cap ($2B-$10B)</option>
-              <option value="Large Cap (>$10B)">Large Cap (&gt;$10B)</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Float</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_float">
-              <option value="">— Seleccionar —</option>
-              <option value="Ultra Low Float (<5M)">Ultra Low Float (&lt;5M)</option>
-              <option value="Low Float (5M-10M)">Low Float (5M-10M)</option>
-              <option value="Medium Low Float (10M-20M)">Medium Low Float (10M-20M)</option>
-              <option value="Medium Float (20M-50M)">Medium Float (20M-50M)</option>
-              <option value="High Float Small Cap (50M-100M)">High Float Small Cap (50M-100M)</option>
-              <option value="Large Float (>100M)">Large Float (&gt;100M)</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Insiders</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_insiders">
-              <option value="">— Seleccionar —</option>
-              <option>0%-25%</option>
-              <option>25%-50%</option>
-              <option value=">50%">&gt;50%</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Inst. Own</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_instOwn">
-              <option value="">— Seleccionar —</option>
-              <option>0%-30%</option>
-              <option>30%-60%</option>
-              <option value=">60%">&gt;60%</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Overhead</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_overhead">
-              <option value="">— Seleccionar —</option>
-              <option>VOL. HISTORICO</option>
-              <option>RESISTENCIA</option>
-              <option>SIN OVERHEAD</option>
-              <option>DIVERGENCIA</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Cash Need</label>
-          <!-- Hidden real select keeps compatibility with all existing form logic -->
-          <select id="ff_cash" style="display:none">
-            <option value="">— Seleccionar —</option>
-            <option>LOW</option>
-            <option>MEDIUM</option>
-            <option>HIGH</option>
-            <option value="CASH POSITIVE">CASH POSITIVE</option>
-          </select>
-          <div id="ff_cash_custom" style="position:relative;">
-            <div id="ff_cash_display" onclick="toggleCashDropdown()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 32px 9px 12px;cursor:pointer;user-select:none;transition:border-color .15s;position:relative;">
-              — Seleccionar —
-              <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;font-size:12px;">▾</span>
+        <!-- ESTADO Y DATOS BÁSICOS -->
+        <div class="form-section">
+          <div class="form-section-title">Estado y Datos Básicos</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Estado *</label>
+              <select class="form-select" id="disc_estado" required>
+                <option value="">Seleccionar...</option>
+                <option value="estudio">📚 ESTUDIO</option>
+                <option value="ejecucion">⚡ EJECUCIÓN</option>
+                <option value="finalizado">✅ FINALIZADO</option>
+              </select>
             </div>
-            <div id="ff_cash_list" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg3);border:1px solid var(--border);border-radius:8px;z-index:999;overflow:hidden;box-shadow:0 8px 24px #0008;">
-              <div onclick="setCashValue('')"       style="padding:9px 12px;font-size:13px;color:var(--muted);cursor:pointer;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">— Seleccionar —</div>
-              <div onclick="setCashValue('LOW')"    style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">LOW</div>
-              <div onclick="setCashValue('MEDIUM')" style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">MEDIUM</div>
-              <div onclick="setCashValue('HIGH')"   style="padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">HIGH</div>
-              <div onclick="setCashValue('CASH POSITIVE')" style="padding:9px 12px;font-size:13px;color:#00e676;font-weight:700;cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:.5px;transition:background .1s;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">● CASH POSITIVE</div>
+            <div class="form-group">
+              <label class="form-label">Fecha *</label>
+              <input type="date" class="form-input" id="disc_fecha" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ticker *</label>
+              <input type="text" class="form-input" id="disc_ticker" placeholder="AAPL" required style="text-transform:uppercase">
             </div>
           </div>
         </div>
-        <div class="form-field">
-          <label class="form-label">Dilución</label>
-          <div id="ff_dilucion" style="display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;max-height:240px;overflow-y:auto;">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:2px;">
-              <input type="checkbox" value="NO TIENE DILUCION" style="cursor:pointer;width:16px;height:16px;accent-color:#00e676;">
-              <span style="color:#00e676;font-weight:700;">● NO TIENE DILUCION</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;">
-              <input type="checkbox" value="S-1 OFFERING" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);">
-              <span style="color:var(--text);">S-1 OFFERING</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;">
-              <input type="checkbox" value="WARRANTS" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);">
-              <span style="color:var(--text);">WARRANTS</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;">
-              <input type="checkbox" value="CONVERTIBLE NOTE" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);">
-              <span style="color:var(--text);">CONVERTIBLE NOTE</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;">
-              <input type="checkbox" value="CONVERTIBLE PREFERRED" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);">
-              <span style="color:var(--text);">CONVERTIBLE PREFERRED</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;">
-              <input type="checkbox" value="EQUITY LINE" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);">
-              <span style="color:var(--text);">EQUITY LINE</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;">
-              <input type="checkbox" value="ATM" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);">
-              <span style="color:var(--text);">ATM</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;padding:4px;">
-              <input type="checkbox" value="SHELF" style="cursor:pointer;width:16px;height:16px;accent-color:var(--green);">
-              <span style="color:var(--text);">SHELF</span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Sección: Timing -->
-    <div class="form-section">
-      <div class="form-section-title">Timing</div>
-      <div class="form-grid cols3">
-        <div class="form-field">
-          <label class="form-label">Inicio</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_inicio">
-              <option value="">— Seleccionar —</option>
-              <option>PRE-MARKET</option>
-              <option>OPEN</option>
-              <option>MID-DAY</option>
-              <option>POST-MARKET</option>
-            </select>
+        <!-- DATOS DE ENTRADA -->
+        <div class="form-section">
+          <div class="form-section-title">Datos de Entrada</div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Setup</label>
+              <select class="form-select" id="disc_setup">
+                <option value="">— Seleccionar —</option>
+                <option value="SETUP A ($1000 - $1200)">SETUP A ($1000 - $1200)</option>
+                <option value="SETUP B ($800 - $1000)">SETUP B ($800 - $1000)</option>
+                <option value="SETUP C ($600 - $800)">SETUP C ($600 - $800)</option>
+                <option value="BABY SIZE (<$600)">BABY SIZE (&lt;$600)</option>
+                <option value="Otro (escribir)">Otro (escribir)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Inicio</label>
+              <select class="form-select" id="disc_inicio">
+                <option value="">Seleccionar...</option>
+                <option value="PRE-MARKET">PRE-MARKET</option>
+                <option value="OPEN">OPEN</option>
+                <option value="MID-DAY">MID-DAY</option>
+                <option value="POST-MARKET">POST-MARKET</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-3" style="margin-top:14px;">
+            <div class="form-group">
+              <label class="form-label">Closed</label>
+              <select class="form-select" id="disc_closed">
+                <option value="">Seleccionar...</option>
+                <option value="PRE-MARKET">PRE-MARKET</option>
+                <option value="MID-DAY">MID-DAY</option>
+                <option value="CLOSE">CLOSE</option>
+                <option value="POST-MARKET">POST-MARKET</option>
+              </select>
+            </div>
           </div>
         </div>
-        <div class="form-field">
-          <label class="form-label">Closed</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_final">
-              <option value="">— Seleccionar —</option>
-              <option>PRE-MARKET</option>
-              <option>MID-DAY</option>
-              <option>CLOSE</option>
-              <option>POST-MARKET</option>
-              <option>SE DIO LA VUELTA</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Runner</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_runner">
-              <option value="">— Seleccionar —</option>
-              <option>25% RUNNER</option>
-              <option>NO RUNNER</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Objetivo 1</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_objetivo1">
-              <option value="">— Seleccionar —</option>
-              <option>JLINES</option>
-              <option>VWAP</option>
-              <option>CLOSE DAY ANTERIOR</option>
-              <option>CLOSE DAY</option>
-              <option>POST-MARKET (22:30)</option>
-              <option>CLOSE 15%</option>
-              <option>CLOSE 20%</option>
-              <option>CLOSE 25%</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Objetivo 2</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_objetivo2">
-              <option value="">— Seleccionar —</option>
-              <option>JLINES</option>
-              <option>VWAP</option>
-              <option>CLOSE DAY ANTERIOR</option>
-              <option>CLOSE DAY</option>
-              <option>POST-MARKET (22:30)</option>
-              <option>CLOSE 15%</option>
-              <option>CLOSE 20%</option>
-              <option>CLOSE 25%</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="form-label">Objetivo 3</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="ff_objetivo3">
-              <option value="">— Seleccionar —</option>
-              <option>JLINES</option>
-              <option>VWAP</option>
-              <option>CLOSE DAY ANTERIOR</option>
-              <option>CLOSE DAY</option>
-              <option>POST-MARKET (22:30)</option>
-              <option>CLOSE 15%</option>
-              <option>CLOSE 20%</option>
-              <option>CLOSE 25%</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Sección: Observaciones — notas sobre la ejecución del trade -->
-    <div class="form-section">
-      <div class="form-section-title">Observaciones <span class="form-label-opt" style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-left:6px">— opcional</span></div>
-      <textarea id="ff_observaciones"
-        class="form-input"
-        placeholder="¿Cómo ejecutaste el trade? Anota tu razonamiento, errores, qué salió bien o mal..."
-        style="
-          width:100%;
-          min-height:110px;
-          background:var(--bg3);
-          border:1px solid var(--border);
-          border-radius:10px;
-          color:var(--text);
-          font-family:'DM Sans',sans-serif;
-          font-size:13px;
-          line-height:1.6;
-          padding:12px 14px;
-          resize:vertical;
-          outline:none;
-          transition:border-color 0.15s;
-        "
-        onfocus="this.style.borderColor='var(--green)'"
-        onblur="this.style.borderColor='var(--border)'"
-      ></textarea>
-    </div>
+        <!-- DATOS DE SALIDA -->
+        <div class="form-section">
+          <div class="form-section-title">Datos de Salida</div>
+          <!-- SHORT -->
+          <div style="margin-bottom:18px;">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;color:var(--red);margin-bottom:10px;text-transform:uppercase;">🔴 Short</div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">PNL Short ($)</label>
+                <input type="number" step="0.01" class="form-input" id="disc_pnlShort" placeholder="50.00">
+              </div>
+              <div class="form-group">
+                <label class="form-label">R Short</label>
+                <input type="number" step="0.01" class="form-input" id="disc_rrShort" placeholder="2.5">
+              </div>
+            </div>
+          </div>
+          <!-- LONG -->
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;color:var(--green);margin-bottom:10px;text-transform:uppercase;">🟢 Long</div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">PNL Long ($)</label>
+                <input type="number" step="0.01" class="form-input" id="disc_pnlLong" placeholder="50.00">
+              </div>
+              <div class="form-group">
+                <label class="form-label">R Long</label>
+                <input type="number" step="0.01" class="form-input" id="disc_rrLong" placeholder="2.5">
+              </div>
+            </div>
+            <div style="margin-top:12px;display:grid;grid-template-columns:160px 1fr;gap:14px;align-items:end;">
+              <div class="form-group">
+                <label class="form-label">💲 Precio Entrada (avg)</label>
+                <input type="number" step="0.001" class="form-input" id="disc_precioEntrada" placeholder="2.45">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Locates Reg Sho</label>
+                <label class="checkbox-label" style="padding:10px 0;">
+                  <input type="checkbox" id="disc_locatesRegSho" style="width:18px;height:18px;cursor:pointer;accent-color:var(--green);">
+                  <span style="font-size:13px;">REG SHO</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <!-- Footer -->
-    <div class="form-footer">
-      <button class="btn-cancel" id="addTradeCancelBtn">Cancelar</button>
-      <button class="btn-submit" id="addTradeSubmitBtn">＋ Añadir operación</button>
-    </div>
+        <!-- SETUP Y CONTEXTO -->
+        <div class="form-section">
+          <div class="form-section-title">Setup y Contexto</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Noticia</label>
+              <select class="form-select" id="disc_noticia">
+                <option value="">Seleccionar...</option>
+                <option value="SI">SÍ</option>
+                <option value="NO">NO</option>
+                <option value="NOTICIA DE AYER">NOTICIA DE AYER</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">País</label>
+              <input type="text" class="form-input" id="disc_pais" list="disc_paisList" placeholder="Escribe o selecciona...">
+              <datalist id="disc_paisList">
+                <option value="USA">
+                <option value="China">
+                <option value="Israel">
+                <option value="UK">
+                <option value="Canada">
+              </datalist>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sector</label>
+              <input type="text" class="form-input" id="disc_sector" placeholder="Tech, Biotech, Energy...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Industry</label>
+              <input type="text" class="form-input" id="disc_industry" placeholder="Software, Pharmaceuticals...">
+            </div>
+          </div>
+        </div>
 
+        <!-- FUNDAMENTALES -->
+        <div class="form-section">
+          <div class="form-section-title">Fundamentales</div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">M.Cap</label>
+              <select class="form-select" id="disc_mcap">
+                <option value="">Seleccionar...</option>
+                <option value="Nano Cap (<$50M)">Nano Cap (&lt;$50M)</option>
+                <option value="Micro Cap ($50M-$300M)">Micro Cap ($50M-$300M)</option>
+                <option value="Small Cap ($300M-$2B)">Small Cap ($300M-$2B)</option>
+                <option value="Mid Cap ($2B-$10B)">Mid Cap ($2B-$10B)</option>
+                <option value="Large Cap (>$10B)">Large Cap (&gt;$10B)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Float</label>
+              <select class="form-select" id="disc_float">
+                <option value="">Seleccionar...</option>
+                <option value="Ultra Low Float (<5M)">Ultra Low Float (&lt;5M)</option>
+                <option value="Low Float (5M-10M)">Low Float (5M-10M)</option>
+                <option value="Medium Low Float (10M-20M)">Medium Low Float (10M-20M)</option>
+                <option value="Medium Float (20M-50M)">Medium Float (20M-50M)</option>
+                <option value="High Float Small Cap (50M-100M)">High Float Small Cap (50M-100M)</option>
+                <option value="Large Float (>100M)">Large Float (&gt;100M)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Insiders</label>
+              <select class="form-select" id="disc_insiders">
+                <option value="">Seleccionar...</option>
+                <option value="0%-25%">0%-25%</option>
+                <option value="25%-50%">25%-50%</option>
+                <option value=">50%">&gt;50%</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Inst. Own</label>
+              <select class="form-select" id="disc_instOwn">
+                <option value="">Seleccionar...</option>
+                <option value="0%-30%">0%-30%</option>
+                <option value="30%-60%">30%-60%</option>
+                <option value=">60%">&gt;60%</option>
+                <option value="NO DISPONIBLE">NO DISPONIBLE</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Overhead</label>
+              <select class="form-select" id="disc_overhead">
+                <option value="">Seleccionar...</option>
+                <option value="VOL. HISTORICO">VOL. HISTORICO</option>
+                <option value="RESISTENCIA">RESISTENCIA</option>
+                <option value="SIN OVERHEAD">SIN OVERHEAD</option>
+                <option value="DIVERGENCIA">DIVERGENCIA</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cash Need</label>
+              <select class="form-select" id="disc_cashNeed">
+                <option value="">Seleccionar...</option>
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="• CASH POSITIVE">• CASH POSITIVE</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- DILUCIÓN -->
+          <div style="margin-top:16px;">
+            <label class="form-label" style="display:block;margin-bottom:10px;">Dilución</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;">
+              <label class="checkbox-label"><input type="checkbox" id="disc_dilucionNoTiene" value="• NO TIENE DILUCIÓN"><span>• NO TIENE DILUCIÓN</span></label>
+              <label class="checkbox-label"><input type="checkbox" id="disc_dilucionS1" value="S-1 OFFERING"><span>S-1 OFFERING</span></label>
+              <label class="checkbox-label" style="display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="disc_dilucionWarrants" value="WARRANTS"><span>WARRANTS</span>
+                <input type="number" step="0.01" id="disc_warrantsPrice" class="form-input" placeholder="$" style="width:58px;padding:4px 6px;font-size:11px;">
+                <input type="number" step="0.1" id="disc_warrantsAmount" class="form-input" placeholder="M" style="width:52px;padding:4px 6px;font-size:11px;">
+              </label>
+              <label class="checkbox-label" style="display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="disc_dilucionConvNote" value="CONVERTIBLE NOTE"><span>CONV. NOTE</span>
+                <input type="number" step="0.01" id="disc_convNotePrice" class="form-input" placeholder="$" style="width:58px;padding:4px 6px;font-size:11px;">
+                <input type="number" step="0.1" id="disc_convNoteAmount" class="form-input" placeholder="M" style="width:52px;padding:4px 6px;font-size:11px;">
+              </label>
+              <label class="checkbox-label" style="display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="disc_dilucionConvPref" value="CONVERTIBLE PREFERRED"><span>CONV. PREF</span>
+                <input type="number" step="0.01" id="disc_convPrefPrice" class="form-input" placeholder="$" style="width:58px;padding:4px 6px;font-size:11px;">
+                <input type="number" step="0.1" id="disc_convPrefAmount" class="form-input" placeholder="M" style="width:52px;padding:4px 6px;font-size:11px;">
+              </label>
+              <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" id="disc_dilucionEquityLine" value="EQUITY LINE"><span>EQUITY LINE</span>
+                <input type="number" step="0.1" id="disc_equityLineAmount" class="form-input" placeholder="M" style="width:72px;padding:4px 8px;font-size:12px;margin-left:auto;">
+              </label>
+              <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" id="disc_dilucionATM" value="ATM"><span>ATM</span>
+                <input type="number" step="0.1" id="disc_atmAmount" class="form-input" placeholder="M" style="width:72px;padding:4px 8px;font-size:12px;margin-left:auto;">
+              </label>
+              <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" id="disc_dilucionShelf" value="SHELF"><span>SHELF</span>
+                <input type="number" step="0.1" id="disc_shelfAmount" class="form-input" placeholder="M" style="width:72px;padding:4px 8px;font-size:12px;margin-left:auto;">
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- NOTAS -->
+        <div class="form-section">
+          <div class="form-section-title">Notas y Observaciones</div>
+          <div class="form-group">
+            <label class="form-label">Notas</label>
+            <textarea class="form-textarea" id="disc_notas" placeholder="ESTUDIO: Setup identificado, catalizadores, plan de entrada...&#10;EJECUCIÓN: Cómo se desarrolla el trade, ajustes...&#10;FINALIZADO: Resultado, qué salió bien/mal, aprendizajes..." style="min-height:120px;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);resize:vertical;outline:none;"></textarea>
+          </div>
+        </div>
+
+        <!-- GRÁFICO DEL TRADE -->
+        <div class="form-section">
+          <div class="form-section-title">Gráfico del Trade</div>
+          <div class="disc-chart-upload-area" id="discChartUploadArea">
+            <div id="discChartPlaceholder">
+              <div style="text-align:center;padding:36px 20px;">
+                <div style="font-size:44px;margin-bottom:14px;opacity:0.3;">📊</div>
+                <p style="color:var(--muted2);margin-bottom:14px;">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                <button type="button" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:9px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;" onclick="document.getElementById('discChartInput').click()">Seleccionar Imagen</button>
+                <input type="file" id="discChartInput" accept="image/*" style="display:none;">
+              </div>
+            </div>
+            <div id="discChartUploading" style="display:none;">
+              <div style="text-align:center;padding:36px 20px;">
+                <div style="font-size:44px;margin-bottom:14px;">⏳</div>
+                <p style="color:var(--green);font-weight:600;margin-bottom:6px;">Comprimiendo imagen...</p>
+                <p style="color:var(--muted2);font-size:12px;">Por favor espera</p>
+              </div>
+            </div>
+            <div id="discChartPreview" style="display:none;padding:16px;">
+              <img id="discChartImage" src="" alt="Chart" style="width:100%;height:auto;display:block;border-radius:8px;">
+              <div style="margin-top:12px;display:flex;gap:12px;justify-content:center;">
+                <button type="button" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:8px 16px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;" onclick="discZoomChart()">🔍 Ampliar</button>
+                <button type="button" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red);padding:8px 16px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;" onclick="discRemoveChart()">✕ Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="disc-btn disc-btn-delete" id="discBtnDelete" onclick="discDeleteTrade()" style="display:none;">🗑 Eliminar</button>
+          <button type="button" class="disc-btn disc-btn-cancel" onclick="closeDiscModal()">Cancelar</button>
+          <button type="submit" class="disc-btn disc-btn-save">Guardar Trade</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Chart Zoom (Discrecional) -->
+<div class="disc-chart-zoom-overlay" id="discChartZoomOverlay" onclick="discCloseChartZoom()">
+  <div class="disc-chart-zoom-content" onclick="event.stopPropagation()">
+    <button class="disc-chart-zoom-close" onclick="discCloseChartZoom()">✕</button>
+    <img id="discChartZoomImage" src="" alt="Chart Zoom" style="max-width:100%;max-height:90vh;border-radius:8px;">
   </div>
 </div>
 
@@ -3126,233 +3116,276 @@ document.getElementById('tradeModal').addEventListener('click', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { /* handled below */ } });
 
 // ── Add Trade Form ────────────────────────────────────────────────────────────
-function openAddTradeModal() {
-  // Reset form
-  ['ff_fecha','ff_stock','ff_pnl','ff_pct','ff_realR','ff_setup_custom','ff_play_custom','ff_pais_custom','ff_observaciones'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  ['ff_setup','ff_play','ff_noticia','ff_pais','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_inicio','ff_final','ff_runner','ff_objetivo1','ff_objetivo2','ff_objetivo3'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.selectedIndex = 0;
-  });
-  // Desmarcar todos los checkboxes de dilución
-  document.querySelectorAll('#ff_dilucion input[type="checkbox"]').forEach(cb => cb.checked = false);
-  ['ff_setup_custom_wrap','ff_play_custom_wrap','ff_pais_custom_wrap'].forEach(id => {
-    document.getElementById(id).style.display = 'none';
-  });
+// ── Nuevo formulario Discrecional ─────────────────────────────────────────────
+let discEditingIdx = null;
+let discChartImageData = null;
 
-  // Default date to today
-  const now = new Date();
-  const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-  const yr = String(now.getFullYear()).slice(2);
-  document.getElementById('ff_fecha').value = `${String(now.getDate()).padStart(2,'0')}${months[now.getMonth()]}${yr}`;
-
-  document.getElementById('addTradeModal').classList.add('open');
+function openDiscModal() {
+  discEditingIdx = null;
+  document.getElementById('discModalTitle').textContent = 'NUEVO TRADE';
+  document.getElementById('discTradeForm').reset();
+  // Reset checkboxes dilución
+  ['disc_dilucionNoTiene','disc_dilucionS1','disc_dilucionWarrants','disc_dilucionConvNote',
+   'disc_dilucionConvPref','disc_dilucionEquityLine','disc_dilucionATM','disc_dilucionShelf',
+   'disc_locatesRegSho'].forEach(id => { const el=document.getElementById(id); if(el) el.checked=false; });
+  // Reset campos numéricos dilución
+  ['disc_warrantsPrice','disc_warrantsAmount','disc_convNotePrice','disc_convNoteAmount',
+   'disc_convPrefPrice','disc_convPrefAmount','disc_equityLineAmount','disc_atmAmount','disc_shelfAmount']
+   .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('discBtnDelete').style.display = 'none';
+  discRemoveChart();
+  // Fecha de hoy
+  document.getElementById('disc_fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('discModal').classList.add('open');
   document.body.style.overflow = 'hidden';
-  setCashValue('');
-  setTimeout(() => document.getElementById('ff_stock').focus(), 300);
+  setTimeout(() => document.getElementById('disc_ticker').focus(), 300);
 }
 
-function closeAddTradeModal() {
-  editingTradeKey = null;
-  document.getElementById('addTradeModalTitle').textContent = 'Nuevo Trade';
-  document.getElementById('addTradeModalSubtitle').textContent = 'Introduce los datos de la operación';
-  document.getElementById('addTradeSubmitBtn').textContent = '＋ Añadir operación';
-  document.getElementById('addTradeModal').classList.remove('open');
+function closeDiscModal() {
+  document.getElementById('discModal').classList.remove('open');
   document.body.style.overflow = '';
 }
-
-// Custom select toggle helper
-function handleCustomSelect(selectId, wrapId) {
-  const sel = document.getElementById(selectId);
-  const wrap = document.getElementById(wrapId);
-  sel.addEventListener('change', () => {
-    wrap.style.display = sel.value === '__custom__' ? 'flex' : 'none';
-  });
-}
-
-handleCustomSelect('ff_setup', 'ff_setup_custom_wrap');
-handleCustomSelect('ff_play',  'ff_play_custom_wrap');
-handleCustomSelect('ff_pais',  'ff_pais_custom_wrap');
-
-const cashSel = document.getElementById('ff_cash');
-const updateCashStyle = () => cashSel.classList.toggle('cash-positive', cashSel.value === 'CASH POSITIVE');
-cashSel.addEventListener('change', updateCashStyle);
-
-function toggleCashDropdown() {
-  const list = document.getElementById('ff_cash_list');
-  list.style.display = list.style.display === 'none' ? 'block' : 'none';
-}
-function setCashValue(val) {
-  const sel = document.getElementById('ff_cash');
-  const display = document.getElementById('ff_cash_display');
-  sel.value = val;
-  if (val === 'CASH POSITIVE') {
-    display.style.color = '#00e676';
-    display.style.fontWeight = '700';
-    display.style.borderColor = '#00e676';
-    display.style.fontFamily = "'DM Mono', monospace";
-    display.childNodes[0].textContent = '● CASH POSITIVE ';
-  } else {
-    display.style.color = val ? 'var(--text)' : 'var(--muted)';
-    display.style.fontWeight = '';
-    display.style.borderColor = '';
-    display.style.fontFamily = '';
-    display.childNodes[0].textContent = val || '— Seleccionar — ';
-  }
-  document.getElementById('ff_cash_list').style.display = 'none';
-}
-// Sync custom display when editing an existing trade
-const _origOpenEdit = openEditTradeModal;
-openEditTradeModal = function(t) {
-  _origOpenEdit(t);
-  setTimeout(() => setCashValue(document.getElementById('ff_cash').value), 0);
-};
-// Close dropdown on outside click
-document.addEventListener('click', e => {
-  if (!document.getElementById('ff_cash_custom').contains(e.target))
-    document.getElementById('ff_cash_list').style.display = 'none';
-});
-
-
-// ── Edit Trade ────────────────────────────────────────────────────────────────
-let editingTradeKey = null;
 
 function openEditFromModal() {
   const t = trades.find(tr => tradeKey(tr) === currentTradeKey);
   if (!t) return;
   closeModal();
-  openEditTradeModal(t);
+  openDiscEditModal(t);
 }
 
-function openEditTradeModal(t) {
-  editingTradeKey = tradeKey(t);
-
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val != null ? val : ''; };
-  const setSel = (id, val, customId, wrapId) => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const opt = [...sel.options].find(o => o.value === val);
-    if (opt) { sel.value = val; if (wrapId) document.getElementById(wrapId).style.display = 'none'; }
-    else if (val && customId) { sel.value = '__custom__'; setVal(customId, val); document.getElementById(wrapId).style.display = 'flex'; }
-    else sel.selectedIndex = 0;
+function openDiscEditModal(t) {
+  discEditingIdx = trades.indexOf(t);
+  document.getElementById('discModalTitle').textContent = 'EDITAR · ' + (t.stock || t.ticker || '');
+  const sv = (id, val) => { const el=document.getElementById(id); if(el) el.value = val != null ? val : ''; };
+  sv('disc_fecha',   t.disc_fecha   || t.fecha   || '');
+  sv('disc_ticker',  t.disc_ticker  || t.ticker  || t.stock || '');
+  sv('disc_setup',   t.disc_setup   || t.setupEntrada || '');
+  sv('disc_inicio',  t.disc_inicio  || t.inicio  || '');
+  sv('disc_closed',  t.disc_closed  || t.closed  || '');
+  sv('disc_pnlShort',  t.disc_pnlShort  != null ? t.disc_pnlShort  : (t.pnlShort  != null ? t.pnlShort  : ''));
+  sv('disc_rrShort',   t.disc_rrShort   != null ? t.disc_rrShort   : (t.rrShort   != null ? t.rrShort   : ''));
+  sv('disc_pnlLong',   t.disc_pnlLong   != null ? t.disc_pnlLong   : (t.pnlLong   != null ? t.pnlLong   : ''));
+  sv('disc_rrLong',    t.disc_rrLong    != null ? t.disc_rrLong    : (t.rrLong    != null ? t.rrLong    : ''));
+  sv('disc_precioEntrada', t.disc_precioEntrada != null ? t.disc_precioEntrada : (t.precioEntrada != null ? t.precioEntrada : ''));
+  sv('disc_noticia', t.disc_noticia || t.noticia || '');
+  sv('disc_pais',    t.disc_pais    || t.pais    || '');
+  sv('disc_sector',  t.disc_sector  || t.sector  || '');
+  sv('disc_industry',t.disc_industry|| t.industry|| '');
+  sv('disc_mcap',    t.disc_mcap    || t.mcap    || '');
+  sv('disc_float',   t.disc_float   || t.float   || '');
+  sv('disc_insiders',t.disc_insiders|| t.insiders|| '');
+  sv('disc_instOwn', t.disc_instOwn || t.instOwn || '');
+  sv('disc_overhead',t.disc_overhead|| t.overhead|| '');
+  sv('disc_cashNeed',t.disc_cashNeed|| t.cash    || '');
+  sv('disc_notas',   t.disc_notas   || '');
+  const el_estado = document.getElementById('disc_estado');
+  if (el_estado) el_estado.value = t.disc_estado || t.estado || '';
+  const el_lrs = document.getElementById('disc_locatesRegSho');
+  if (el_lrs) el_lrs.checked = !!(t.disc_locatesRegSho || t.locatesRegSho);
+  // Dilución
+  const dilucion = Array.isArray(t.disc_dilucion) ? t.disc_dilucion : (Array.isArray(t.dilucion) ? t.dilucion : (t.dilucion||'').split(',').map(s=>s.trim()));
+  const setDilCb = (id, prefix) => {
+    const cb = document.getElementById(id); if(!cb) return;
+    cb.checked = dilucion.some(d => d && d.includes && d.includes(prefix));
   };
-
-  setVal('ff_fecha', t.fecha); setVal('ff_stock', t.stock);
-  setVal('ff_pnl', t.pnl); setVal('ff_pct', t.pct); setVal('ff_realR', t.realR);
-  setSel('ff_setup', t.setup, 'ff_setup_custom', 'ff_setup_custom_wrap');
-  setSel('ff_play',  t.play,  'ff_play_custom',  'ff_play_custom_wrap');
-  setSel('ff_pais',  t.pais,  'ff_pais_custom',  'ff_pais_custom_wrap');
-  ['ff_noticia','ff_mcap','ff_float','ff_insiders','ff_instOwn','ff_overhead','ff_cash','ff_inicio','ff_final','ff_runner','ff_objetivo1','ff_objetivo2','ff_objetivo3'].forEach(id => {
-    const key = id.replace('ff_','');
-    setSel(id, t[key]);
-  });
-  // Manejar dilución como checkboxes múltiples
-  document.querySelectorAll('#ff_dilucion input[type="checkbox"]').forEach(cb => cb.checked = false);
-  if (t.dilucion) {
-    const selected = t.dilucion.split(',').map(s => s.trim());
-    document.querySelectorAll('#ff_dilucion input[type="checkbox"]').forEach(cb => {
-      if (selected.includes(cb.value)) cb.checked = true;
-    });
-  }
-
-  // Cargar observaciones existentes del trade al editar
-  const tKey = tradeKey(t);
-  document.getElementById('ff_observaciones').value = notesCache[tKey] || '';
-
-  document.getElementById('addTradeModalTitle').textContent    = 'Editar · ' + t.stock;
-  document.getElementById('addTradeModalSubtitle').textContent = t.fecha + ' — modifica y guarda';
-  document.getElementById('addTradeSubmitBtn').textContent     = '✓ Guardar cambios';
-
-  document.getElementById('addTradeModal').classList.add('open');
+  setDilCb('disc_dilucionNoTiene','NO TIENE');
+  setDilCb('disc_dilucionS1','S-1');
+  setDilCb('disc_dilucionWarrants','WARRANTS');
+  setDilCb('disc_dilucionConvNote','CONVERTIBLE NOTE');
+  setDilCb('disc_dilucionConvPref','CONVERTIBLE PREFERRED');
+  setDilCb('disc_dilucionEquityLine','EQUITY LINE');
+  setDilCb('disc_dilucionATM','ATM');
+  setDilCb('disc_dilucionShelf','SHELF');
+  // Gráfico
+  const chartImg = t.disc_chartImage || t.chartImage || null;
+  if (chartImg) { discChartImageData = chartImg; discDisplayChart(chartImg); } else { discRemoveChart(); }
+  document.getElementById('discBtnDelete').style.display = 'block';
+  document.getElementById('discModal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 // Submit
-document.getElementById('addTradeSubmitBtn').addEventListener('click', () => {
-  const stock = document.getElementById('ff_stock').value.trim().toUpperCase();
-  const pnlRaw = document.getElementById('ff_pnl').value.trim();
-  const fecha = document.getElementById('ff_fecha').value.trim();
+document.getElementById('discTradeForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const ticker = document.getElementById('disc_ticker').value.trim().toUpperCase();
+  const fecha  = document.getElementById('disc_fecha').value.trim();
+  if (!ticker) { document.getElementById('disc_ticker').style.borderColor='var(--red)'; setTimeout(()=>document.getElementById('disc_ticker').style.borderColor='',800); document.getElementById('disc_ticker').focus(); return; }
+  if (!fecha)  { document.getElementById('disc_fecha').style.borderColor='var(--red)'; setTimeout(()=>document.getElementById('disc_fecha').style.borderColor='',800); return; }
 
-  if (!stock) { shakeField('ff_stock'); return; }
-  if (!fecha)  { shakeField('ff_fecha'); return; }
-
-  const getSelect = (id, customId) => {
-    const sel = document.getElementById(id);
-    if (sel.value === '__custom__') return document.getElementById(customId).value.trim();
-    return sel.value;
+  const dilucion = [];
+  if (document.getElementById('disc_dilucionNoTiene').checked) dilucion.push('• NO TIENE DILUCIÓN');
+  if (document.getElementById('disc_dilucionS1').checked) dilucion.push('S-1 OFFERING');
+  const buildDil = (cbId, label, priceId, amtId) => {
+    if (!document.getElementById(cbId).checked) return;
+    let l = label;
+    const p = priceId ? document.getElementById(priceId).value : '';
+    const a = amtId   ? document.getElementById(amtId).value   : '';
+    if (p) l += ` ($${p})`; if (a) l += ` ${a}M`; dilucion.push(l);
   };
+  buildDil('disc_dilucionWarrants','WARRANTS','disc_warrantsPrice','disc_warrantsAmount');
+  buildDil('disc_dilucionConvNote','CONVERTIBLE NOTE','disc_convNotePrice','disc_convNoteAmount');
+  buildDil('disc_dilucionConvPref','CONVERTIBLE PREFERRED','disc_convPrefPrice','disc_convPrefAmount');
+  buildDil('disc_dilucionEquityLine','EQUITY LINE',null,'disc_equityLineAmount');
+  buildDil('disc_dilucionATM','ATM',null,'disc_atmAmount');
+  buildDil('disc_dilucionShelf','SHELF',null,'disc_shelfAmount');
 
+  const pnlShort = parseFloat(document.getElementById('disc_pnlShort').value) || null;
+  const pnlLong  = parseFloat(document.getElementById('disc_pnlLong').value)  || null;
+
+  // Construir objeto trade compatible con proyecto_data (usa stock/fecha/pnl/setup/etc.)
+  // más los campos extra discrecionales prefijados con disc_
   const newTrade = {
-    fecha,
-    stock,
-    pnl:     pnlRaw !== '' ? parseFloat(pnlRaw) : null,
-    pct:     parseFloat(document.getElementById('ff_pct').value)   || 0,
-    realR:   parseFloat(document.getElementById('ff_realR').value) || 0,
-    setup:   getSelect('ff_setup', 'ff_setup_custom'),
-    play:    getSelect('ff_play',  'ff_play_custom'),
-    noticia: document.getElementById('ff_noticia').value,
-    pais:    getSelect('ff_pais',  'ff_pais_custom'),
-    mcap:    document.getElementById('ff_mcap').value,
-    float:   document.getElementById('ff_float').value,
-    insiders:document.getElementById('ff_insiders').value,
-    instOwn: document.getElementById('ff_instOwn').value,
-    overhead:document.getElementById('ff_overhead').value,
-    cash:    document.getElementById('ff_cash').value,
-    dilucion:Array.from(document.querySelectorAll('#ff_dilucion input[type="checkbox"]:checked')).map(cb => cb.value).join(', '),
-    inicio:  document.getElementById('ff_inicio').value,
-    final:   document.getElementById('ff_final').value,
-    runner:  document.getElementById('ff_runner').value,
-    objetivo1: document.getElementById('ff_objetivo1').value,
-    objetivo2: document.getElementById('ff_objetivo2').value,
-    objetivo3: document.getElementById('ff_objetivo3').value,
+    // Campos compatibles con proyecto_data
+    fecha:   fecha,   // ISO date yyyy-mm-dd — se convierte al mostrar
+    stock:   ticker,
+    pnl:     (pnlShort||0) + (pnlLong||0) || null,
+    pct:     0,
+    realR:   parseFloat(document.getElementById('disc_rrShort').value || document.getElementById('disc_rrLong').value) || 0,
+    setup:   document.getElementById('disc_setup').value || '',
+    play:    '',
+    noticia: document.getElementById('disc_noticia').value || '',
+    pais:    document.getElementById('disc_pais').value    || '',
+    mcap:    document.getElementById('disc_mcap').value    || '',
+    float:   document.getElementById('disc_float').value   || '',
+    insiders:document.getElementById('disc_insiders').value|| '',
+    instOwn: document.getElementById('disc_instOwn').value || '',
+    overhead:document.getElementById('disc_overhead').value|| '',
+    cash:    document.getElementById('disc_cashNeed').value|| '',
+    dilucion:dilucion.join(', '),
+    inicio:  document.getElementById('disc_inicio').value  || '',
+    final:   document.getElementById('disc_closed').value  || '',
+    runner:  '', objetivo1:'', objetivo2:'', objetivo3:'',
+    // Campos extra discrecionales
+    disc_estado:       document.getElementById('disc_estado').value || '',
+    disc_fecha:        fecha,
+    disc_ticker:       ticker,
+    disc_setup:        document.getElementById('disc_setup').value || '',
+    disc_inicio:       document.getElementById('disc_inicio').value || '',
+    disc_closed:       document.getElementById('disc_closed').value || '',
+    disc_pnlShort:     pnlShort,
+    disc_rrShort:      parseFloat(document.getElementById('disc_rrShort').value) || null,
+    disc_pnlLong:      pnlLong,
+    disc_rrLong:       parseFloat(document.getElementById('disc_rrLong').value)  || null,
+    disc_precioEntrada:parseFloat(document.getElementById('disc_precioEntrada').value) || null,
+    disc_locatesRegSho:document.getElementById('disc_locatesRegSho').checked,
+    disc_noticia:      document.getElementById('disc_noticia').value || '',
+    disc_pais:         document.getElementById('disc_pais').value   || '',
+    disc_sector:       document.getElementById('disc_sector').value || '',
+    disc_industry:     document.getElementById('disc_industry').value || '',
+    disc_mcap:         document.getElementById('disc_mcap').value   || '',
+    disc_float:        document.getElementById('disc_float').value  || '',
+    disc_insiders:     document.getElementById('disc_insiders').value || '',
+    disc_instOwn:      document.getElementById('disc_instOwn').value || '',
+    disc_overhead:     document.getElementById('disc_overhead').value || '',
+    disc_cashNeed:     document.getElementById('disc_cashNeed').value || '',
+    disc_dilucion:     dilucion,
+    disc_notas:        document.getElementById('disc_notas').value  || '',
+    disc_chartImage:   discChartImageData || null,
   };
 
-  if (editingTradeKey) {
-    const idx = trades.findIndex(t => tradeKey(t) === editingTradeKey);
-    if (idx !== -1) trades[idx] = newTrade;
-    editingTradeKey = null;
-    document.getElementById('addTradeSubmitBtn').textContent = '＋ Añadir operación';
+  if (discEditingIdx !== null && discEditingIdx >= 0) {
+    trades[discEditingIdx] = newTrade;
   } else {
     trades.push(newTrade);
   }
 
-  // Guardar observaciones en notesCache y sincronizar con Firebase
-  const obsText = document.getElementById('ff_observaciones').value.trim();
-  const newKey = tradeKey(newTrade);
-  if (obsText) {
-    notesCache[newKey] = obsText;
-  } else {
-    delete notesCache[newKey];
-  }
+  // Guardar notas en cache
+  const obsText = newTrade.disc_notas;
+  const nKey = tradeKey(newTrade);
+  if (obsText) { notesCache[nKey] = obsText; } else { delete notesCache[nKey]; }
   saveNotesToFirebase();
 
   render();
-  closeAddTradeModal();
+  closeDiscModal();
   saveToFirebase();
   const pnlMsg = newTrade.pnl != null ? ` · ${newTrade.pnl>=0?'+':''}$${Math.abs(newTrade.pnl).toFixed(2)}` : ' · abierto';
-  showToast(`✓ ${stock} añadido${pnlMsg}`);
+  showToast(`✓ ${ticker} añadido${pnlMsg}`);
 });
 
-function shakeField(id) {
-  const el = document.getElementById(id);
-  el.style.borderColor = 'var(--red)';
-  el.style.animation = 'shake 0.3s ease';
-  setTimeout(() => { el.style.animation = ''; el.style.borderColor = ''; }, 600);
-  el.focus();
+function discDeleteTrade() {
+  if (discEditingIdx === null) return;
+  const t = trades[discEditingIdx];
+  const estado = t.disc_estado || '';
+  if (estado === 'ejecucion') { alert('⚠️ No puedes eliminar un trade en EJECUCIÓN.'); return; }
+  if (!confirm('¿Eliminar este trade? Esta acción no se puede deshacer.')) return;
+  trades.splice(discEditingIdx, 1);
+  render();
+  closeDiscModal();
+  saveToFirebase();
+  showToast('🗑 Trade eliminado');
 }
 
-// Shake keyframe (inject once)
-const shakeStyle = document.createElement('style');
-shakeStyle.textContent = `@keyframes shake {
-  0%,100%{transform:translateX(0)}
-  20%{transform:translateX(-6px)}
-  40%{transform:translateX(6px)}
-  60%{transform:translateX(-4px)}
-  80%{transform:translateX(4px)}
-}`;
-document.head.appendChild(shakeStyle);
+// ── Chart upload (discrecional) ───────────────────────────────────────────────
+(function initDiscChartUpload() {
+  const input = document.getElementById('discChartInput');
+  const area  = document.getElementById('discChartUploadArea');
+  if (!input || !area) return;
+  input.addEventListener('change', discHandleChartFile);
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('dragover'); });
+  area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+  area.addEventListener('drop', e => {
+    e.preventDefault(); area.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length && files[0].type.startsWith('image/')) { input.files = files; discHandleChartFile(); }
+  });
+})();
+
+function discHandleChartFile() {
+  const file = document.getElementById('discChartInput').files[0];
+  if (!file || !file.type.match('image.*')) return;
+  document.getElementById('discChartPlaceholder').style.display = 'none';
+  document.getElementById('discChartUploading').style.display = 'block';
+  document.getElementById('discChartPreview').style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > 900) { h = h*900/w; w = 900; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => {
+        const r2 = new FileReader();
+        r2.onloadend = function() {
+          discChartImageData = r2.result;
+          discDisplayChart(r2.result);
+          document.getElementById('discChartUploading').style.display = 'none';
+        };
+        r2.readAsDataURL(blob);
+      }, 'image/jpeg', 0.75);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function discDisplayChart(data) {
+  document.getElementById('discChartPlaceholder').style.display = 'none';
+  document.getElementById('discChartUploading').style.display = 'none';
+  document.getElementById('discChartPreview').style.display = 'block';
+  document.getElementById('discChartImage').src = data;
+}
+
+function discRemoveChart() {
+  discChartImageData = null;
+  const inp = document.getElementById('discChartInput'); if(inp) inp.value = '';
+  document.getElementById('discChartPlaceholder').style.display = 'block';
+  document.getElementById('discChartUploading').style.display = 'none';
+  document.getElementById('discChartPreview').style.display = 'none';
+  const img = document.getElementById('discChartImage'); if(img) img.src = '';
+}
+
+function discZoomChart() {
+  const src = document.getElementById('discChartImage').src;
+  if (!src) return;
+  document.getElementById('discChartZoomImage').src = src;
+  document.getElementById('discChartZoomOverlay').classList.add('open');
+}
+
+function discCloseChartZoom() {
+  document.getElementById('discChartZoomOverlay').classList.remove('open');
+}
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -3361,16 +3394,15 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// Button & close events
-document.getElementById('openAddTrade').addEventListener('click', openAddTradeModal);
-document.getElementById('addTradeClose').addEventListener('click', closeAddTradeModal);
-document.getElementById('addTradeCancelBtn').addEventListener('click', closeAddTradeModal);
-document.getElementById('addTradeModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('addTradeModal')) closeAddTradeModal();
+// Botón ＋ Añadir Trade → nuevo modal
+document.getElementById('openAddTrade').addEventListener('click', openDiscModal);
+// Cerrar con overlay click
+document.getElementById('discModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('discModal')) closeDiscModal();
 });
-// ESC closes whichever modal is open
+// ESC cierra ambos modales
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModal(); closeAddTradeModal(); }
+  if (e.key === 'Escape') { closeModal(); closeDiscModal(); }
 });
 
 
