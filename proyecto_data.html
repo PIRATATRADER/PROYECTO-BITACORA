@@ -1697,9 +1697,9 @@
           <div class="form-select-wrap">
             <select class="form-select" id="ff_setup">
               <option value="">— Seleccionar —</option>
-              <option>SETUP A ($400 - $500)</option>
-              <option>SETUP B ($300 - $400)</option>
-              <option>SETUP C ($200 - $300)</option>
+              <option>SETUP C ($400 - $500)</option>
+              <option>SETUP B ($500 - $600)</option>
+              <option>SETUP A ($600 - $800)</option>
               <option value="__custom__">Otro (escribir)</option>
             </select>
           </div>
@@ -2364,48 +2364,218 @@ window._sortTrades = function(col) {
   });
 };
 
+// Helpers para parsear fecha "DDMMMYY" → valor numérico comparable
+function _parseFecha(f) {
+  if (!f) return 0;
+  const months = {ENE:0,FEB:1,MAR:2,ABR:3,MAY:4,JUN:5,JUL:6,AGO:7,SEP:8,OCT:9,NOV:10,DIC:11};
+  const m = f.match(/^(\d{2})([A-Z]{3})(\d{2})$/i);
+  if (!m) return 0;
+  const day = parseInt(m[1],10);
+  const mon = months[(m[2]||'').toUpperCase()] ?? 0;
+  const yr  = 2000 + parseInt(m[3],10);
+  return yr * 10000 + mon * 100 + day;
+}
+function _monthKey(f) {
+  // Devuelve "MMMYY" para agrupar por mes
+  if (!f) return 'N/A';
+  const m = f.match(/^(\d{2})([A-Z]{3})(\d{2})$/i);
+  if (!m) return f.slice(2) || 'N/A';
+  return (m[2]+m[3]).toUpperCase(); // p.ej. "ENE25"
+}
+function _monthLabel(key) {
+  const nombres = {ENE:'Enero',FEB:'Febrero',MAR:'Marzo',ABR:'Abril',MAY:'Mayo',JUN:'Junio',
+                   JUL:'Julio',AGO:'Agosto',SEP:'Septiembre',OCT:'Octubre',NOV:'Noviembre',DIC:'Diciembre'};
+  const m = key.match(/^([A-Z]{3})(\d{2})$/i);
+  if (!m) return key;
+  return (nombres[m[1].toUpperCase()]||m[1]) + ' 20' + m[2];
+}
+
+// Estado de acordeón — qué meses y días están abiertos
+const _accordionState = { months: {}, days: {} };
+
+window._toggleMonth = function(mk) {
+  _accordionState.months[mk] = !_accordionState.months[mk];
+  // Al cerrar el mes, cerrar también sus días
+  if (!_accordionState.months[mk]) {
+    Object.keys(_accordionState.days).forEach(function(dk) {
+      if (dk.startsWith('__' + mk + '__')) _accordionState.days[dk] = false;
+    });
+  }
+  renderTradesTable();
+};
+
+window._toggleDay = function(mk, dk, event) {
+  event.stopPropagation();
+  const key = '__' + mk + '__' + dk;
+  _accordionState.days[key] = !_accordionState.days[key];
+  renderTradesTable();
+};
+
 function renderTradesTable() {
   const body = document.getElementById('tradesBody');
   if (!trades || !trades.length) {
     body.innerHTML = '<tr><td colspan="7" class="empty-hint">Sin trades cargados</td></tr>';
     return;
   }
+
+  // Si el usuario ha pulsado un th distinto a fecha, ordenar normal sin agrupar
+  if (_tradeSort.col !== 'fecha') {
+    const sorted = trades.slice().sort(function(a, b) {
+      const col = _tradeSort.col;
+      let av = a[col], bv = b[col];
+      if (col === 'pnl' || col === 'realR') {
+        av = av == null ? -Infinity : Number(av);
+        bv = bv == null ? -Infinity : Number(bv);
+        return _tradeSort.dir * (bv - av);
+      }
+      av = (av || '').toString().toLowerCase();
+      bv = (bv || '').toString().toLowerCase();
+      return _tradeSort.dir * av.localeCompare(bv);
+    });
+    window._recentTrades = sorted;
+    body.innerHTML = sorted.map(function(t, i) {
+      const hasImg = chartImages[tradeKey(t)] ? '📷 ' : '';
+      let res, pnlDisplay, pnlColor;
+      if (t.pnl == null) {
+        res = '<span class="badge" style="background:#448aff22;color:var(--blue);border:1px solid #448aff55">OPEN</span>';
+        pnlDisplay = '—'; pnlColor = 'var(--muted2)';
+      } else {
+        res = t.pnl > 0 ? '<span class="badge badge-green">WIN</span>'
+            : t.pnl < 0 ? '<span class="badge badge-red">LOSS</span>'
+            : '<span class="badge badge-yellow">BE</span>';
+        pnlDisplay = fmtPlain(t.pnl);
+        pnlColor = t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+      }
+      return '<tr onclick="openModal(window._recentTrades[' + i + '])" title="Click para ver detalle">'
+        + '<td class="td-mono">' + (t.fecha||'-') + '</td>'
+        + '<td><strong>' + hasImg + (t.stock||'-') + '</strong></td>'
+        + '<td><span class="badge badge-blue">' + (t.setup||'-') + '</span></td>'
+        + '<td>' + (t.pais||'-') + '</td>'
+        + '<td class="td-mono" style="color:' + pnlColor + '">' + pnlDisplay + '</td>'
+        + '<td class="td-mono">' + ((t.realR||0)).toFixed(2) + 'R</td>'
+        + '<td>' + res + '</td>'
+        + '</tr>';
+    }).join('');
+    return;
+  }
+
+  // Ordenar por fecha del más reciente al más antiguo
   const sorted = trades.slice().sort(function(a, b) {
-    const col = _tradeSort.col;
-    let av = a[col], bv = b[col];
-    if (col === 'pnl' || col === 'realR') {
-      av = av == null ? -Infinity : Number(av);
-      bv = bv == null ? -Infinity : Number(bv);
-      return _tradeSort.dir * (bv - av);
-    }
-    av = (av || '').toString().toLowerCase();
-    bv = (bv || '').toString().toLowerCase();
-    return _tradeSort.dir * av.localeCompare(bv);
+    return _parseFecha(b.fecha) - _parseFecha(a.fecha);
   });
   window._recentTrades = sorted;
-  body.innerHTML = sorted.map(function(t, i) {
-    const hasImg = chartImages[tradeKey(t)] ? '📷 ' : '';
-    let res, pnlDisplay, pnlColor;
-    if (t.pnl == null) {
-      res = '<span class="badge" style="background:#448aff22;color:var(--blue);border:1px solid #448aff55">OPEN</span>';
-      pnlDisplay = '—'; pnlColor = 'var(--muted2)';
-    } else {
-      res = t.pnl > 0 ? '<span class="badge badge-green">WIN</span>'
-          : t.pnl < 0 ? '<span class="badge badge-red">LOSS</span>'
-          : '<span class="badge badge-yellow">BE</span>';
-      pnlDisplay = fmtPlain(t.pnl);
-      pnlColor = t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Agrupar por mes
+  const monthOrder = [];
+  const monthGroups = {};
+  sorted.forEach(function(t) {
+    const mk = _monthKey(t.fecha);
+    if (!monthGroups[mk]) { monthGroups[mk] = []; monthOrder.push(mk); }
+    monthGroups[mk].push(t);
+  });
+
+  // Abrir el primer mes por defecto si no hay estado previo
+  if (monthOrder.length && _accordionState.months[monthOrder[0]] === undefined) {
+    _accordionState.months[monthOrder[0]] = true;
+    // Abrir también el primer día del primer mes
+    const firstMonth = monthGroups[monthOrder[0]];
+    if (firstMonth.length) {
+      const firstDay = firstMonth[0].fecha || 'N/A';
+      _accordionState.days['__' + monthOrder[0] + '__' + firstDay] = true;
     }
-    return '<tr onclick="openModal(window._recentTrades[' + i + '])" title="Click para ver detalle">'
-      + '<td class="td-mono">' + (t.fecha||'-') + '</td>'
-      + '<td><strong>' + hasImg + (t.stock||'-') + '</strong></td>'
-      + '<td><span class="badge badge-blue">' + (t.setup||'-') + '</span></td>'
-      + '<td>' + (t.pais||'-') + '</td>'
-      + '<td class="td-mono" style="color:' + pnlColor + '">' + pnlDisplay + '</td>'
-      + '<td class="td-mono">' + ((t.realR||0)).toFixed(2) + 'R</td>'
-      + '<td>' + res + '</td>'
+  }
+
+  let globalIdx = 0;
+  let html = '';
+
+  monthOrder.forEach(function(mk) {
+    const tradesInMonth = monthGroups[mk];
+    const isMonthOpen = !!_accordionState.months[mk];
+
+    // Stats del mes
+    const closed = tradesInMonth.filter(t => t.pnl != null);
+    const monthPNL = closed.reduce((s,t) => s + t.pnl, 0);
+    const monthWins = closed.filter(t => t.pnl > 0).length;
+    const monthWR = closed.length ? Math.round(monthWins / closed.length * 100) : 0;
+    const pnlCol = monthPNL >= 0 ? 'var(--green)' : 'var(--red)';
+    const wrCol  = monthWR  >= 50 ? 'var(--green)' : 'var(--red)';
+    const arrow  = isMonthOpen ? '▾' : '▸';
+
+    // ── Cabecera de mes (clickable) ──
+    html += '<tr onclick="window._toggleMonth(\'' + mk + '\')" style="cursor:pointer;background:#13172080;border-top:2px solid var(--border);user-select:none;" onmouseenter="this.style.background=\'#1a2030\'" onmouseleave="this.style.background=\'#13172080\'">'
+      + '<td colspan="4" style="padding:10px 12px;font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#448aff;font-weight:700;">'
+      + '<span style="margin-right:8px;font-size:13px;transition:transform 0.2s;">' + arrow + '</span>'
+      + _monthLabel(mk) + '</td>'
+      + '<td class="td-mono" style="color:' + pnlCol + ';font-size:11px;text-align:right;padding-right:8px;">' + (monthPNL>=0?'+':'') + '$' + Math.abs(monthPNL).toFixed(0) + '</td>'
+      + '<td class="td-mono" style="color:' + wrCol + ';font-size:11px;text-align:center;">' + monthWR + '%&nbsp;WR</td>'
+      + '<td style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted2);text-align:center;">' + tradesInMonth.length + '&nbsp;ops</td>'
       + '</tr>';
-  }).join('');
+
+    if (!isMonthOpen) return;
+
+    // Agrupar por día dentro del mes
+    const dayOrder = [];
+    const dayGroups = {};
+    tradesInMonth.forEach(function(t) {
+      const dk = t.fecha || 'N/A';
+      if (!dayGroups[dk]) { dayGroups[dk] = []; dayOrder.push(dk); }
+      dayGroups[dk].push(t);
+    });
+
+    dayOrder.forEach(function(dk) {
+      const tradesInDay = dayGroups[dk];
+      const dayKey = '__' + mk + '__' + dk;
+      const isDayOpen = !!_accordionState.days[dayKey];
+
+      const dayClosed = tradesInDay.filter(t => t.pnl != null);
+      const dayPNL  = dayClosed.reduce((s,t) => s + t.pnl, 0);
+      const dayWins = dayClosed.filter(t => t.pnl > 0).length;
+      const dayWR   = dayClosed.length ? Math.round(dayWins / dayClosed.length * 100) : 0;
+      const dCol    = dayPNL >= 0 ? 'var(--green)' : 'var(--red)';
+      const dWrCol  = dayWR  >= 50 ? 'var(--green)' : 'var(--red)';
+      const dArrow  = isDayOpen ? '▾' : '▸';
+
+      // ── Cabecera de día (clickable) ──
+      html += '<tr onclick="window._toggleDay(\'' + mk + '\',\'' + dk + '\',event)" style="cursor:pointer;background:rgba(68,138,255,0.05);border-top:1px solid var(--border);user-select:none;" onmouseenter="this.style.background=\'rgba(68,138,255,0.1)\'" onmouseleave="this.style.background=\'rgba(68,138,255,0.05)\'">'
+        + '<td colspan="4" style="padding:7px 12px 7px 28px;font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted2);letter-spacing:1px;">'
+        + '<span style="margin-right:7px;color:#448aff66;">' + dArrow + '</span>'
+        + dk + '</td>'
+        + '<td class="td-mono" style="color:' + dCol + ';font-size:10px;text-align:right;padding-right:8px;">' + (dayPNL>=0?'+':'') + '$' + Math.abs(dayPNL).toFixed(0) + '</td>'
+        + '<td class="td-mono" style="color:' + dWrCol + ';font-size:10px;text-align:center;">' + dayWR + '%</td>'
+        + '<td style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);text-align:center;">' + tradesInDay.length + '</td>'
+        + '</tr>';
+
+      if (!isDayOpen) return;
+
+      // ── Trades del día ──
+      tradesInDay.forEach(function(t) {
+        const idx = globalIdx++;
+        const hasImg = chartImages[tradeKey(t)] ? '📷 ' : '';
+        let res, pnlDisplay, pnlColor;
+        if (t.pnl == null) {
+          res = '<span class="badge" style="background:#448aff22;color:var(--blue);border:1px solid #448aff55">OPEN</span>';
+          pnlDisplay = '—'; pnlColor = 'var(--muted2)';
+        } else {
+          res = t.pnl > 0 ? '<span class="badge badge-green">WIN</span>'
+              : t.pnl < 0 ? '<span class="badge badge-red">LOSS</span>'
+              : '<span class="badge badge-yellow">BE</span>';
+          pnlDisplay = fmtPlain(t.pnl);
+          pnlColor = t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+        }
+        html += '<tr onclick="openModal(window._recentTrades[' + idx + '])" title="Click para ver detalle" style="background:var(--bg2);" onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'var(--bg2)\'">'
+          + '<td class="td-mono" style="padding-left:44px;color:var(--muted);font-size:10px;">↳&nbsp;' + (t.fecha||'-') + '</td>'
+          + '<td><strong>' + hasImg + (t.stock||'-') + '</strong></td>'
+          + '<td><span class="badge badge-blue">' + (t.setup||'-') + '</span></td>'
+          + '<td>' + (t.pais||'-') + '</td>'
+          + '<td class="td-mono" style="color:' + pnlColor + '">' + pnlDisplay + '</td>'
+          + '<td class="td-mono">' + ((t.realR||0)).toFixed(2) + 'R</td>'
+          + '<td>' + res + '</td>'
+          + '</tr>';
+      });
+    });
+  });
+
+  body.innerHTML = html;
 }
 
 function render() {
@@ -2590,6 +2760,11 @@ function renderSetupBars(containerId, closedTrades, totalCount, key) {
   const groups  = {};
   closedTrades.forEach(function(t) {
     let k = (t[field] || 'N/A').trim() || 'N/A';
+    // Normalizar setup: agrupar por SETUP A/B/C ignorando el precio
+    if (isSetup) {
+      const m = k.match(/^(SETUP\s+[A-Z])/i);
+      if (m) k = m[1].toUpperCase();
+    }
     // Normalizar valores de noticia
     if (isNews) {
       const lowerK = k.toLowerCase();
