@@ -2416,7 +2416,17 @@ function editTrade(globalIdx) {
   document.getElementById('inputOverhead').value = trade.overhead || '';
   document.getElementById('inputCashNeed').value = trade.cashNeed || '';
   
-  // Dilución (checkboxes)
+  // ── Dilución: resetear TODO primero, luego cargar los del trade ─────────────
+  // (sin esto, los checkboxes del trade anterior se quedan activos)
+  ['dilucionNoTiene','dilucionS1','dilucionWarrants','dilucionConvertibleNote',
+   'dilucionConvertiblePreferred','dilucionEquityLine','dilucionATM','dilucionShelf']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+  ['warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
+   'convertiblePreferredPrice','convertiblePreferredAmount',
+   'equityLineAmount','atmAmount','shelfAmount']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const dilucion = trade.dilucion || [];
   document.getElementById('dilucionNoTiene').checked = dilucion.some(d => d.includes('• NO TIENE DILUCIÓN'));
   document.getElementById('dilucionS1').checked = dilucion.some(d => d.includes('S-1 OFFERING'));
