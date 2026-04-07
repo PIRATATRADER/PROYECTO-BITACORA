@@ -1904,6 +1904,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadIndustryList();
   initIndustryInput();
   startCountdownTimers();
+  initTickerAutofill();
   
   console.log('=== INICIALIZACIÓN COMPLETA ===');
 });
@@ -2376,6 +2377,94 @@ function openAddModal() {
   setDefaultDate();
   document.getElementById('tradeModal').classList.add('open');
 }
+
+// ── AUTOCOMPLETADO POR TICKER ──────────────────────────────────────────────────
+// Busca en trades anteriores del mismo ticker y rellena campos estáticos
+// Siempre sobreescribe los campos con los datos del trade más reciente encontrado
+function autoFillFromTicker(ticker) {
+  if (!ticker) return;
+  const upper = ticker.toUpperCase().trim();
+
+  // Buscar todos los trades con ese ticker, ordenados por fecha descendente
+  const matches = allTrades
+    .filter(t => (t.ticker || '').toUpperCase().trim() === upper)
+    .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+  if (!matches.length) return;
+
+  const fields = [
+    { formId: 'inputPais',       tradeKey: 'pais'       },
+    { formId: 'inputSector',     tradeKey: 'sector'     },
+    { formId: 'inputIndustry',   tradeKey: 'industry'   },
+    { formId: 'inputMarketCap',  tradeKey: 'marketCap'  },
+    { formId: 'inputFloat',      tradeKey: 'float'      },
+    { formId: 'inputInsiders',   tradeKey: 'insiders'   },
+    { formId: 'inputInstOwn',    tradeKey: 'instOwn'    },
+    { formId: 'inputCashNeed',   tradeKey: 'cashNeed'   },
+  ];
+
+  let filled = 0;
+  fields.forEach(({ formId, tradeKey }) => {
+    const el = document.getElementById(formId);
+    if (!el) return;
+
+    // Buscar el trade más reciente que tenga ese campo con valor
+    for (const t of matches) {
+      if (t[tradeKey]) {
+        el.value = t[tradeKey];
+        // Resaltar brevemente el campo rellenado
+        el.style.transition = 'border-color 0.3s';
+        el.style.borderColor = 'var(--purple)';
+        setTimeout(() => { el.style.borderColor = ''; }, 1500);
+        filled++;
+        break;
+      }
+    }
+  });
+
+  if (filled > 0) {
+    showTickerToast(upper, filled);
+  }
+}
+
+function showTickerToast(ticker, count) {
+  // Eliminar toast anterior si existe
+  const old = document.getElementById('tickerToast');
+  if (old) old.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'tickerToast';
+  toast.innerHTML = `✨ <strong>${ticker}</strong> encontrado — ${count} campo${count > 1 ? 's' : ''} autocompletado${count > 1 ? 's' : ''}. Revísalos.`;
+  toast.style.cssText = `
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    background: var(--bg3); border: 1px solid var(--purple); border-radius: 10px;
+    padding: 12px 22px; font-size: 13px; color: var(--text); z-index: 9999;
+    box-shadow: 0 4px 20px rgba(177,106,255,0.25);
+    animation: fadeUp 0.3s ease forwards;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.4s'; setTimeout(() => toast.remove(), 400); }, 3500);
+}
+
+// Inicializar listener del ticker (se llama desde DOMContentLoaded)
+function initTickerAutofill() {
+  const tickerInput = document.getElementById('inputTicker');
+  if (!tickerInput) return;
+
+  tickerInput.addEventListener('blur', () => {
+    const val = tickerInput.value.toUpperCase().trim();
+    if (val) autoFillFromTicker(val);
+  });
+
+  // También al presionar Enter en el campo ticker
+  tickerInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = tickerInput.value.toUpperCase().trim();
+      if (val) autoFillFromTicker(val);
+    }
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Edit Trade
 function editTrade(globalIdx) {
