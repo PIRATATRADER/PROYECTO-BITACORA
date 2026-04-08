@@ -2257,7 +2257,6 @@ function renderDays() {
                 <th>Reg Sho</th>
                 <th>Dilución</th>
                 <th>PNL</th>
-                <th>Gráfico</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -2369,20 +2368,17 @@ function renderDays() {
                   <td class="td-mono">${trade.pais || '-'}</td>
                   <td class="td-mono">${trade.setupEntrada || '-'}</td>
                   <td class="td-mono">${trade.industry || '-'}</td>
-                  <td class="td-mono" style="${trade.insiders === '>50%' ? 'color: var(--red); font-weight: 600;' : ''}">${trade.insiders || '-'}</td>
-                  <td class="td-mono">${trade.instOwn || '-'}</td>
+                  <td class="td-mono" style="${trade.insiders === '>50%' ? 'color:var(--red);font-weight:700;' : trade.insiders === '25%-50%' ? 'color:#ffd600;font-weight:700;' : trade.insiders === 'NO DISPONIBLE' ? 'color:#ff7043;font-weight:700;' : ''}">${trade.insiders || '-'}</td>
+                  <td class="td-mono">${(() => {
+                    const v = trade.instOwn; if (!v) return '-';
+                    const n = parseFloat(v);
+                    const color = n >= 60 ? '#ff3d57' : n >= 30 ? '#ffd600' : 'var(--muted2)';
+                    return `<span style="color:${color};font-weight:${n>=30?'700':'400'};">${v}</span>`;
+                  })()}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
                   <td class="td-mono" style="text-align:center;">${trade.locatesRegSho ? '<span style="color:#ff1744;font-weight:800;font-size:10px;letter-spacing:0.5px;">REG SHO</span>' : '<span style="color:var(--muted);font-size:11px;">-</span>'}</td>
                   <td class="td-mono" style="font-size: 9px; padding: 8px;">${dilucionFormatted}</td>
                   <td class="td-mono">${pnlContent}</td>
-                  <td class="td-chart">
-                    ${trade.chartImage ? `
-                      <div class="chart-thumbnail-wrapper">
-                        <img src="${trade.chartImage}" class="chart-thumbnail" onclick="event.stopPropagation(); zoomChartFromTable(${globalIdx});" title="Click para ampliar">
-                        <button class="chart-delete-btn" onclick="event.stopPropagation(); deleteChartFromTable(${globalIdx});" title="Eliminar gráfico">✕</button>
-                      </div>
-                    ` : '<span style="color: var(--muted); font-size: 11px;">-</span>'}
-                  </td>
                   <td style="text-align: center;">
                     ${tradeIncompleto ? '<span style="background: var(--yellow); color: #000; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">⚠️ ABIERTO</span>' : '<span style="color: var(--green); font-size: 16px;">✓</span>'}
                   </td>
@@ -2498,6 +2494,72 @@ function autoFillFromTicker(ticker) {
       }
     }
   });
+
+  // ── Autocompletar dilución ──────────────────────────────────────────────────
+  // Buscar el trade más reciente con dilución definida
+  const tradeConDilucion = matches.find(t => t.dilucion && t.dilucion.length > 0);
+  if (tradeConDilucion) {
+    // Resetear primero todos los checkboxes y campos de dilución
+    ['dilucionNoTiene','dilucionS1','dilucionWarrants','dilucionConvertibleNote',
+     'dilucionConvertiblePreferred','dilucionEquityLine','dilucionATM','dilucionShelf']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+    ['warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
+     'convertiblePreferredPrice','convertiblePreferredAmount',
+     'equityLineAmount','atmAmount','shelfAmount']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+    const dilucion = tradeConDilucion.dilucion;
+    document.getElementById('dilucionNoTiene').checked = dilucion.some(d => d.includes('• NO TIENE DILUCIÓN'));
+    document.getElementById('dilucionS1').checked = dilucion.some(d => d.includes('S-1 OFFERING'));
+
+    const warrantsItem = dilucion.find(d => d.startsWith('WARRANTS'));
+    if (warrantsItem) {
+      document.getElementById('dilucionWarrants').checked = true;
+      // Formato guardado: "WARRANTS ($1.5) 2M"
+      const wPrice = warrantsItem.match(/\(\$\s*([\d.]+)\)/i);
+      const wAmount = warrantsItem.match(/\)\s*([\d.]+)M/i);
+      if (wPrice) { const wpEl = document.getElementById('warrantsPrice'); if (wpEl) wpEl.value = wPrice[1]; }
+      if (wAmount) { const waEl = document.getElementById('warrantsAmount'); if (waEl) waEl.value = wAmount[1]; }
+    }
+    const convNoteItem = dilucion.find(d => d.startsWith('CONVERTIBLE NOTE'));
+    if (convNoteItem) {
+      document.getElementById('dilucionConvertibleNote').checked = true;
+      // Formato guardado: "CONVERTIBLE NOTE ($1.5) 2M"
+      const cnPrice = convNoteItem.match(/\(\$\s*([\d.]+)\)/i);
+      const cnAmount = convNoteItem.match(/\)\s*([\d.]+)M/i);
+      if (cnPrice) { const cnpEl = document.getElementById('convertibleNotePrice'); if (cnpEl) cnpEl.value = cnPrice[1]; }
+      if (cnAmount) { const cnaEl = document.getElementById('convertibleNoteAmount'); if (cnaEl) cnaEl.value = cnAmount[1]; }
+    }
+    const convPrefItem = dilucion.find(d => d.startsWith('CONVERTIBLE PREFERRED'));
+    if (convPrefItem) {
+      document.getElementById('dilucionConvertiblePreferred').checked = true;
+      // Formato guardado: "CONVERTIBLE PREFERRED ($1.5) 2M"
+      const cpPrice = convPrefItem.match(/\(\$\s*([\d.]+)\)/i);
+      const cpAmount = convPrefItem.match(/\)\s*([\d.]+)M/i);
+      if (cpPrice) { const cppEl = document.getElementById('convertiblePreferredPrice'); if (cppEl) cppEl.value = cpPrice[1]; }
+      if (cpAmount) { const cpaEl = document.getElementById('convertiblePreferredAmount'); if (cpaEl) cpaEl.value = cpAmount[1]; }
+    }
+    const equityItem = dilucion.find(d => d.includes('EQUITY LINE'));
+    if (equityItem) {
+      document.getElementById('dilucionEquityLine').checked = true;
+      const eqParts = equityItem.match(/EQUITY LINE\s+([\d.]+)\s*M/i);
+      if (eqParts) { const eaEl = document.getElementById('equityLineAmount'); if (eaEl) eaEl.value = eqParts[1]; }
+    }
+    const atmItem = dilucion.find(d => d.includes('ATM'));
+    if (atmItem) {
+      document.getElementById('dilucionATM').checked = true;
+      const atmParts = atmItem.match(/ATM\s+([\d.]+)\s*M/i);
+      if (atmParts) { const aaEl = document.getElementById('atmAmount'); if (aaEl) aaEl.value = atmParts[1]; }
+    }
+    const shelfItem = dilucion.find(d => d.includes('SHELF'));
+    if (shelfItem) {
+      document.getElementById('dilucionShelf').checked = true;
+      const shParts = shelfItem.match(/SHELF\s+([\d.]+)\s*M/i);
+      if (shParts) { const saEl = document.getElementById('shelfAmount'); if (saEl) saEl.value = shParts[1]; }
+    }
+    filled++;
+  }
+  // ───────────────────────────────────────────────────────────────────────────
 
   if (filled > 0) {
     showTickerToast(upper, filled);
@@ -4337,7 +4399,7 @@ function renderSectoresTable() {
     return '<span style="color:var(--muted)">—</span>';
   };
 
-  const insiderStyle = v => v === '>50%' ? 'color:#ff1744;font-weight:700;' : '';
+  const insiderStyle = v => v === '>50%' ? 'color:#ff1744;font-weight:700;' : v === '25%-50%' ? 'color:#ffd600;font-weight:700;' : v === 'NO DISPONIBLE' ? 'color:#ff7043;font-weight:700;' : '';
 
   // ── Filas ───────────────────────────────────────────────────────────────────
   const rows = unique.map(trade => {
@@ -4361,18 +4423,57 @@ function renderSectoresTable() {
         </div>
       </td>
       <td>${noticiaPill(trade.noticia)}</td>
-      <td>${mcapPill(trade.marketCap)}</td>
-      <td>${floatPill(trade.float)}</td>
+      <td class="td-mono" style="font-size:10px;">${trade.marketCap || '—'}</td>
+      <td class="td-mono" style="font-size:10px;${trade.float === 'Micro Low Float (<1M)' ? 'color:#ff1744;font-weight:700;' : ''}">${trade.float || '—'}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text);">${trade.pais||'<span style="color:var(--muted)">—</span>'}</span></td>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);" title="${trade.setupEntrada||''}">${trade.setupEntrada ? (trade.setupEntrada.length>18 ? trade.setupEntrada.substring(0,18)+'…' : trade.setupEntrada) : '—'}</span></td>
       <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);" title="${trade.industry||''}">${trade.industry ? (trade.industry.length>22 ? trade.industry.substring(0,22)+'…' : trade.industry) : '—'}</span></td>
       <td><span style="font-family:'DM Mono',monospace;font-size:12px;${insiderStyle(trade.insiders)}">${trade.insiders||'—'}</span></td>
-      <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);">${trade.instOwn||'—'}</span></td>
+      <td>${(() => {
+        const v = trade.instOwn; if (!v) return '<span style="color:var(--muted)">—</span>';
+        const n = parseFloat(v);
+        const color = n >= 60 ? '#ff3d57' : n >= 30 ? '#ffd600' : 'var(--muted2)';
+        return `<span style="font-family:'DM Mono',monospace;font-size:12px;color:${color};font-weight:${n>=30?'700':'400'};">${v}</span>`;
+      })()}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);" title="${trade.overhead||''}">${trade.overhead ? (trade.overhead.length>14 ? trade.overhead.substring(0,14)+'…' : trade.overhead) : '—'}</span></td>
       <td style="text-align:center;">${trade.locatesRegSho ? pill('REG SHO','#ff1744','rgba(255,23,68,0.15)') : '<span style="color:var(--muted)">—</span>'}</td>
-      <td>${dilPill(trade)}</td>
+      <td class="td-mono" style="font-size:9px;padding:8px;">${(() => {
+        if (!trade.dilucion || !trade.dilucion.length) return '—';
+        const items = trade.dilucion.map(item => {
+          const s = item.trim();
+          if (/NO TIENE DILU/i.test(s)) return `<span style="display:block;color:#00e676;font-weight:800;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">✓ NO TIENE DILUCIÓN</span>`;
+          const mAtm   = s.match(/^ATM(?:\s+([\d.,]+)\s*M)?$/i);
+          const mShelf = s.match(/^SHELF(?:\s+([\d.,]+)\s*M)?$/i);
+          const mEq    = s.match(/^EQUITY LINE(?:\s+([\d.,]+)\s*M)?$/i);
+          if (mAtm || mShelf || mEq) {
+            let label = mAtm ? 'ATM' : mShelf ? 'SHELF' : 'EQUITY LINE';
+            const qty = (mAtm||mShelf||mEq)[1];
+            if (qty) label += ` (${qty.replace('.', ',')}M)`;
+            return `<span style="display:block;color:#ff1744;font-weight:800;font-size:11px;letter-spacing:0.5px;white-space:nowrap;">${label}</span>`;
+          }
+          if (s.startsWith('WARRANTS')) {
+            const pm = s.match(/\(\$([^)]+)\)/); const am = s.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+            let label = 'WARRANTS';
+            if (pm) label += ` ($${pm[1]})`; if (am) label += ` <span style="color:#ff9800;font-weight:800;">${am[1]}M</span>`;
+            return `<span style="display:block;color:#b16aff;font-weight:700;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">${label}</span>`;
+          }
+          if (s.startsWith('CONVERTIBLE NOTE')) {
+            const pm = s.match(/\(\$([^)]+)\)/); const am = s.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+            let label = 'CONV. NOTE';
+            if (pm) label += ` ($${pm[1]})`; if (am) label += ` <span style="color:#ff9800;font-weight:800;">${am[1]}M</span>`;
+            return `<span style="display:block;color:#b16aff;font-weight:700;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">${label}</span>`;
+          }
+          if (s.startsWith('CONVERTIBLE PREFERRED')) {
+            const pm = s.match(/\(\$([^)]+)\)/); const am = s.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+            let label = 'CONV. PREF';
+            if (pm) label += ` ($${pm[1]})`; if (am) label += ` <span style="color:#ff9800;font-weight:800;">${am[1]}M</span>`;
+            return `<span style="display:block;color:#b16aff;font-weight:700;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">${label}</span>`;
+          }
+          return `<span style="display:block;color:var(--muted2);font-size:9px;">${s}</span>`;
+        });
+        return `<div style="display:flex;flex-direction:column;gap:1px;">${items.join('')}</div>`;
+      })()}</td>
       <td>${pnlCell(trade)}</td>
-      <td style="padding:8px 10px;">${trade.chartImage ? `<div class="chart-thumbnail-wrapper"><img src="${trade.chartImage}" class="chart-thumbnail" style="width:52px;height:36px;" onclick="event.stopPropagation();zoomChartFromTable(${globalIdx});" title="Click para ampliar"></div>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td style="text-align:center;">${incompleto ? '<span style="color:var(--yellow);font-size:16px;" title="Datos incompletos">⚠</span>' : '<span style="color:var(--green);font-size:16px;">✓</span>'}</td>
     </tr>`;
   }).join('');
@@ -4422,11 +4523,10 @@ function renderSectoresTable() {
             <th>Reg Sho</th>
             <th>Dilución</th>
             <th class="sortable" onclick="sortSectoresBy('pnl')">PNL ${ar('pnl')}</th>
-            <th>Gráfico</th>
             <th style="text-align:center;">OK</th>
           </tr>
         </thead>
-        <tbody>${rows || `<tr><td colspan="17" style="text-align:center;color:var(--muted2);padding:40px;font-size:14px;">No hay trades en este sector</td></tr>`}</tbody>
+        <tbody>${rows || `<tr><td colspan="16" style="text-align:center;color:var(--muted2);padding:40px;font-size:14px;">No hay trades en este sector</td></tr>`}</tbody>
       </table>
     </div>
   `;
