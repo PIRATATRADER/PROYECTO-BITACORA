@@ -504,6 +504,54 @@
     pointer-events: all;
   }
 
+  /* Sectores modal: fullscreen panel */
+  #sectoresModal {
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 16px;
+  }
+  #sectoresModal .modal {
+    max-width: 100% !important;
+    max-height: calc(100vh - 32px) !important;
+    height: calc(100vh - 32px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+  #sectoresModal .modal-header { flex-shrink: 0; }
+  #sectoresModal .modal-body {
+    flex: 1; overflow: hidden;
+    display: flex; flex-direction: column; padding: 0 !important;
+  }
+  #sectoresModalContent {
+    flex: 1; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  #sectoresModalContent > .s-stats-bar { flex-shrink: 0; }
+  #sectoresModalContent > .s-table-wrap { flex: 1; overflow: auto; }
+  .sectores-table {
+    width: 100%; border-collapse: collapse;
+  }
+  .sectores-table thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: #0d1017;
+    padding: 12px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+    text-align: left; border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  .sectores-table thead th.sortable { cursor: pointer; user-select: none; }
+  .sectores-table thead th.sortable:hover { color: var(--text); }
+  .sectores-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s; cursor: pointer;
+  }
+  .sectores-table tbody tr:hover { background: rgba(177,106,255,0.05); }
+  .sectores-table tbody td { padding: 10px 14px; vertical-align: middle; }
+
   .modal {
     background: var(--bg2);
     border: 1px solid var(--border);
@@ -1287,9 +1335,22 @@
       <span>✅ Finalizados</span>
       <span class="count" id="countFinalizado">0</span>
     </button>
-    <button class="filter-tab" style="margin-left: auto; background: var(--purple); color: #fff;" onclick="openStatsModal()">
+  </div>
+  <!-- Segunda fila: Estadísticas + Sectores -->
+  <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+    <button class="filter-tab" style="flex: none; background: var(--purple); color: #fff; border-color: var(--purple);" onclick="openStatsModal()">
       <span>📈 Estadísticas</span>
     </button>
+    <div style="position: relative;">
+      <button class="filter-tab" id="sectoresBtn" style="flex: none; background: var(--bg3); color: var(--text); border-color: var(--border);" onclick="toggleSectoresMenu()">
+        <span>🏭 Sectores</span>
+        <span style="font-size: 10px; margin-left: 4px;">▼</span>
+      </button>
+      <div id="sectoresDropdown" style="display:none; position:absolute; top: calc(100% + 8px); left:0; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; min-width: 220px; z-index: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.5); overflow:hidden;">
+        <div style="padding: 10px 14px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); border-bottom: 1px solid var(--border);">ELEGIR SECTOR</div>
+        <div id="sectoresMenuList" style="max-height: 320px; overflow-y: auto;"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Days Container -->
@@ -1303,6 +1364,22 @@
           <span>+</span> Agregar Primer Trade
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Sectores -->
+<div class="modal-overlay" id="sectoresModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div class="modal-title" id="sectoresModalTitle">🏭 SECTOR</div>
+        <span id="sectoresSubtitle" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);letter-spacing:1px;"></span>
+      </div>
+      <button class="modal-close" onclick="closeSectoresModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="sectoresModalContent"></div>
     </div>
   </div>
 </div>
@@ -4077,6 +4154,288 @@ function buildPrecioTab(fin) {
         ${sinPrecioRow}
       </tbody>
     </table>`;
+}
+
+// ── SECTORES ──────────────────────────────────────────────────────────────────
+
+function toggleSectoresMenu() {
+  const dropdown = document.getElementById('sectoresDropdown');
+  const isVisible = dropdown.style.display !== 'none';
+  if (isVisible) {
+    dropdown.style.display = 'none';
+    return;
+  }
+  // Populate sectors list from trades
+  const sectores = [...new Set(allTrades.map(t => t.sector).filter(Boolean))].sort();
+  const list = document.getElementById('sectoresMenuList');
+  if (sectores.length === 0) {
+    list.innerHTML = '<div style="padding:16px;color:var(--muted2);font-size:12px;text-align:center;">No hay sectores registrados</div>';
+  } else {
+    list.innerHTML = sectores.map(s => {
+      const count = allTrades.filter(t => t.sector === s).length;
+      return `<button onclick="openSectoresModal('${s.replace(/'/g,"\\'")}'); toggleSectoresMenu();" style="
+        display:flex; align-items:center; justify-content:space-between;
+        width:100%; padding:12px 16px; background:transparent; border:none;
+        border-bottom:1px solid var(--border); color:var(--text);
+        font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer;
+        transition: background 0.15s; text-align:left;
+      " onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <span>${s}</span>
+        <span style="background:var(--bg);padding:2px 8px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2)">${count}</span>
+      </button>`;
+    }).join('');
+  }
+  dropdown.style.display = 'block';
+
+  // Close when clicking outside
+  setTimeout(() => {
+    document.addEventListener('click', function closeDropdown(e) {
+      if (!document.getElementById('sectoresBtn').contains(e.target) &&
+          !document.getElementById('sectoresDropdown').contains(e.target)) {
+        document.getElementById('sectoresDropdown').style.display = 'none';
+        document.removeEventListener('click', closeDropdown);
+      }
+    });
+  }, 0);
+}
+
+// State for sectores sorting
+let sectoresSortCol = 'ticker';
+let sectoresSortDir = 'asc';
+let sectoresCurrentSector = '';
+
+function openSectoresModal(sector) {
+  sectoresCurrentSector = sector;
+  sectoresSortCol = 'ticker';
+  sectoresSortDir = 'asc';
+  document.getElementById('sectoresModalTitle').textContent = '🏭 ' + sector.toUpperCase();
+  renderSectoresTable();
+  document.getElementById('sectoresModal').classList.add('open');
+  setTimeout(updateAllCountdowns, 100);
+}
+
+function sortSectoresBy(col) {
+  if (sectoresSortCol === col) {
+    sectoresSortDir = sectoresSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sectoresSortCol = col;
+    sectoresSortDir = 'asc';
+  }
+  renderSectoresTable();
+}
+
+function renderSectoresTable() {
+  const sector = sectoresCurrentSector;
+  const allSectorTrades = allTrades.filter(t => t.sector === sector);
+
+  // ── Un stock por ticker → trade más reciente ───────────────────────────────
+  const byTicker = {};
+  allSectorTrades.forEach(t => {
+    const key = (t.ticker || '').toUpperCase().trim();
+    if (!key) return;
+    if (!byTicker[key] || (t.fecha || '') > (byTicker[key].fecha || '')) byTicker[key] = t;
+  });
+  let unique = Object.values(byTicker);
+
+  // ── Ordenar ─────────────────────────────────────────────────────────────────
+  unique.sort((a, b) => {
+    let va, vb;
+    if      (sectoresSortCol === 'ticker')   { va = (a.ticker||'').toUpperCase();      vb = (b.ticker||'').toUpperCase(); }
+    else if (sectoresSortCol === 'fecha')    { va = a.fecha||'';                        vb = b.fecha||''; }
+    else if (sectoresSortCol === 'estado')   { va = a.estado||'';                       vb = b.estado||''; }
+    else if (sectoresSortCol === 'pnl')      { va = sPNL(a); vb = sPNL(b); return sectoresSortDir==='asc' ? va-vb : vb-va; }
+    else if (sectoresSortCol === 'mcap')     { va = (a.marketCap||'').toUpperCase();    vb = (b.marketCap||'').toUpperCase(); }
+    else if (sectoresSortCol === 'float')    { va = (a.float||'').toUpperCase();        vb = (b.float||'').toUpperCase(); }
+    else if (sectoresSortCol === 'pais')     { va = (a.pais||'').toUpperCase();         vb = (b.pais||'').toUpperCase(); }
+    else if (sectoresSortCol === 'industry') { va = (a.industry||'').toUpperCase();     vb = (b.industry||'').toUpperCase(); }
+    else { va = (a[sectoresSortCol]||'').toString().toUpperCase(); vb = (b[sectoresSortCol]||'').toString().toUpperCase(); }
+    if (va < vb) return sectoresSortDir==='asc' ? -1 : 1;
+    if (va > vb) return sectoresSortDir==='asc' ? 1 : -1;
+    return 0;
+  });
+
+  // ── Helpers visuales ────────────────────────────────────────────────────────
+  const ar = col => sectoresSortCol !== col
+    ? `<span style="opacity:0.35;margin-left:3px;">⇅</span>`
+    : `<span style="color:var(--purple);margin-left:3px;">${sectoresSortDir==='asc'?'▲':'▼'}</span>`;
+
+  const pill = (text, color, bg) =>
+    `<span style="display:inline-block;background:${bg};color:${color};font-family:'DM Mono',monospace;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:0.4px;white-space:nowrap;">${text}</span>`;
+
+  const mcapPill = v => {
+    if (!v) return '<span style="color:var(--muted)">—</span>';
+    if (v.includes('Nano'))  return pill('NANO',  '#ff4444','rgba(255,68,68,0.15)');
+    if (v.includes('Micro')) return pill('MICRO', '#ff7043','rgba(255,112,67,0.15)');
+    if (v.includes('Small')) return pill('SMALL', '#ffd600','rgba(255,214,0,0.12)');
+    if (v.includes('Mid'))   return pill('MID',   '#29b6f6','rgba(41,182,246,0.12)');
+    if (v.includes('Large')) return pill('LARGE', '#66bb6a','rgba(102,187,106,0.12)');
+    return `<span style="color:var(--muted2);font-size:11px;">${v}</span>`;
+  };
+
+  const floatPill = v => {
+    if (!v) return '<span style="color:var(--muted)">—</span>';
+    if (v.includes('Micro Low'))    return pill('μ-LOW',  '#ff1744','rgba(255,23,68,0.15)');
+    if (v.includes('Ultra Low'))    return pill('U-LOW',  '#ff5722','rgba(255,87,34,0.15)');
+    if (v.includes('Low Float'))    return pill('LOW',    '#ff9800','rgba(255,152,0,0.12)');
+    if (v.includes('Medium Low'))   return pill('M-LOW',  '#ffd600','rgba(255,214,0,0.12)');
+    if (v.includes('Medium Float')) return pill('MEDIUM', '#aed581','rgba(174,213,129,0.12)');
+    if (v.includes('High Float'))   return pill('HIGH',   '#66bb6a','rgba(102,187,106,0.12)');
+    if (v.includes('Large Float'))  return pill('LARGE',  '#29b6f6','rgba(41,182,246,0.12)');
+    return `<span style="color:var(--muted2);font-size:11px;">${v}</span>`;
+  };
+
+  const estadoPill = e => {
+    if (e==='estudio')    return pill('ESTUDIO',    '#ffc107','rgba(255,193,7,0.12)');
+    if (e==='ejecucion')  return pill('EJECUCIÓN',  '#2196f3','rgba(33,150,243,0.12)');
+    if (e==='finalizado') return pill('FINALIZADO', '#4caf50','rgba(76,175,80,0.12)');
+    return '—';
+  };
+
+  const noticiaPill = v => {
+    if (v==='SI')              return pill('SI',   '#00e676','rgba(0,230,118,0.12)');
+    if (v==='NO')              return pill('NO',   '#ff3d57','rgba(255,61,87,0.12)');
+    if (v==='NOTICIA DE AYER') return pill('AYER', '#ffd600','rgba(255,214,0,0.12)');
+    return '<span style="color:var(--muted)">—</span>';
+  };
+
+  const dilPill = trade => {
+    if (!trade.dilucion || !trade.dilucion.length) return '<span style="color:var(--muted)">—</span>';
+    const chips = trade.dilucion.map(item => {
+      const s = item.trim();
+      if (/NO TIENE DILU/i.test(s)) return pill('✓ LIMPIO', '#00e676','rgba(0,230,118,0.12)');
+      if (/^ATM/i.test(s))          return pill('ATM',    '#ff1744','rgba(255,23,68,0.15)');
+      if (/^SHELF/i.test(s))        return pill('SHELF',  '#ff1744','rgba(255,23,68,0.15)');
+      if (/^EQUITY/i.test(s))       return pill('EQ.L',   '#ff5722','rgba(255,87,34,0.15)');
+      if (/^WARRANTS/i.test(s))     return pill('WARR',   '#b16aff','rgba(177,106,255,0.15)');
+      if (/^CONVERTIBLE/i.test(s))  return pill('CONV',   '#b16aff','rgba(177,106,255,0.15)');
+      if (/^S-1/i.test(s))          return pill('S-1',    '#7a8599','rgba(122,133,153,0.15)');
+      return pill(s.substring(0,6), '#7a8599','rgba(122,133,153,0.15)');
+    });
+    return `<div style="display:flex;gap:4px;flex-wrap:wrap;">${chips.join('')}</div>`;
+  };
+
+  const pnlCell = trade => {
+    if (trade.estado==='ejecucion' && trade.ejecucionStartTime)
+      return `<span class="countdown-timer" data-start-time="${trade.ejecucionStartTime}" style="color:var(--green);font-weight:600;font-family:'DM Mono',monospace;"></span>`;
+    const parts = [];
+    if (trade.pnlShort != null) {
+      const c = trade.pnlShort >= 0 ? '#00e676' : '#ff3d57';
+      const bg = trade.pnlShort >= 0 ? 'rgba(0,230,118,0.1)' : 'rgba(255,61,87,0.1)';
+      parts.push(`<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><span style="color:var(--red);font-size:9px;font-family:'DM Mono',monospace;background:rgba(255,61,87,0.1);padding:1px 5px;border-radius:3px;">S</span>${pill(formatPNL(trade.pnlShort),c,bg)}</div>`);
+    }
+    if (trade.pnlLong != null) {
+      const c = trade.pnlLong >= 0 ? '#00e676' : '#ff3d57';
+      const bg = trade.pnlLong >= 0 ? 'rgba(0,230,118,0.1)' : 'rgba(255,61,87,0.1)';
+      parts.push(`<div style="display:flex;align-items:center;gap:5px;"><span style="color:var(--green);font-size:9px;font-family:'DM Mono',monospace;background:rgba(0,230,118,0.1);padding:1px 5px;border-radius:3px;">L</span>${pill(formatPNL(trade.pnlLong),c,bg)}</div>`);
+    }
+    if (parts.length) return `<div>${parts.join('')}</div>`;
+    if (trade.pnl != null) {
+      const c = trade.pnl >= 0 ? '#00e676' : '#ff3d57';
+      const bg = trade.pnl >= 0 ? 'rgba(0,230,118,0.1)' : 'rgba(255,61,87,0.1)';
+      return pill(formatPNL(trade.pnl), c, bg);
+    }
+    return '<span style="color:var(--muted)">—</span>';
+  };
+
+  const insiderStyle = v => v === '>50%' ? 'color:#ff1744;font-weight:700;' : '';
+
+  // ── Filas ───────────────────────────────────────────────────────────────────
+  const rows = unique.map(trade => {
+    const globalIdx = allTrades.findIndex(t => t === trade);
+    const count = allSectorTrades.filter(t => (t.ticker||'').toUpperCase().trim() === (trade.ticker||'').toUpperCase().trim()).length;
+    const incompleto = ![trade.setupEntrada,trade.inicio,trade.closed,
+      (trade.pnlShort!=null||trade.pnlLong!=null),(trade.rrShort!=null||trade.rrLong!=null),
+      trade.precioEntrada,trade.noticia,trade.pais,trade.sector,trade.industry,
+      trade.marketCap,trade.float,trade.insiders,trade.instOwn,trade.cashNeed,
+      (trade.dilucion&&trade.dilucion.length>0)].every(Boolean);
+
+    const fechaStr = (trade.fecha||'').replace(/(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1').substring(0,8);
+
+    return `<tr onclick="editTrade(${globalIdx})">
+      <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);">${fechaStr||'—'}</span></td>
+      <td>${estadoPill(trade.estado)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--text);letter-spacing:0.5px;">${trade.ticker}</span>
+          ${count>1?`<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);background:var(--bg3);border:1px solid var(--border);padding:1px 6px;border-radius:10px;" title="${count} veces operado">×${count}</span>`:''}
+        </div>
+      </td>
+      <td>${noticiaPill(trade.noticia)}</td>
+      <td>${mcapPill(trade.marketCap)}</td>
+      <td>${floatPill(trade.float)}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text);">${trade.pais||'<span style="color:var(--muted)">—</span>'}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);" title="${trade.setupEntrada||''}">${trade.setupEntrada ? (trade.setupEntrada.length>18 ? trade.setupEntrada.substring(0,18)+'…' : trade.setupEntrada) : '—'}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);" title="${trade.industry||''}">${trade.industry ? (trade.industry.length>22 ? trade.industry.substring(0,22)+'…' : trade.industry) : '—'}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px;${insiderStyle(trade.insiders)}">${trade.insiders||'—'}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);">${trade.instOwn||'—'}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);" title="${trade.overhead||''}">${trade.overhead ? (trade.overhead.length>14 ? trade.overhead.substring(0,14)+'…' : trade.overhead) : '—'}</span></td>
+      <td style="text-align:center;">${trade.locatesRegSho ? pill('REG SHO','#ff1744','rgba(255,23,68,0.15)') : '<span style="color:var(--muted)">—</span>'}</td>
+      <td>${dilPill(trade)}</td>
+      <td>${pnlCell(trade)}</td>
+      <td style="padding:8px 10px;">${trade.chartImage ? `<div class="chart-thumbnail-wrapper"><img src="${trade.chartImage}" class="chart-thumbnail" style="width:52px;height:36px;" onclick="event.stopPropagation();zoomChartFromTable(${globalIdx});" title="Click para ampliar"></div>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="text-align:center;">${incompleto ? '<span style="color:var(--yellow);font-size:16px;" title="Datos incompletos">⚠</span>' : '<span style="color:var(--green);font-size:16px;">✓</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Stats bar ───────────────────────────────────────────────────────────────
+  const finTrades = allSectorTrades.filter(t => t.estado==='finalizado');
+  const totalPNL  = finTrades.reduce((s,t) => s+sPNL(t), 0);
+  const wr = finTrades.length ? Math.round(finTrades.filter(t=>sPNL(t)>0).length/finTrades.length*100) : 0;
+
+  // Actualizar subtítulo en header
+  const sub = document.getElementById('sectoresSubtitle');
+  if (sub) sub.textContent = `${unique.length} stocks únicos · ${allSectorTrades.length} trades en total`;
+
+  const kpi = (label, value, color='var(--text)') => `
+    <div style="text-align:center;padding:0 20px;border-right:1px solid var(--border);">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">${label}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1;color:${color};">${value}</div>
+    </div>`;
+
+  document.getElementById('sectoresModalContent').innerHTML = `
+    <div class="s-stats-bar" style="display:flex;align-items:center;padding:14px 24px;background:var(--bg3);border-bottom:1px solid var(--border);gap:0;">
+      ${kpi('Stocks únicos', unique.length, 'var(--purple)')}
+      ${kpi('Total trades', allSectorTrades.length)}
+      ${kpi('Finalizados', finTrades.length)}
+      ${kpi('PNL Total', formatPNL(totalPNL), totalPNL>=0?'var(--green)':'var(--red)')}
+      ${kpi('Win Rate', finTrades.length ? wr+'%' : '—')}
+      <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">
+        ↑↓ Haz clic en la cabecera para ordenar · Nº = veces operado el stock
+      </div>
+    </div>
+    <div class="s-table-wrap">
+      <table class="sectores-table">
+        <thead>
+          <tr>
+            <th class="sortable" onclick="sortSectoresBy('fecha')">Fecha ${ar('fecha')}</th>
+            <th class="sortable" onclick="sortSectoresBy('estado')">Estado ${ar('estado')}</th>
+            <th class="sortable" onclick="sortSectoresBy('ticker')">Ticker ${ar('ticker')}</th>
+            <th>Noticia</th>
+            <th class="sortable" onclick="sortSectoresBy('mcap')">M.Cap ${ar('mcap')}</th>
+            <th class="sortable" onclick="sortSectoresBy('float')">Float ${ar('float')}</th>
+            <th class="sortable" onclick="sortSectoresBy('pais')">País ${ar('pais')}</th>
+            <th>Setup</th>
+            <th class="sortable" onclick="sortSectoresBy('industry')">Industry ${ar('industry')}</th>
+            <th>Insiders</th>
+            <th>Inst. Own</th>
+            <th>Overhead</th>
+            <th>Reg Sho</th>
+            <th>Dilución</th>
+            <th class="sortable" onclick="sortSectoresBy('pnl')">PNL ${ar('pnl')}</th>
+            <th>Gráfico</th>
+            <th style="text-align:center;">OK</th>
+          </tr>
+        </thead>
+        <tbody>${rows || `<tr><td colspan="17" style="text-align:center;color:var(--muted2);padding:40px;font-size:14px;">No hay trades en este sector</td></tr>`}</tbody>
+      </table>
+    </div>
+  `;
+
+  setTimeout(updateAllCountdowns, 100);
+}
+
+function closeSectoresModal() {
+  document.getElementById('sectoresModal').classList.remove('open');
 }
 
 </script>
