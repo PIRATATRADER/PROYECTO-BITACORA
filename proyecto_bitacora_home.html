@@ -466,6 +466,22 @@ body::before {
       <div class="card-arrow">Ver detalle completo →</div>
     </div>
 
+    <!-- TARJETA 7: QUICK ADD TRADE -->
+    <div class="mode-card" onclick="abrirQuickAdd()" style="cursor:pointer;--card-accent:#b16aff;">
+      <div class="card-icon">⚡</div>
+      <div>
+        <div class="card-label">Herramienta</div>
+        <div class="card-title" style="color:#b16aff;">QUICK ADD TRADE</div>
+      </div>
+      <div class="card-desc">Ventana rápida para añadir trades en Estudio o Ejecución directamente sobre el DAS Trader.</div>
+      <div class="card-stats">
+        <div class="card-stat"><div class="card-stat-val" style="color:#b16aff;">⚡</div><div class="card-stat-label">Rápido</div></div>
+        <div class="card-stat"><div class="card-stat-val" style="color:#b16aff;">🔝</div><div class="card-stat-label">Siempre encima</div></div>
+        <div class="card-stat"><div class="card-stat-val" style="color:#b16aff;">🔄</div><div class="card-stat-label">Sync Firestore</div></div>
+      </div>
+      <div class="card-arrow" style="color:#b16aff;">Abrir ventana →</div>
+    </div>
+
     </div><!-- /cards-grid -->
 
     <!-- MASCOTA -->
@@ -707,6 +723,17 @@ function openDash(mode) {
     window.location.href = 'discrecional_dashboard.html?v=' + v;
   } else if (mode === 'analysis') {
     window.location.href = 'trades_analysis_dashboard.html?v=' + v;
+  }
+}
+
+function abrirQuickAdd() {
+  // Abre el bat como protocolo de archivo — solo funciona si el bat está en la misma carpeta
+  const bat = window.location.href.replace(/[^/\\]*$/, '') + 'abrir_quick_add.bat';
+  // Intentar abrir la ventana directamente como app de Chrome
+  const htmlPath = window.location.href.replace(/[^/\\]*$/, '') + 'quick_add_trade.html';
+  const w = window.open(htmlPath, 'QuickAddTrade', 'width=320,height=620,top=20,left=9999,toolbar=no,menubar=no,scrollbars=no,resizable=yes');
+  if (!w) {
+    alert('Permite ventanas emergentes para este sitio, o usa el archivo abrir_quick_add.bat directamente.');
   }
 }
 </script>
