@@ -1931,16 +1931,28 @@
 <!-- Time Alert Overlay -->
 <div class="time-alert-overlay" id="timeAlertOverlay">
   <div class="time-alert-content">
-    <div class="time-alert-icon" id="timeAlertIcon">⏰</div>
-    <div class="time-alert-title" id="timeAlertTitle">¡CIERRA LA POSICIÓN!</div>
-    <div class="time-alert-ticker" id="timeAlertTicker">TICKER</div>
-    <div class="time-alert-buttons" id="timeAlertButtons" style="display:flex;gap:20px;justify-content:center;margin-top:10px;">
-      <button class="time-alert-btn btn-winning" onclick="alertVoyGanando()">✅ VOY GANANDO</button>
-      <button class="time-alert-btn btn-losing" onclick="alertVoyPerdiendo()">❌ VOY PERDIENDO</button>
+
+    <!-- PANTALLA 1: ¿Cómo vas? -->
+    <div id="alertScreen1">
+      <div class="time-alert-icon">⏰</div>
+      <div class="time-alert-title" style="color:var(--red);">¿CÓMO VAS?</div>
+      <div class="time-alert-ticker" id="timeAlertTicker">TICKER</div>
+      <div style="display:flex;gap:20px;justify-content:center;margin-top:10px;">
+        <button class="time-alert-btn btn-winning" onclick="alertVoyGanando()">✅ VOY GANANDO</button>
+        <button class="time-alert-btn btn-losing"  onclick="alertVoyPerdiendo()">❌ VOY PERDIENDO</button>
+      </div>
     </div>
-    <div id="timeAlertWarning" style="display:none;">
-      <button class="time-alert-btn btn-losing" onclick="alertCerrarAviso()" style="margin-top:0; background:var(--yellow); color:#000;">⏱ ENTENDIDO — SEGUIR CONTANDO</button>
+
+    <!-- PANTALLA 2: Stop Loss -->
+    <div id="alertScreen2" style="display:none;">
+      <div class="time-alert-icon">🛡️</div>
+      <div class="time-alert-title" style="color:var(--yellow);font-size:52px;">NO OLVIDES<br>PONER EL<br>STOP LOSS</div>
+      <div class="time-alert-ticker" id="timeAlertTicker2">TICKER</div>
+      <div style="display:flex;justify-content:center;margin-top:20px;">
+        <button class="time-alert-btn btn-winning" onclick="alertStopLossOk()">✅ STOP LOSS PUESTO</button>
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -2079,6 +2091,23 @@ async function loadTrades() {
     // ─────────────────────────────────────────────────────────────────────────
 
     renderDashboard();
+
+    // ── Escuchar cambios externos (ej: quick_add_trade) ───────────────────────
+    db.collection('trading_discrecional').onSnapshot(snapshot => {
+      snapshot.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const data = { ...change.doc.data(), id: change.doc.id };
+          // Solo añadir si no existe ya en allTrades
+          const exists = allTrades.some(t => t.id === data.id);
+          if (!exists && data.ticker) {
+            allTrades.push(data);
+            renderDashboard();
+          }
+        }
+      });
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
   } catch (error) {
     console.error('❌ === ERROR CARGANDO TRADES ===');
     console.error('Tipo:', error.name);
@@ -3361,7 +3390,7 @@ function updateAllCountdowns() {
       const s = Math.floor((remaining % 60000) / 1000);
       timer.textContent = state.mode === '2h'
         ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
-        : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        : `⚠ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
       timer.style.color = state.mode === '2h' ? 'var(--green)' : 'var(--yellow)';
       state.alertShown = false;
     } else {
@@ -3386,58 +3415,48 @@ function getTickerFromTimer(timerElement) {
 
 function showTimeAlert(ticker, mode) {
   const overlay = document.getElementById('timeAlertOverlay');
-  const icon    = document.getElementById('timeAlertIcon');
-  const title   = document.getElementById('timeAlertTitle');
-  const buttons = document.getElementById('timeAlertButtons');
-  const warning = document.getElementById('timeAlertWarning');
-
-  document.getElementById('timeAlertTicker').textContent = ticker;
   overlay.setAttribute('data-ticker', ticker);
 
-  if (mode === '2h') {
-    icon.textContent  = '⏰';
-    title.textContent = '¡CIERRA LA POSICIÓN!';
-    title.style.fontSize = '72px';
-    title.style.color = 'var(--red)';
-    buttons.style.display = 'flex';
-    warning.style.display  = 'none';
-  } else {
-    // Modo 15m: aviso de pérdida
-    icon.textContent  = '🚨';
-    title.textContent = 'TU TRADE NO SE ESTÁ DANDO, CIÉRRALO';
-    title.style.fontSize = '44px';
-    title.style.color = 'var(--red)';
-    buttons.style.display = 'none';
-    warning.style.display  = 'block';
-  }
+  // Mostrar siempre pantalla 1 (¿Cómo vas?) tanto para 2h como para 15m
+  document.getElementById('alertScreen1').style.display = 'block';
+  document.getElementById('alertScreen2').style.display = 'none';
+  document.getElementById('timeAlertTicker').textContent = ticker;
 
   overlay.classList.add('show');
   playBeep();
 }
 
-// Usuario va ganando → cronómetro desaparece
+// VOY GANANDO → mostrar pantalla Stop Loss
 function alertVoyGanando() {
   const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
+  // Pasar a modo "esperando stop loss"
+  document.getElementById('alertScreen1').style.display = 'none';
+  document.getElementById('alertScreen2').style.display = 'block';
+  document.getElementById('timeAlertTicker2').textContent = ticker;
+  // El timer queda en "done" — cronómetro desaparece
   if (ticker) timerAlertState[ticker] = { mode: 'done', alertShown: true, phaseStart: 0 };
+}
+
+// Stop Loss confirmado → cerrar todo
+function alertStopLossOk() {
   closeTimeAlert();
 }
 
-// Usuario va perdiendo → reiniciar con 15 minutos
+// VOY PERDIENDO → nueva cuenta atrás de 15min, cerrar overlay
 function alertVoyPerdiendo() {
   const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
   if (ticker) timerAlertState[ticker] = { mode: '15m', alertShown: false, phaseStart: Date.now() };
   closeTimeAlert();
 }
 
-// Cerrar alerta de advertencia (15m) y reiniciar otros 15m
-function alertCerrarAviso() {
-  const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
-  if (ticker) timerAlertState[ticker] = { mode: '15m', alertShown: false, phaseStart: Date.now() };
-  closeTimeAlert();
-}
-
 function closeTimeAlert() {
-  document.getElementById('timeAlertOverlay').classList.remove('show');
+  const overlay = document.getElementById('timeAlertOverlay');
+  overlay.classList.remove('show');
+  // Resetear pantallas para la próxima vez
+  setTimeout(() => {
+    document.getElementById('alertScreen1').style.display = 'block';
+    document.getElementById('alertScreen2').style.display = 'none';
+  }, 300);
 }
 
 function playBeep() {
@@ -4538,6 +4557,188 @@ function closeSectoresModal() {
   document.getElementById('sectoresModal').classList.remove('open');
 }
 
+</script>
+
+<!-- ── BOTÓN FLOTANTE QUICK ADD ─────────────────────────────────────────── -->
+<div id="quickAddBtn" title="Añadir trade rápido" onclick="toggleQuickPanel()" style="
+  position:fixed; bottom:28px; right:28px; z-index:9000;
+  width:52px; height:52px; border-radius:50%;
+  background:var(--purple); color:#000;
+  font-size:24px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:0 4px 20px rgba(177,106,255,0.45);
+  transition:transform 0.2s, box-shadow 0.2s;
+  user-select:none;
+" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⚡</div>
+
+<!-- Panel -->
+<div id="quickAddPanel" style="
+  position:fixed; bottom:92px; right:28px; z-index:9000;
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:14px; padding:20px; width:300px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  display:none; flex-direction:column; gap:14px;
+  animation:fadeUp 0.2s ease forwards;
+">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--purple);">QUICK ADD TRADE</div>
+  <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:1px;">Escribe el ticker y elige el estado</div>
+
+  <!-- Ticker input -->
+  <input id="quickTicker" type="text" placeholder="Ticker  ej: AAPL" autocomplete="off" style="
+    background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+    padding:10px 14px; color:var(--text); font-family:'DM Mono',monospace;
+    font-size:15px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    outline:none; width:100%; transition:border-color 0.2s;
+  " oninput="this.value=this.value.toUpperCase()" onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor=''" onkeydown="if(event.key==='Enter')quickAddTrade()">
+
+  <!-- Preview del ticker -->
+  <div id="quickPreview" style="display:none; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-family:'DM Mono',monospace; font-size:10px; color:var(--muted2); line-height:1.7;"></div>
+
+  <!-- Botones estado -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+    <button onclick="quickAddTrade('estudio')" style="
+      background:rgba(255,193,7,0.12); border:1px solid rgba(255,193,7,0.3);
+      border-radius:8px; padding:10px; color:#ffc107;
+      font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700;
+      cursor:pointer; transition:all 0.15s; letter-spacing:0.5px;
+    " onmouseover="this.style.background='rgba(255,193,7,0.22)'" onmouseout="this.style.background='rgba(255,193,7,0.12)'">📋 ESTUDIO</button>
+    <button onclick="quickAddTrade('ejecucion')" style="
+      background:rgba(33,150,243,0.12); border:1px solid rgba(33,150,243,0.3);
+      border-radius:8px; padding:10px; color:#2196f3;
+      font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700;
+      cursor:pointer; transition:all 0.15s; letter-spacing:0.5px;
+    " onmouseover="this.style.background='rgba(33,150,243,0.22)'" onmouseout="this.style.background='rgba(33,150,243,0.12)'">▶ EJECUCIÓN</button>
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-align:center;letter-spacing:0.5px;">Si el ticker existe, se copian todos sus datos</div>
+</div>
+
+<script>
+function toggleQuickPanel() {
+  const panel = document.getElementById('quickAddPanel');
+  const isOpen = panel.style.display === 'flex';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) {
+    document.getElementById('quickTicker').value = '';
+    document.getElementById('quickPreview').style.display = 'none';
+    setTimeout(() => document.getElementById('quickTicker').focus(), 50);
+  }
+}
+
+// Mostrar preview al escribir el ticker
+document.getElementById('quickTicker').addEventListener('input', function() {
+  const val = this.value.toUpperCase().trim();
+  const preview = document.getElementById('quickPreview');
+  if (!val) { preview.style.display = 'none'; return; }
+
+  const matches = allTrades
+    .filter(t => (t.ticker||'').toUpperCase().trim() === val)
+    .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+
+  if (!matches.length) {
+    preview.style.display = 'block';
+    preview.innerHTML = '<span style="color:var(--muted);">⚠ Ticker nuevo — se creará sin datos previos</span>';
+    return;
+  }
+
+  const t = matches[0];
+  const fechaStr = (t.fecha||'').replace(/(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1');
+  preview.style.display = 'block';
+  preview.innerHTML = `
+    <span style="color:var(--green);font-weight:700;">✓ ${matches.length} trade${matches.length>1?'s':''} anterior${matches.length>1?'es':''} encontrado${matches.length>1?'s':''}</span><br>
+    <span style="color:var(--muted2);">Último:</span> <span style="color:var(--text);">${fechaStr}</span><br>
+    ${t.marketCap ? `<span style="color:var(--muted2);">M.Cap:</span> <span style="color:var(--text);">${t.marketCap}</span><br>` : ''}
+    ${t.float    ? `<span style="color:var(--muted2);">Float:</span> <span style="color:var(--text);">${t.float}</span><br>` : ''}
+    ${t.sector   ? `<span style="color:var(--muted2);">Sector:</span> <span style="color:var(--text);">${t.sector}</span>` : ''}
+  `;
+});
+
+async function quickAddTrade(estado) {
+  const ticker = document.getElementById('quickTicker').value.toUpperCase().trim();
+  if (!ticker) {
+    document.getElementById('quickTicker').style.borderColor = 'var(--red)';
+    setTimeout(() => document.getElementById('quickTicker').style.borderColor = '', 1500);
+    return;
+  }
+
+  // Fecha de hoy
+  const today = new Date().toISOString().split('T')[0];
+
+  // Buscar trade previo más reciente
+  const matches = allTrades
+    .filter(t => (t.ticker||'').toUpperCase().trim() === ticker)
+    .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+
+  const prev = matches[0] || {};
+
+  // Construir nuevo trade copiando campos del anterior
+  const newTrade = {
+    fecha:       today,
+    ticker:      ticker,
+    estado:      estado,
+    pais:        prev.pais        || '',
+    sector:      prev.sector      || '',
+    industry:    prev.industry    || '',
+    marketCap:   prev.marketCap   || '',
+    float:       prev.float       || '',
+    insiders:    prev.insiders    || '',
+    instOwn:     prev.instOwn     || '',
+    cashNeed:    prev.cashNeed    || '',
+    overhead:    '',
+    locatesRegSho: false,
+    dilucion:    prev.dilucion    || [],
+    noticia:     '',
+    setupEntrada:'',
+    precioEntrada:'',
+    pnl:         null,
+    pnlShort:    null,
+    pnlLong:     null,
+    rrShort:     null,
+    rrLong:      null,
+    inicio:      '',
+    closed:      '',
+    chartImage:  '',
+    notas:       prev.notas       || '',
+    ejecucionStartTime: estado === 'ejecucion' ? Date.now() : null,
+  };
+
+  // Añadir a allTrades y guardar
+  allTrades.push(newTrade);
+  try {
+    if (typeof db !== 'undefined') {
+      const ref = await db.collection('trades').add(newTrade);
+      newTrade.id = ref.id;
+      allTrades[allTrades.length - 1].id = ref.id;
+    }
+  } catch(e) { console.warn('Firestore save error:', e); }
+
+  // Cerrar panel y re-renderizar
+  toggleQuickPanel();
+  renderDashboard();
+
+  // Toast confirmación
+  const estadoLabel = estado === 'estudio' ? '📋 ESTUDIO' : '▶ EJECUCIÓN';
+  const isPrev = matches.length > 0;
+  const toast = document.createElement('div');
+  toast.innerHTML = `⚡ <strong>${ticker}</strong> añadido en ${estadoLabel}${isPrev ? ' — datos copiados del trade anterior' : ' — ticker nuevo'}`;
+  toast.style.cssText = `
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+    background:var(--bg3); border:1px solid var(--purple); border-radius:10px;
+    padding:12px 22px; font-size:13px; color:var(--text); z-index:9999;
+    box-shadow:0 4px 20px rgba(177,106,255,0.25);
+    animation:fadeUp 0.3s ease forwards; white-space:nowrap;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity 0.4s'; setTimeout(()=>toast.remove(),400); }, 3500);
+}
+
+// Cerrar panel al pulsar fuera
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('quickAddPanel');
+  const btn   = document.getElementById('quickAddBtn');
+  if (panel.style.display === 'flex' && !panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
 </script>
 
 </body>
