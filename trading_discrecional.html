@@ -2092,19 +2092,32 @@ async function loadTrades() {
 
     renderDashboard();
 
-    // ── Escuchar cambios externos (ej: quick_add_trade) ───────────────────────
+    // ── Escuchar cambios externos en tiempo real (ej: quick_add_trade) ────────
+    // Se activa DESPUÉS de la carga inicial para evitar falsos positivos
+    let initialLoadDone = true;
     db.collection('trading_discrecional').onSnapshot(snapshot => {
+      if (!initialLoadDone) return;
+      let changed = false;
       snapshot.docChanges().forEach(change => {
         if (change.type === 'added') {
           const data = { ...change.doc.data(), id: change.doc.id };
-          // Solo añadir si no existe ya en allTrades
+          if (data.id === '_index' || (data.id || '').startsWith('trades_')) return;
           const exists = allTrades.some(t => t.id === data.id);
           if (!exists && data.ticker) {
             allTrades.push(data);
-            renderDashboard();
+            changed = true;
           }
+        } else if (change.type === 'modified') {
+          const data = { ...change.doc.data(), id: change.doc.id };
+          const idx = allTrades.findIndex(t => t.id === data.id);
+          if (idx !== -1) { allTrades[idx] = data; changed = true; }
+        } else if (change.type === 'removed') {
+          const id = change.doc.id;
+          const idx = allTrades.findIndex(t => t.id === id);
+          if (idx !== -1) { allTrades.splice(idx, 1); changed = true; }
         }
       });
+      if (changed) renderDashboard();
     });
     // ─────────────────────────────────────────────────────────────────────────
 
