@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0c0f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>⚡ Quick Add Trade</title>
+
+<!-- PWA Manifest inline -->
+<script>
+  const manifestData = {
+    name: "Quick Add Trade",
+    short_name: "QuickTrade",
+    description: "Añade trades rápidamente a tu bitácora",
+    start_url: "./quick_add_trade.html",
+    display: "standalone",
+    background_color: "#0a0c0f",
+    theme_color: "#b16aff",
+    orientation: "portrait",
+    icons: [{
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230a0c0f'/%3E%3Ctext x='256' y='340' font-size='300' text-anchor='middle' fill='%23b16aff'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E",
+      sizes: "512x512", type: "image/svg+xml", purpose: "any maskable"
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+  const manifestUrl = URL.createObjectURL(blob);
+  document.addEventListener('DOMContentLoaded', () => {
+    const link = document.createElement('link');
+    link.rel = 'manifest'; link.href = manifestUrl;
+    document.head.appendChild(link);
+  });
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg:     #0a0c0f;
+    --bg2:    #111318;
+    --bg3:    #181c24;
+    --border: #1e2530;
+    --green:  #00e676;
+    --red:    #ff3d57;
+    --yellow: #ffd600;
+    --purple: #b16aff;
+    --text:   #e8eaf0;
+    --muted:  #4a5568;
+    --muted2: #7a8599;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+  }
+
+  /* ── Barra de título custom (drag) ── */
+  .titlebar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+    cursor: default;
+  }
+
+  .titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .titlebar-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .titlebar-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: var(--purple);
+  }
+
+  .titlebar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    -webkit-app-region: no-drag;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .status-dot.connected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .status-dot.error     { background: var(--red);   box-shadow: 0 0 5px var(--red); }
+
+  /* ── Contenido principal ── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  /* ── Ticker ── */
+  #quickTicker {
+    width: 100%;
+    background: var(--bg3);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+    caret-color: var(--purple);
+  }
+  #quickTicker::placeholder { color: var(--muted); font-size: 18px; letter-spacing: 2px; }
+  #quickTicker:focus    { border-color: var(--purple); }
+  #quickTicker.found    { border-color: var(--green); }
+  #quickTicker.notfound { border-color: var(--muted); }
+  #quickTicker.shake    { border-color: var(--red); animation: shake 0.3s ease; }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%      { transform: translateX(-5px); }
+    75%      { transform: translateX(5px); }
+  }
+
+  /* ── Preview ── */
+  #quickPreview {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted2);
+    line-height: 1.9;
+    display: none;
+  }
+
+  /* ── Botones ── */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .btn {
+    border-radius: 10px;
+    padding: 13px 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-estudio {
+    background: rgba(255,193,7,0.10);
+    border-color: rgba(255,193,7,0.35);
+    color: #ffc107;
+  }
+  .btn-estudio:hover { background: rgba(255,193,7,0.22); }
+
+  .btn-ejecucion {
+    background: rgba(33,150,243,0.10);
+    border-color: rgba(33,150,243,0.35);
+    color: #2196f3;
+  }
+  .btn-ejecucion:hover { background: rgba(33,150,243,0.22); }
+
+  /* ── Toast ── */
+  #toast {
+    display: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.5;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+  }
+  #toast.success { border-color: var(--green); }
+  #toast.error-t { border-color: var(--red);   }
+  #toast.info    { border-color: var(--purple); }
+
+  /* ── Hint ── */
+  .hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); flex-shrink: 0; }
+
+  /* ── Recientes ── */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted2);
+  }
+
+  #recentList { display: flex; flex-direction: column; gap: 4px; }
+
+  .recent-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+  }
+  .recent-ticker { color: var(--text); font-weight: 700; font-size: 12px; }
+  .recent-fecha  { color: var(--muted2); }
+  .badge-small   { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+  .badge-estudio   { background: rgba(255,193,7,0.15);  color: #ffc107; }
+  .badge-ejecucion { background: rgba(33,150,243,0.15); color: #2196f3; }
+
+  /* ── Banner instalación ── */
+  #installBanner {
+    display: none;
+    background: rgba(177,106,255,0.1);
+    border: 1px solid rgba(177,106,255,0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+    line-height: 1.6;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #installBanner:hover { background: rgba(177,106,255,0.18); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Barra de título -->
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <span class="titlebar-icon">⚡</span>
+      <span class="titlebar-name">QUICK ADD TRADE</span>
+    </div>
+    <div class="titlebar-right">
+      <div id="statusDot" class="status-dot" title="Conectando..."></div>
+    </div>
+  </div>
+
+  <!-- Contenido -->
+  <div class="content">
+
+    <!-- Banner instalación PWA -->
+    <div id="installBanner" onclick="installPWA()">
+      📲 <strong>Instalar como app</strong> — click aquí para abrir sin barra de Chrome y poder fijarla encima de otras ventanas
+    </div>
+
+    <!-- Ticker -->
+    <input id="quickTicker" type="text" placeholder="TICKER" autocomplete="off"
+      spellcheck="false"
+      oninput="onTickerInput()"
+      onkeydown="onTickerKey(event)">
+
+    <!-- Preview -->
+    <div id="quickPreview"></div>
+
+    <!-- Botones estado -->
+    <div class="btn-grid">
+      <button class="btn btn-estudio"   onclick="addTrade('estudio')">📋 ESTUDIO</button>
+      <button class="btn btn-ejecucion" onclick="addTrade('ejecucion')">▶ EJECUCIÓN</button>
+    </div>
+
+    <!-- Feedback -->
+    <div id="toast"></div>
+
+    <div class="hint">Enter = Ejecución &nbsp;·&nbsp; Shift+Enter = Estudio</div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">Añadidos esta sesión</div>
+    <div id="recentList">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;padding:6px 0;">—</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Firebase ────────────────────────────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey:            "AIzaSyDVR0xHEt5AIUPANlnfNok3dFqBVQb7jT0",
+    authDomain:        "proyecto-bitacora-fead3.firebaseapp.com",
+    projectId:         "proyecto-bitacora-fead3",
+    storageBucket:     "proyecto-bitacora-fead3.firebasestorage.app",
+    messagingSenderId: "907354671911",
+    appId:             "1:907354671911:web:68000bcbaa989d25db7702"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let allTrades = [];
+  const dot = document.getElementById('statusDot');
+
+  db.collection('trading_discrecional').orderBy('fecha', 'desc').get()
+    .then(snap => {
+      allTrades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      dot.classList.add('connected');
+      dot.title = `Conectado · ${allTrades.length} trades`;
+    })
+    .catch(err => {
+      dot.classList.add('error');
+      dot.title = 'Error de conexión';
+      console.error(err);
+    });
+
+  // ── PWA Install ─────────────────────────────────────────────────────────────
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBanner').style.display = 'block';
+  });
+
+  async function installPWA() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if (outcome === 'accepted') document.getElementById('installBanner').style.display = 'none';
+  }
+
+  // ── Ticker input ────────────────────────────────────────────────────────────
+  function onTickerInput() {
+    const val = document.getElementById('quickTicker').value.toUpperCase().trim();
+    document.getElementById('quickTicker').value = val;
+    const preview = document.getElementById('quickPreview');
+
+    if (!val) {
+      preview.style.display = 'none';
+      document.getElementById('quickTicker').className = '';
+      return;
+    }
+
+    const matches = allTrades
+      .filter(t => (t.ticker||'').toUpperCase().trim() === val)
+      .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+
+    if (!matches.length) {
+      preview.style.display = 'block';
+      preview.innerHTML = '<span style="color:var(--muted);">⚠ Ticker nuevo — sin datos previos</span>';
+      document.getElementById('quickTicker').className = 'notfound';
+      return;
+    }
+
+    document.getElementById('quickTicker').className = 'found';
+    const t = matches[0];
+    const fechaStr = (t.fecha||'').replace(/(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1');
+    const dil = (t.dilucion && t.dilucion.length)
+      ? t.dilucion.map(d => `<span style="color:var(--text);">${d}</span>`).join('<br>')
+      : '<span style="color:var(--muted);">—</span>';
+
+    preview.style.display = 'block';
+    preview.innerHTML = `
+      <span style="color:var(--green);font-weight:700;">✓ ${matches.length} trade${matches.length>1?'s':''} anterior${matches.length>1?'es':''}</span><br>
+      <span style="color:var(--muted2);">Último &nbsp;</span><span style="color:var(--text);">${fechaStr}</span><br>
+      ${t.marketCap ? `<span style="color:var(--muted2);">M.Cap &nbsp;&nbsp;</span><span style="color:var(--text);">${t.marketCap}</span><br>` : ''}
+      ${t.float     ? `<span style="color:var(--muted2);">Float &nbsp;&nbsp;</span><span style="color:var(--text);">${t.float}</span><br>` : ''}
+      ${t.sector    ? `<span style="color:var(--muted2);">Sector &nbsp;</span><span style="color:var(--text);">${t.sector}</span><br>` : ''}
+      <span style="color:var(--muted2);">Dil &nbsp;&nbsp;&nbsp;&nbsp;</span>${dil}
+    `;
+  }
+
+  function onTickerKey(e) {
+    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); addTrade('estudio'); }
+    else if (e.key === 'Enter')           { e.preventDefault(); addTrade('ejecucion'); }
+  }
+
+  // ── Añadir trade ────────────────────────────────────────────────────────────
+  async function addTrade(estado) {
+    const ticker = document.getElementById('quickTicker').value.toUpperCase().trim();
+    if (!ticker) {
+      const el = document.getElementById('quickTicker');
+      el.classList.add('shake');
+      setTimeout(() => el.classList.remove('shake'), 400);
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const matches = allTrades
+      .filter(t => (t.ticker||'').toUpperCase().trim() === ticker)
+      .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+    const prev = matches[0] || {};
+
+    const newTrade = {
+      fecha:              today,
+      ticker:             ticker,
+      estado:             estado,
+      pais:               prev.pais       || '',
+      sector:             prev.sector     || '',
+      industry:           prev.industry   || '',
+      marketCap:          prev.marketCap  || '',
+      float:              prev.float      || '',
+      insiders:           prev.insiders   || '',
+      instOwn:            prev.instOwn    || '',
+      cashNeed:           prev.cashNeed   || '',
+      overhead:           '',
+      locatesRegSho:      false,
+      dilucion:           prev.dilucion   || [],
+      notas:              prev.notas      || '',
+      noticia:            '',
+      setupEntrada:       '',
+      precioEntrada:      '',
+      pnl:                null,
+      pnlShort:           null,
+      pnlLong:            null,
+      rrShort:            null,
+      rrLong:             null,
+      inicio:             '',
+      closed:             '',
+      chartImage:         '',
+      ejecucionStartTime: estado === 'ejecucion' ? Date.now() : null,
+    };
+
+    try {
+      showToast('⏳ Guardando...', 'info');
+      const ref = await db.collection('trading_discrecional').add(newTrade);
+      newTrade.id = ref.id;
+      allTrades.unshift(newTrade);
+
+      const label = estado === 'estudio' ? '📋 ESTUDIO' : '▶ EJECUCIÓN';
+      showToast(
+        `✓ <strong>${ticker}</strong> → ${label}<br><span style="color:var(--muted2);">${matches.length > 0 ? 'Datos copiados del anterior' : 'Ticker nuevo'}</span>`,
+        'success'
+      );
+      addRecent(ticker, estado, today);
+
+      document.getElementById('quickTicker').value = '';
+      document.getElementById('quickTicker').className = '';
+      document.getElementById('quickPreview').style.display = 'none';
+      setTimeout(() => document.getElementById('quickTicker').focus(), 50);
+
+    } catch(err) {
+      showToast('✗ Error al guardar', 'error-t');
+      console.error(err);
+    }
+  }
+
+  // ── Toast ───────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type='info') {
+    const t = document.getElementById('toast');
+    t.innerHTML = msg;
+    t.className = type;
+    t.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.style.display = 'none', 3500);
+  }
+
+  // ── Recientes ───────────────────────────────────────────────────────────────
+  const sessionAdded = [];
+  function addRecent(ticker, estado, fecha) {
+    sessionAdded.unshift({ ticker, estado, fecha });
+    document.getElementById('recentList').innerHTML = sessionAdded.slice(0, 5).map(item => `
+      <div class="recent-item">
+        <span class="recent-ticker">${item.ticker}</span>
+        <span class="recent-fecha">${item.fecha.replace(/(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1')}</span>
+        <span class="badge-small badge-${item.estado}">${item.estado === 'estudio' ? 'ESTUDIO' : 'EJEC.'}</span>
+      </div>`).join('');
+  }
+
+  window.onload = () => document.getElementById('quickTicker').focus();
+</script>
+
+</body>
+</html>
