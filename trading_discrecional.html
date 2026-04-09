@@ -1298,14 +1298,14 @@
   </header>
 
   <!-- KPIs -->
-  <div class="kpi-grid">
+  <div class="kpi-grid" style="grid-template-columns:repeat(6,1fr);">
     <div class="kpi-card">
       <div class="kpi-label">En Estudio</div>
-      <div class="kpi-value" style="color: #ffc107;" id="kpiEstudio">0</div>
+      <div class="kpi-value" style="color:#ffc107;" id="kpiEstudio">0</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">En Ejecución</div>
-      <div class="kpi-value" style="color: #2196f3;" id="kpiEjecucion">0</div>
+      <div class="kpi-value" style="color:#2196f3;" id="kpiEjecucion">0</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Finalizados</div>
@@ -1314,6 +1314,14 @@
     <div class="kpi-card">
       <div class="kpi-label">PNL Total</div>
       <div class="kpi-value" id="kpiPNL">$0</div>
+    </div>
+    <div class="kpi-card" title="Tiempo medio en posición ganadora (inicio→closed)">
+      <div class="kpi-label">⏱ T. Medio Win</div>
+      <div class="kpi-value" style="color:var(--green);font-size:22px;" id="kpiTimeWin">—</div>
+    </div>
+    <div class="kpi-card" title="Tiempo medio en posición perdedora (inicio→closed)">
+      <div class="kpi-label">⏱ T. Medio Loss</div>
+      <div class="kpi-value" style="color:var(--red);font-size:22px;" id="kpiTimeLoss">—</div>
     </div>
   </div>
 
@@ -1953,6 +1961,18 @@
       </div>
     </div>
 
+    <!-- PANTALLA 3: Aviso perdiendo demasiado tiempo -->
+    <div id="alertScreen3" style="display:none;">
+      <div class="time-alert-icon">🚨</div>
+      <div class="time-alert-title" style="color:var(--red);font-size:38px;">LLEVAS<br><span id="alertLossingTime" style="font-size:60px;color:#ff1744;">—</span><br>EN PÉRDIDAS</div>
+      <div class="time-alert-ticker" id="timeAlertTicker3">TICKER</div>
+      <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--yellow);margin:14px 0;text-align:center;">Tu promedio de pérdidas es 3x más largo<br>que tus ganancias. ¿Merece la pena?</div>
+      <div style="display:flex;gap:16px;justify-content:center;margin-top:10px;">
+        <button class="time-alert-btn btn-losing" onclick="alertSeguirPerdiendo()">⏱ SEGUIR 15 MIN MÁS</button>
+        <button class="time-alert-btn" onclick="closeTimeAlert()" style="background:rgba(122,133,153,0.15);border-color:var(--muted);color:var(--muted2);">✕ CERRAR</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1975,6 +1995,133 @@ let currentFilter = 'all'; // Filtro activo
 let chartImageData = null; // Para almacenar la imagen del gráfico
 let sortBy = 'estado'; // Puede ser 'estado' o 'ticker'
 let sortOrder = 'asc'; // Puede ser 'asc' o 'desc'
+
+// ── FMP API ───────────────────────────────────────────────────────────────────
+const FMP_KEY  = 'PU9ZNYoi4aYD2CGWWCmKPljga9unY6WP';
+const FMP_BASE = 'https://financialmodelingprep.com/stable/';
+
+// Mapea mktCap en dólares al bucket del select
+function mktCapBucket(cap) {
+  if (!cap || isNaN(cap)) return '';
+  if (cap < 50e6)   return 'Nano Cap (<$50M)';
+  if (cap < 300e6)  return 'Micro Cap ($50M-$300M)';
+  if (cap < 2e9)    return 'Small Cap ($300M-$2B)';
+  if (cap < 10e9)   return 'Mid Cap ($2B-$10B)';
+  return 'Large Cap (>$10B)';
+}
+
+// Mapea floatShares al bucket del select
+function floatBucket(shares) {
+  if (!shares || isNaN(shares)) return '';
+  const m = shares / 1e6;
+  if (m < 1)   return 'Micro Low Float (<1M)';
+  if (m < 5)   return 'Ultra Low Float (1M-5M)';
+  if (m < 10)  return 'Low Float (5M-10M)';
+  if (m < 20)  return 'Medium Low Float (10M-20M)';
+  if (m < 50)  return 'Medium Float (20M-50M)';
+  if (m < 100) return 'High Float Small Cap (50M-100M)';
+  return 'Large Float (>100M)';
+}
+
+// Resalta un campo en verde brevemente
+function highlightFmp(el) {
+  el.style.transition = 'border-color 0.3s';
+  el.style.borderColor = 'var(--green)';
+  setTimeout(() => { el.style.borderColor = ''; }, 1800);
+}
+
+// Llama a FMP y rellena precio + fundamentales en el modal
+let fmpDebounce = null;
+async function fmpAutoFill(ticker) {
+  if (!ticker) return;
+  clearTimeout(fmpDebounce);
+  fmpDebounce = setTimeout(async () => {
+    try {
+      const [quoteRes, profileRes, floatRes] = await Promise.all([
+        fetch(`${FMP_BASE}quote?symbol=${ticker}&apikey=${FMP_KEY}`),
+        fetch(`${FMP_BASE}profile?symbol=${ticker}&apikey=${FMP_KEY}`),
+        fetch(`${FMP_BASE}shares-float?symbol=${ticker}&apikey=${FMP_KEY}`)
+      ]);
+      const [quoteData, profileData, floatData] = await Promise.all([
+        quoteRes.json(), profileRes.json(), floatRes.json()
+      ]);
+
+      const quote     = Array.isArray(quoteData)   ? quoteData[0]   : null;
+      const profile   = Array.isArray(profileData)  ? profileData[0]  : null;
+      const floatInfo = Array.isArray(floatData)    ? floatData[0]   : null;
+      let fmpFilled = 0;
+
+      // 1. PRECIO desde /quote
+      if (quote && quote.price) {
+        const el = document.getElementById('inputPrecioEntrada');
+        if (el && !el.value) { el.value = Number(quote.price).toFixed(3); highlightFmp(el); fmpFilled++; }
+      }
+
+      // 2. SECTOR, INDUSTRY, PAÍS, MARKET CAP desde /profile
+      if (profile) {
+        const fieldsMap = [
+          { id: 'inputSector',    val: profile.sector   },
+          { id: 'inputIndustry',  val: profile.industry },
+          { id: 'inputPais',      val: profile.country  },
+        ];
+        fieldsMap.forEach(({ id, val }) => {
+          if (!val) return;
+          const el = document.getElementById(id);
+          if (el && !el.value) { el.value = val; highlightFmp(el); fmpFilled++; }
+        });
+
+        const capBucket = mktCapBucket(profile.mktCap);
+        if (capBucket) {
+          const el = document.getElementById('inputMarketCap');
+          if (el && !el.value) { el.value = capBucket; highlightFmp(el); fmpFilled++; }
+        }
+      }
+
+      // 3. FLOAT desde /shares-float (campo correcto: floatShares)
+      if (floatInfo && floatInfo.floatShares) {
+        const flBucket = floatBucket(floatInfo.floatShares);
+        if (flBucket) {
+          const el = document.getElementById('inputFloat');
+          if (el && !el.value) { el.value = flBucket; highlightFmp(el); fmpFilled++; }
+        }
+      }
+
+      if (fmpFilled > 0) showFmpToast(ticker, quote, profile, floatInfo, fmpFilled);
+
+    } catch(e) { console.warn('FMP error:', e); }
+  }, 650);
+}
+
+function showFmpToast(ticker, quote, profile, floatInfo, filled) {
+  const old = document.getElementById('fmpToast');
+  if (old) old.remove();
+
+  const price  = quote?.price != null ? `$${Number(quote.price).toFixed(2)}` : null;
+  const chg    = quote?.changesPercentage != null ? Number(quote.changesPercentage) : null;
+  const chgStr = chg != null ? `<span style="color:${chg>=0?'var(--green)':'var(--red)'};font-weight:700;">${chg>=0?'+':''}${chg.toFixed(2)}%</span>` : '';
+  const vol    = quote?.volume ? Number(quote.volume).toLocaleString() : null;
+  const flStr  = floatInfo?.floatShares ? floatBucket(floatInfo.floatShares) : null;
+
+  const lines = [
+    price ? `💲 <strong>${price}</strong> ${chgStr}` : null,
+    vol   ? `📊 Vol: ${vol}` : null,
+    flStr ? `🔢 Float: ${flStr}` : null,
+  ].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+
+  const toast = document.createElement('div');
+  toast.id = 'fmpToast';
+  toast.innerHTML = `<span style="color:var(--green);font-weight:700;">⚡ FMP · ${ticker}</span> — ${filled} campo${filled>1?'s':''} rellenado${filled>1?'s':''}<br><span style="font-size:11px;color:var(--muted2);">${lines}</span>`;
+  toast.style.cssText = `
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+    background:var(--bg3); border:1px solid var(--green); border-radius:10px;
+    padding:12px 22px; font-size:13px; color:var(--text); z-index:9999;
+    box-shadow:0 4px 20px rgba(0,230,118,0.2); white-space:nowrap;
+    animation:fadeUp 0.3s ease forwards;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity 0.4s'; setTimeout(()=>toast.remove(),400); }, 5000);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -2185,6 +2332,43 @@ function updateKPIs() {
   document.getElementById('countEstudio').textContent = estudio;
   document.getElementById('countEjecucion').textContent = ejecucion;
   document.getElementById('countFinalizado').textContent = finalizado;
+
+  // ── Punto 3: Tiempo medio ganadores vs perdedores ─────────────────────────
+  const timeMap = { 'PRE-MARKET': 7.5, 'OPEN': 9.5, 'MID-DAY': 12.0, 'CLOSE': 15.5, 'POST-MARKET': 17.0 };
+  function calcDurH(trade) {
+    const s = timeMap[trade.inicio];
+    const e = timeMap[trade.closed];
+    if (s == null || e == null) return null;
+    return Math.abs(e - s);
+  }
+  function fmtH(h) {
+    if (h == null) return '—';
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    return hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
+  }
+  const finTrades = allTrades.filter(t => t.estado === 'finalizado');
+  const wins  = finTrades.filter(t => sPNL(t) > 0);
+  const losses = finTrades.filter(t => sPNL(t) < 0);
+  const winDurs  = wins.map(calcDurH).filter(v => v != null);
+  const lossDurs = losses.map(calcDurH).filter(v => v != null);
+  const avgWin  = winDurs.length  ? winDurs.reduce((a,b)=>a+b,0)/winDurs.length   : null;
+  const avgLoss = lossDurs.length ? lossDurs.reduce((a,b)=>a+b,0)/lossDurs.length : null;
+
+  const kwEl = document.getElementById('kpiTimeWin');
+  const klEl = document.getElementById('kpiTimeLoss');
+  if (kwEl) kwEl.textContent = fmtH(avgWin);
+  if (klEl) {
+    klEl.textContent = fmtH(avgLoss);
+    // Si el tiempo de pérdidas es más del doble que el de ganancias → alerta visual
+    if (avgWin != null && avgLoss != null && avgLoss > avgWin * 2) {
+      klEl.style.color = '#ff1744';
+      klEl.title = '⚠ Estás aguantando pérdidas ' + (avgLoss/avgWin).toFixed(1) + 'x más que ganancias';
+    } else {
+      klEl.style.color = 'var(--red)';
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 }
 
 // Filter trades by status
@@ -2606,6 +2790,37 @@ function autoFillFromTicker(ticker) {
   if (filled > 0) {
     showTickerToast(upper, filled);
   }
+
+  // ── Aviso si el ticker tiene más de 3 trades ──────────────────────────────
+  const totalTrades = matches.length;
+  if (totalTrades >= 3) {
+    const finTrades = matches.filter(t => t.estado === 'finalizado');
+    const wins      = finTrades.filter(t => sPNL(t) > 0).length;
+    const losses    = finTrades.filter(t => sPNL(t) < 0).length;
+    const totalPNL  = finTrades.reduce((s,t) => s + sPNL(t), 0);
+    const pnlColor  = totalPNL >= 0 ? '#00e676' : '#ff3d57';
+    const pnlStr    = (totalPNL >= 0 ? '+' : '') + '$' + totalPNL.toFixed(0);
+    const old2 = document.getElementById('tickerWarningToast');
+    if (old2) old2.remove();
+    const warn = document.createElement('div');
+    warn.id = 'tickerWarningToast';
+    warn.innerHTML = `
+      ⚠️ <strong>${upper}</strong> — ${totalTrades} trades en el historial
+      &nbsp;·&nbsp; ${wins}W / ${losses}L
+      &nbsp;·&nbsp; PNL acumulado: <span style="color:${pnlColor};font-weight:700;">${pnlStr}</span>
+      ${totalPNL < 0 ? '<br><span style="color:#ff3d57;font-size:11px;">🚨 Este ticker te está costando dinero — ¿merece la pena?</span>' : ''}
+    `;
+    warn.style.cssText = `
+      position:fixed; bottom:72px; left:50%; transform:translateX(-50%);
+      background:var(--bg3); border:1px solid #ffd600; border-radius:10px;
+      padding:12px 22px; font-size:13px; color:var(--text); z-index:9999;
+      box-shadow:0 4px 20px rgba(255,214,0,0.2); white-space:nowrap;
+      animation:fadeUp 0.3s ease forwards;
+    `;
+    document.body.appendChild(warn);
+    setTimeout(() => { warn.style.opacity='0'; warn.style.transition='opacity 0.4s'; setTimeout(()=>warn.remove(),400); }, 5000);
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 }
 
 function showTickerToast(ticker, count) {
@@ -2634,14 +2849,20 @@ function initTickerAutofill() {
 
   tickerInput.addEventListener('blur', () => {
     const val = tickerInput.value.toUpperCase().trim();
-    if (val) autoFillFromTicker(val);
+    if (val) {
+      autoFillFromTicker(val);
+      fmpAutoFill(val);
+    }
   });
 
   // También al presionar Enter en el campo ticker
   tickerInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const val = tickerInput.value.toUpperCase().trim();
-      if (val) autoFillFromTicker(val);
+      if (val) {
+        autoFillFromTicker(val);
+        fmpAutoFill(val);
+      }
     }
   });
 }
@@ -3455,10 +3676,37 @@ function alertStopLossOk() {
   closeTimeAlert();
 }
 
-// VOY PERDIENDO → nueva cuenta atrás de 15min, cerrar overlay
+// VOY PERDIENDO → mostrar pantalla 3 con tiempo transcurrido + luego 15min
 function alertVoyPerdiendo() {
   const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
+
+  // Calcular tiempo que lleva en ejecución
+  let tiempoStr = '—';
+  if (ticker && timerAlertState[ticker]) {
+    const state = timerAlertState[ticker];
+    const phaseStart = state.mode === '2h' ? state.phaseStart : (state.phaseStart - 0);
+    // Buscar el trade para obtener ejecucionStartTime real
+    const trade = allTrades.find(t => (t.ticker||'').toUpperCase().trim() === ticker && t.estado === 'ejecucion');
+    const startMs = trade && trade.ejecucionStartTime ? trade.ejecucionStartTime : state.phaseStart;
+    const elapsed = Date.now() - startMs;
+    const h = Math.floor(elapsed / 3600000);
+    const m = Math.floor((elapsed % 3600000) / 60000);
+    tiempoStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  // Mostrar pantalla 3
+  document.getElementById('alertScreen1').style.display = 'none';
+  document.getElementById('alertScreen2').style.display = 'none';
+  document.getElementById('alertScreen3').style.display = 'block';
+  document.getElementById('alertLossingTime').textContent = tiempoStr;
+  if (ticker) document.getElementById('timeAlertTicker3').textContent = ticker;
+
+  // Preparar el estado para 15m (se activa al pulsar "seguir")
   if (ticker) timerAlertState[ticker] = { mode: '15m', alertShown: false, phaseStart: Date.now() };
+}
+
+// Seguir 15 min más después de ver el aviso
+function alertSeguirPerdiendo() {
   closeTimeAlert();
 }
 
@@ -3890,9 +4138,21 @@ function buildDirectionTab(fin) {
   const hasShort = fin.filter(t => t.pnlShort != null);
   const hasLong  = fin.filter(t => t.pnlLong != null);
 
+  // Mapa de horas por sesión para calcular duración
+  const tMap = { 'PRE-MARKET':7.5, 'OPEN':9.5, 'MID-DAY':12.0, 'CLOSE':15.5, 'POST-MARKET':17.0 };
+  function durH(trade) {
+    const s = tMap[trade.inicio]; const e = tMap[trade.closed];
+    return (s != null && e != null) ? Math.abs(e - s) : null;
+  }
+  function fmtH(h) {
+    if (h == null) return '—';
+    const hh = Math.floor(h); const mm = Math.round((h-hh)*60);
+    return hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
+  }
+
   function dirKPIs(trades, pnlKey, rrKey, containerId) {
-    const pnls = trades.map(t => t[pnlKey] || 0);
-    const rrs  = trades.map(t => parseFloat(t[rrKey] || 0));
+    const pnls  = trades.map(t => t[pnlKey] || 0);
+    const rrs   = trades.map(t => parseFloat(t[rrKey] || 0));
     const wins  = pnls.filter(p => p > 0).length;
     const wr    = trades.length ? Math.round(wins/trades.length*100) : 0;
     const totPNL = pnls.reduce((s,v)=>s+v,0);
@@ -3901,18 +4161,64 @@ function buildDirectionTab(fin) {
     const gLoss = Math.abs(pnls.filter(p=>p<0).reduce((s,v)=>s+v,0));
     const pf    = gLoss>0 ? (gWins/gLoss).toFixed(2) : gWins>0?'∞':'0';
 
+    // Tiempo medio ganadores vs perdedores por dirección
+    const winTrades  = trades.filter(t => (t[pnlKey]||0) > 0);
+    const lossTrades = trades.filter(t => (t[pnlKey]||0) < 0);
+    const winDurs    = winTrades.map(durH).filter(v=>v!=null);
+    const lossDurs   = lossTrades.map(durH).filter(v=>v!=null);
+    const avgTWin    = winDurs.length  ? winDurs.reduce((a,b)=>a+b,0)/winDurs.length   : null;
+    const avgTLoss   = lossDurs.length ? lossDurs.reduce((a,b)=>a+b,0)/lossDurs.length : null;
+    const asimStr    = (avgTWin!=null && avgTLoss!=null)
+      ? `<span style="color:${avgTLoss>avgTWin*2?'#ff1744':'var(--muted2)'}">${(avgTLoss/avgTWin).toFixed(1)}x</span>`
+      : '—';
+
     document.getElementById(containerId).innerHTML = [
-      { label:'Trades', val: trades.length },
-      { label:'Win Rate', val: wr+'%' },
-      { label:'PNL', val: formatPNL(totPNL) },
-      { label:'Avg R', val: avgR.toFixed(2)+'R' },
+      { label:'Trades',     val: trades.length },
+      { label:'Win Rate',   val: wr+'%' },
+      { label:'PNL',        val: formatPNL(totPNL) },
+      { label:'Avg R',      val: avgR.toFixed(2)+'R' },
       { label:'Prof. Factor', val: pf },
-      { label:'Wins', val: wins },
+      { label:'Wins',       val: wins },
+      { label:'⏱ T. Win',   val: fmtH(avgTWin) },
+      { label:'⏱ T. Loss',  val: fmtH(avgTLoss) },
+      { label:'Asimetría',  val: asimStr },
     ].map(k=>`<div class="dir-kpi"><div class="dir-kpi-label">${k.label}</div><div class="dir-kpi-val">${k.val}</div></div>`).join('');
   }
 
   dirKPIs(hasShort, 'pnlShort', 'rrShort', 'dirKpiShort');
   dirKPIs(hasLong,  'pnlLong',  'rrLong',  'dirKpiLong');
+
+  // ── Resumen asimetría global (Short + Long combinado) ─────────────────────
+  const allFinDir = fin.filter(t => t.inicio && t.closed);
+  const winsDir   = allFinDir.filter(t => sPNL(t) > 0);
+  const lossesDir = allFinDir.filter(t => sPNL(t) < 0);
+  const wDurs  = winsDir.map(durH).filter(v=>v!=null);
+  const lDurs  = lossesDir.map(durH).filter(v=>v!=null);
+  const avgW   = wDurs.length  ? wDurs.reduce((a,b)=>a+b,0)/wDurs.length   : null;
+  const avgL   = lDurs.length  ? lDurs.reduce((a,b)=>a+b,0)/lDurs.length  : null;
+
+  // Mostrar resumen en el panel si hay datos
+  const existing = document.getElementById('dirAsimetriaBox');
+  if (existing) existing.remove();
+  if (avgW != null && avgL != null) {
+    const ratio = (avgL/avgW).toFixed(1);
+    const color = avgL > avgW*2 ? '#ff1744' : '#00e676';
+    const box = document.createElement('div');
+    box.id = 'dirAsimetriaBox';
+    box.style.cssText = `margin:16px 0;padding:14px 18px;background:var(--bg3);border:1px solid ${color};border-radius:10px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.8;`;
+    box.innerHTML = `
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">📊 Asimetría de tiempo en posición</div>
+      <div>⏱ Tiempo medio <span style="color:#00e676;font-weight:700;">ganador</span>: <strong>${fmtH(avgW)}</strong></div>
+      <div>⏱ Tiempo medio <span style="color:#ff3d57;font-weight:700;">perdedor</span>: <strong>${fmtH(avgL)}</strong></div>
+      <div style="margin-top:6px;color:${color};font-weight:700;font-size:13px;">
+        ${avgL > avgW*2
+          ? `🚨 Aguantas pérdidas ${ratio}x más que ganancias — tu mayor debilidad`
+          : `✅ Asimetría controlada (${ratio}x) — bien gestionado`}
+      </div>
+    `;
+    const panel = document.getElementById('statsPanel-direction');
+    if (panel) panel.insertBefore(box, panel.firstChild);
+  }
 
   // R histograms per direction
   function rHist(trades, rrKey, canvasId, color) {

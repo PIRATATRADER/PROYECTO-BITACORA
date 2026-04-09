@@ -369,6 +369,49 @@
       console.error(err);
     });
 
+  // ── FMP API ──────────────────────────────────────────────────────────────────
+  const FMP_KEY  = 'PU9ZNYoi4aYD2CGWWCmKPljga9unY6WP';
+  const FMP_BASE = 'https://financialmodelingprep.com/stable/';
+  let fmpData = { quote: null, profile: null };
+  let fmpDebounce = null;
+
+  function mktCapBucket(cap) {
+    if (!cap || isNaN(cap)) return '';
+    if (cap < 50e6)  return 'Nano Cap (<$50M)';
+    if (cap < 300e6) return 'Micro Cap ($50M-$300M)';
+    if (cap < 2e9)   return 'Small Cap ($300M-$2B)';
+    if (cap < 10e9)  return 'Mid Cap ($2B-$10B)';
+    return 'Large Cap (>$10B)';
+  }
+
+  function floatBucket(shares) {
+    if (!shares || isNaN(shares)) return '';
+    const m = shares / 1e6;
+    if (m < 1)   return 'Micro Low Float (<1M)';
+    if (m < 5)   return 'Ultra Low Float (1M-5M)';
+    if (m < 10)  return 'Low Float (5M-10M)';
+    if (m < 20)  return 'Medium Low Float (10M-20M)';
+    if (m < 50)  return 'Medium Float (20M-50M)';
+    if (m < 100) return 'High Float Small Cap (50M-100M)';
+    return 'Large Float (>100M)';
+  }
+
+  async function fetchFmp(ticker) {
+    fmpData = { quote: null, profile: null, float: null };
+    if (!ticker) return;
+    try {
+      const [qRes, pRes, fRes] = await Promise.all([
+        fetch(`${FMP_BASE}quote?symbol=${ticker}&apikey=${FMP_KEY}`),
+        fetch(`${FMP_BASE}profile?symbol=${ticker}&apikey=${FMP_KEY}`),
+        fetch(`${FMP_BASE}shares-float?symbol=${ticker}&apikey=${FMP_KEY}`)
+      ]);
+      const [qJson, pJson, fJson] = await Promise.all([qRes.json(), pRes.json(), fRes.json()]);
+      fmpData.quote   = Array.isArray(qJson) ? qJson[0] : null;
+      fmpData.profile = Array.isArray(pJson) ? pJson[0] : null;
+      fmpData.float   = Array.isArray(fJson) ? fJson[0] : null;
+    } catch(e) { console.warn('FMP error:', e); }
+  }
+
   // ── PWA Install ─────────────────────────────────────────────────────────────
   let deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', e => {
@@ -390,10 +433,12 @@
     const val = document.getElementById('quickTicker').value.toUpperCase().trim();
     document.getElementById('quickTicker').value = val;
     const preview = document.getElementById('quickPreview');
+    fmpData = { quote: null, profile: null };
 
     if (!val) {
       preview.style.display = 'none';
       document.getElementById('quickTicker').className = '';
+      clearTimeout(fmpDebounce);
       return;
     }
 
@@ -401,29 +446,67 @@
       .filter(t => (t.ticker||'').toUpperCase().trim() === val)
       .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
 
-    if (!matches.length) {
-      preview.style.display = 'block';
-      preview.innerHTML = '<span style="color:var(--muted);">⚠ Ticker nuevo — sin datos previos</span>';
-      document.getElementById('quickTicker').className = 'notfound';
-      return;
+    // Render inmediato con datos del historial + spinner FMP
+    renderPreview(val, matches, false);
+
+    // Fetch FMP con debounce
+    clearTimeout(fmpDebounce);
+    fmpDebounce = setTimeout(async () => {
+      await fetchFmp(val);
+      renderPreview(val, matches, true);
+    }, 650);
+  }
+
+  function renderPreview(val, matches, fmpReady) {
+    const preview = document.getElementById('quickPreview');
+    const tickerEl = document.getElementById('quickTicker');
+
+    // Bloque FMP
+    let fmpBlock = '';
+    if (!fmpReady) {
+      fmpBlock = `<span style="color:var(--muted);font-size:10px;">⚡ Cargando datos FMP...</span><br>`;
+    } else {
+      const q = fmpData.quote;
+      const p = fmpData.profile;
+      if (q && q.price) {
+        const chg = q.changesPercentage != null ? Number(q.changesPercentage) : null;
+        const chgStr = chg != null
+          ? `<span style="color:${chg>=0?'var(--green)':'var(--red)'};">${chg>=0?'+':''}${chg.toFixed(2)}%</span>`
+          : '';
+        fmpBlock += `<span style="color:var(--muted2);">Precio &nbsp;</span><span style="color:var(--text);font-weight:700;">$${Number(q.price).toFixed(2)}</span> ${chgStr}<br>`;
+        if (q.volume) fmpBlock += `<span style="color:var(--muted2);">Vol &nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color:var(--text);">${Number(q.volume).toLocaleString()}</span><br>`;
+      }
+      if (p) {
+        const capB = mktCapBucket(p.mktCap);
+        const flB  = floatBucket(fmpData.float?.floatShares);
+        if (capB) fmpBlock += `<span style="color:var(--muted2);">M.Cap &nbsp;&nbsp;</span><span style="color:var(--text);">${capB}</span><br>`;
+        if (flB)  fmpBlock += `<span style="color:var(--muted2);">Float &nbsp;&nbsp;</span><span style="color:var(--text);">${flB}</span><br>`;
+        if (p.sector) fmpBlock += `<span style="color:var(--muted2);">Sector &nbsp;</span><span style="color:var(--text);">${p.sector}</span><br>`;
+        if (p.country) fmpBlock += `<span style="color:var(--muted2);">País &nbsp;&nbsp;&nbsp;</span><span style="color:var(--text);">${p.country}</span><br>`;
+      }
+      if (!fmpBlock) fmpBlock = `<span style="color:var(--muted);font-size:10px;">Sin datos de mercado</span><br>`;
+      tickerEl.className = (fmpData.quote?.price) ? 'found' : 'notfound';
     }
 
-    document.getElementById('quickTicker').className = 'found';
-    const t = matches[0];
-    const fechaStr = (t.fecha||'').replace(/(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1');
-    const dil = (t.dilucion && t.dilucion.length)
-      ? t.dilucion.map(d => `<span style="color:var(--text);">${d}</span>`).join('<br>')
-      : '<span style="color:var(--muted);">—</span>';
+    // Bloque historial
+    let histBlock = '';
+    if (matches.length) {
+      const t = matches[0];
+      const fechaStr = (t.fecha||'').replace(/(\d{4})-(\d{2})-(\d{2})/, '$3/$2/$1');
+      const dil = (t.dilucion && t.dilucion.length)
+        ? t.dilucion.map(d => `<span style="color:var(--text);">${d}</span>`).join('<br>')
+        : '<span style="color:var(--muted);">—</span>';
+      histBlock = `
+        <span style="color:var(--purple);font-weight:700;">↺ ${matches.length} trade${matches.length>1?'s':''} anterior${matches.length>1?'es':''}</span><br>
+        <span style="color:var(--muted2);">Último &nbsp;</span><span style="color:var(--text);">${fechaStr}</span><br>
+        <span style="color:var(--muted2);">Dil &nbsp;&nbsp;&nbsp;&nbsp;</span>${dil}
+      `;
+    } else {
+      histBlock = `<span style="color:var(--muted);">⚠ Ticker nuevo — sin historial</span>`;
+    }
 
     preview.style.display = 'block';
-    preview.innerHTML = `
-      <span style="color:var(--green);font-weight:700;">✓ ${matches.length} trade${matches.length>1?'s':''} anterior${matches.length>1?'es':''}</span><br>
-      <span style="color:var(--muted2);">Último &nbsp;</span><span style="color:var(--text);">${fechaStr}</span><br>
-      ${t.marketCap ? `<span style="color:var(--muted2);">M.Cap &nbsp;&nbsp;</span><span style="color:var(--text);">${t.marketCap}</span><br>` : ''}
-      ${t.float     ? `<span style="color:var(--muted2);">Float &nbsp;&nbsp;</span><span style="color:var(--text);">${t.float}</span><br>` : ''}
-      ${t.sector    ? `<span style="color:var(--muted2);">Sector &nbsp;</span><span style="color:var(--text);">${t.sector}</span><br>` : ''}
-      <span style="color:var(--muted2);">Dil &nbsp;&nbsp;&nbsp;&nbsp;</span>${dil}
-    `;
+    preview.innerHTML = fmpBlock + `<span style="color:var(--border);font-size:9px;">───────────────</span><br>` + histBlock;
   }
 
   function onTickerKey(e) {
@@ -447,25 +530,30 @@
       .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
     const prev = matches[0] || {};
 
+    // Datos FMP disponibles en este momento
+    const q = fmpData.quote;
+    const p = fmpData.profile;
+
     const newTrade = {
       fecha:              today,
       ticker:             ticker,
       estado:             estado,
-      pais:               prev.pais       || '',
-      sector:             prev.sector     || '',
-      industry:           prev.industry   || '',
-      marketCap:          prev.marketCap  || '',
-      float:              prev.float      || '',
-      insiders:           prev.insiders   || '',
-      instOwn:            prev.instOwn    || '',
-      cashNeed:           prev.cashNeed   || '',
+      // Prioridad: 1) FMP (tiempo real)  2) Historial propio  3) Vacío
+      precioEntrada:      q?.price       ? String(Number(q.price).toFixed(3))  : (prev.precioEntrada || ''),
+      pais:               p?.country     || prev.pais     || '',
+      sector:             p?.sector      || prev.sector   || '',
+      industry:           p?.industry    || prev.industry || '',
+      marketCap:          p?.mktCap      ? mktCapBucket(p.mktCap)     : (prev.marketCap || ''),
+      float:              fmpData.float?.floatShares ? floatBucket(fmpData.float.floatShares) : (prev.float || ''),
+      insiders:           prev.insiders  || '',
+      instOwn:            prev.instOwn   || '',
+      cashNeed:           prev.cashNeed  || '',
       overhead:           '',
       locatesRegSho:      false,
-      dilucion:           prev.dilucion   || [],
-      notas:              prev.notas      || '',
+      dilucion:           prev.dilucion  || [],
+      notas:              prev.notas     || '',
       noticia:            '',
       setupEntrada:       '',
-      precioEntrada:      '',
       pnl:                null,
       pnlShort:           null,
       pnlLong:            null,
@@ -484,8 +572,10 @@
       allTrades.unshift(newTrade);
 
       const label = estado === 'estudio' ? '📋 ESTUDIO' : '▶ EJECUCIÓN';
+      const savedPrice = newTrade.precioEntrada ? `<br><span style="color:var(--green);">💲 $${Number(newTrade.precioEntrada).toFixed(2)}</span>` : '';
+      const savedFloat = newTrade.float ? `<span style="color:var(--muted2);"> · ${newTrade.float}</span>` : '';
       showToast(
-        `✓ <strong>${ticker}</strong> → ${label}<br><span style="color:var(--muted2);">${matches.length > 0 ? 'Datos copiados del anterior' : 'Ticker nuevo'}</span>`,
+        `✓ <strong>${ticker}</strong> → ${label}${savedPrice}${savedFloat}<br><span style="color:var(--muted2);">${matches.length > 0 ? 'Historial + FMP' : 'FMP autorellenado'}</span>`,
         'success'
       );
       addRecent(ticker, estado, today);

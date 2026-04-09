@@ -412,8 +412,11 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     </div>
   </div>
 
+  <!-- Right column: Objectives + Avg % card -->
+  <div style="display:flex;flex-direction:column;gap:14px;width:400px;flex-shrink:0;">
+
   <!-- Objectives table -->
-  <div class="card obj-card">
+  <div class="card obj-card" style="width:100%;">
     <div class="card-hdr" style="padding:13px 16px;">
       <div class="card-ttl" style="font-size:16px;">OBJETIVOS COMPUESTOS</div>
     </div>
@@ -429,6 +432,21 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
       </table>
     </div>
   </div>
+
+  <!-- % Medio / Día card -->
+  <div class="card" style="width:100%;padding:20px 22px;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--cyan);"></div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;">% Medio por Día Operado</div>
+    <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:14px;">
+      <div id="kAvgPct" style="font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:2px;line-height:1;color:var(--cyan);">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);padding-bottom:6px;line-height:1.5;" id="kAvgPctSub"></div>
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">
+      Promedio del % Day = PNL / Start of Day × 100<br>calculado sobre días con datos registrados
+    </div>
+  </div>
+
+  </div><!-- end right column -->
 </div>
 
 <div class="bot">
@@ -811,13 +829,13 @@ function renderMain() {
 }
 
 // ── OBJECTIVES TABLE ──────────────────────────────────────────────────────────
-// Lógica correcta:
+// Lógica:
 // - startOfMonth = primer SOD del mes
 // - Target día N = startOfMonth × (1+rate)^N   (interés compuesto)
-// - Una fila está en VERDE si el capital acumulado real ha superado ese target
-// - Capital acumulado real = startOfMonth + suma de todos los PNL hasta ese día (inclusive)
-// - Si ganas $600 en el día 5, el capital acumulado sube → los días anteriores
-//   que no habían llegado al target también se ponen en verde automáticamente
+// - Para colorear: se compara el target con (SOD_del_día + PNL_del_día)
+//   → Si el SOD ya está en 9000, todos los targets hasta 9000 se colorean
+//   → Además se suma el PNL ganado ese mismo día para ver si supera el siguiente tramo
+// - Un target de un día anterior también se colorea si el capital actual (SOD+PNL) lo supera
 function renderObj() {
   const m = MONTHS[month];
   const tbody = document.getElementById('ob');
@@ -834,22 +852,24 @@ function renderObj() {
     return;
   }
 
-  // Capital actual = último SOD + PNL - HTB del mismo día
-  let currentCap=null;
-  for(let i=0;i<m.days.length;i++){
-    const row=D[dk(m.days[i])]||{};
-    const s=pd(row.startOfDay);
-    if(s!==null){
-      const pnl=pd(row.pnlDay)||0;
-      const htb=pd(row.htb)||0;
-      currentCap=s+pnl-htb;
-    }
-  }
+  // Capital máximo real alcanzado hasta ahora:
+  // Para cada día con SOD, el capital al cierre = SOD + PNL (si existe), o SOD si no hay PNL aún.
+  // Tomamos el máximo de todos esos valores.
+  let maxCapReached = som;
+  m.days.forEach(d => {
+    const row = D[dk(d)] || {};
+    const s = pd(row.startOfDay);
+    if (s === null) return;
+    const p = pd(row.pnlDay);
+    // Capital al cierre del día: SOD + PNL (si hay PNL), o SOD solo (si no hay PNL todavía)
+    const capClose = (p !== null) ? s + p : s;
+    if (capClose > maxCapReached) maxCapReached = capClose;
+  });
 
   // Targets compuestos calculados desde el capital inicial del mes
-  const t1=m.days.map((_,i)=>som*Math.pow(1.01,i+1));
-  const t2=m.days.map((_,i)=>som*Math.pow(1.02,i+1));
-  const t3=m.days.map((_,i)=>som*Math.pow(1.03,i+1));
+  const t1 = m.days.map((_,i) => som * Math.pow(1.01, i+1));
+  const t2 = m.days.map((_,i) => som * Math.pow(1.02, i+1));
+  const t3 = m.days.map((_,i) => som * Math.pow(1.03, i+1));
 
   // INICIAL row
   let rows=`<tr class="tr-ini">
@@ -859,15 +879,15 @@ function renderObj() {
     <td>${fd(som)}</td>
   </tr>`;
 
-  m.days.forEach((d,i)=>{
-    // Un objetivo está alcanzado si el capital actual >= target
-    const h1 = currentCap!==null && currentCap>=t1[i];
-    const h2 = currentCap!==null && currentCap>=t2[i];
-    const h3 = currentCap!==null && currentCap>=t3[i];
+  m.days.forEach((d,i) => {
+    // Un target se colorea si el capital máximo real alcanzado (SOD+PNL) lo supera
+    const h1 = t1[i] <= maxCapReached;
+    const h2 = t2[i] <= maxCapReached;
+    const h3 = t3[i] <= maxCapReached;
 
-    const c1 = h1?'oh1':'';
-    const c2 = h2?'oh2':'';
-    const c3 = h3?'oh3':'';
+    const c1 = h1 ? 'oh1' : '';
+    const c2 = h2 ? 'oh2' : '';
+    const c3 = h3 ? 'oh3' : '';
 
     rows+=`<tr>
       <td>${d}</td>
@@ -897,6 +917,27 @@ function renderYear() {
   document.getElementById('kDias').textContent=dias;
   document.getElementById('kWin').textContent=wins;
   document.getElementById('kLoss').textContent=losses;
+
+  // % Medio por día: promedio de los % Day individuales (pnlDay/startOfDay*100)
+  let pctSum=0, pctCount=0;
+  m.days.forEach(d=>{
+    const row=D[dk(d)]||{};
+    const sod=pd(row.startOfDay);
+    const p=pd(row.pnlDay);
+    if(sod&&sod>0&&p!==null){ pctSum+=(p/sod)*100; pctCount++; }
+  });
+  const avgPctEl=document.getElementById('kAvgPct');
+  const avgPctSub=document.getElementById('kAvgPctSub');
+  if(pctCount>0){
+    const avgPct=pctSum/pctCount;
+    avgPctEl.textContent=(avgPct>=0?'+':'')+avgPct.toFixed(2)+'%';
+    avgPctEl.style.color=avgPct>=0?'var(--green)':'var(--red)';
+    if(avgPctSub) avgPctSub.innerHTML=`sobre <span style="color:var(--text)">${pctCount}</span> día${pctCount!==1?'s':''} operado${pctCount!==1?'s':''}`;
+  } else {
+    avgPctEl.textContent='—';
+    avgPctEl.style.color='var(--cyan)';
+    if(avgPctSub) avgPctSub.innerHTML='Sin datos aún';
+  }
 
   const goal20=firstCap?firstCap*0.20:null;
   const goal40=firstCap?firstCap*0.40:null;
