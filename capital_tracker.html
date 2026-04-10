@@ -152,16 +152,6 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 
 /* Trade image cell */
 .trade-thumb-wrap{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
-.tradely-thumb-wrap{display:flex;align-items:center;justify-content:center;width:100%;min-height:36px;}
-.pdf-wrap{display:flex;align-items:center;justify-content:center;width:100%;min-height:36px;}
-.pdf-add-btn{font-size:16px;background:transparent;border:1px dashed #e8634a55;border-radius:6px;padding:4px 10px;cursor:pointer;color:#e8634a;transition:all .15s;}
-.pdf-add-btn:hover{border-color:#e8634a;background:#e8634a15;}
-.pdf-thumb-btn{display:flex;align-items:center;justify-content:center;gap:5px;background:#e8634a15;border:1px solid #e8634a55;border-radius:6px;padding:5px 10px;cursor:pointer;color:#e8634a;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;transition:all .15s;white-space:nowrap;}
-.pdf-thumb-btn:hover{border-color:#e8634a;background:#e8634a25;}
-.tradely-add-btn{font-size:18px;background:transparent;border:1px dashed #7c6af755;border-radius:6px;padding:4px 10px;cursor:pointer;color:#7c6af7;transition:all .15s;}
-.tradely-add-btn:hover{border-color:#7c6af7;background:#7c6af715;}
-.tradely-thumb{border-color:#7c6af755!important;}
-.tradely-thumb:hover{border-color:#7c6af7!important;}
 .trade-add-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:26px;height:26px;border-radius:6px;border:1px dashed var(--border);
@@ -195,35 +185,22 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 #tradeModal .modal-box{
   position:relative;max-width:90vw;max-height:90vh;
   border-radius:14px;overflow:hidden;border:1px solid var(--border);
-  background:var(--bg2);transition:all .25s ease;
+  background:var(--bg2);
 }
-#tradeModal.zoomed .modal-box{
-  max-width:100vw;max-height:100vh;width:100vw;height:100vh;
-  border-radius:0;border:none;
-}
-#tradeModal img{display:block;max-width:90vw;max-height:85vh;object-fit:contain;cursor:zoom-in;transition:all .25s ease;}
-#tradeModal.zoomed img{max-width:100vw;max-height:100vh;width:100vw;height:100vh;object-fit:contain;cursor:zoom-out;}
+#tradeModal img{display:block;max-width:90vw;max-height:85vh;object-fit:contain;}
 #tradeModal .modal-close{
   position:absolute;top:10px;right:10px;width:30px;height:30px;
   border-radius:50%;background:rgba(0,0,0,.7);border:1px solid var(--border);
   color:var(--text);font-size:18px;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  transition:all .15s;z-index:10;
+  transition:all .15s;
 }
 #tradeModal .modal-close:hover{background:var(--red);border-color:var(--red);}
-#tradeModal .modal-zoom{
-  position:absolute;top:10px;right:50px;width:30px;height:30px;
-  border-radius:50%;background:rgba(0,0,0,.7);border:1px solid var(--border);
-  color:var(--text);font-size:15px;line-height:1;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:all .15s;z-index:10;
-}
-#tradeModal .modal-zoom:hover{border-color:var(--green);color:var(--green);}
 #tradeModal .modal-del{
   position:absolute;bottom:12px;right:12px;
   font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;
   padding:5px 12px;border-radius:7px;border:1px solid var(--red);
-  background:transparent;color:var(--red);cursor:pointer;transition:all .15s;z-index:10;
+  background:transparent;color:var(--red);cursor:pointer;transition:all .15s;
 }
 #tradeModal .modal-del:hover{background:var(--red);color:#fff;}
 
@@ -428,8 +405,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
-          <th style="text-align:center;color:#7c6af7;min-width:140px;">Tradely</th>
-          <th style="text-align:center;color:#e8634a;min-width:100px;">PDF</th>
+          <th style="text-align:center;color:var(--muted2)">Trades</th>
         </tr></thead>
         <tbody id="mb"></tbody>
       </table>
@@ -497,7 +473,6 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
@@ -515,7 +490,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const storage = firebase.storage();
 const DOC_REF = db.collection('capital_tracker').doc('main_data');
 
 // Clave localStorage — respaldo offline automático
@@ -733,7 +707,7 @@ function renderMain() {
     // Check if this day is a holiday
     const hol = HOLIDAYS[d];
     if (hol) {
-      const colCount = 18; // total columns in table
+      const colCount = 17; // total columns in table
       rows += `<tr class="tr-holiday">
         <td>${d}</td>
         <td colspan="${colCount - 1}" style="text-align:left;padding-left:12px">
@@ -783,11 +757,8 @@ function renderMain() {
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
-      <td style="text-align:center;padding:4px;" class="tradely-img-cell">
-        <div class="tradely-thumb-wrap" data-key="tradely_img_${month}_${k}"></div>
-      </td>
-      <td style="text-align:center;padding:4px;" class="pdf-cell">
-        <div class="pdf-wrap" data-key="pdf_${month}_${k}"></div>
+      <td style="text-align:center;padding:4px;" class="trade-img-cell" data-key="trade_img_${month}_${k}">
+        <div class="trade-thumb-wrap" data-key="trade_img_${month}_${k}"></div>
       </td>
     </tr>`;
   });
@@ -817,7 +788,6 @@ function renderMain() {
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
-    <td></td>
     <td></td>
   </tr>`;
 
@@ -3391,7 +3361,7 @@ function renderRPerSymbol(monthIdx) {
   `;
 }
 
-function renderAll(){ renderMain(); renderObj(); renderYear(); initTradeImgs(); initPdfs(); }
+function renderAll(){ renderMain(); renderObj(); renderYear(); initTradeImgs(); }
 
 let _tradeModalKey = null;
 
@@ -3399,175 +3369,7 @@ function initTradeImgs() {
   document.querySelectorAll('.trade-thumb-wrap').forEach(wrap => {
     renderTradeCell(wrap, wrap.dataset.key);
   });
-  // Tradely images
-  document.querySelectorAll('.tradely-thumb-wrap').forEach(wrap => {
-    renderTradelyCell(wrap, wrap.dataset.key);
-  });
 }
-
-// ── TRADELY IMAGE SYSTEM ──────────────────────────────────────────────────────
-function renderTradelyCell(wrap, key) {
-  const img = localStorage.getItem(key);
-  if (img) {
-    wrap.innerHTML = `<img class="trade-thumb tradely-thumb" src="${img}" alt="Tradely" data-key="${key}"
-      onclick="openTradelyModal('${key}')"
-      onmouseenter="showTradePreview(event,'${key}')"
-      onmouseleave="hideTradePreview()">`;
-  } else {
-    wrap.innerHTML = `<button class="trade-add-btn tradely-add-btn" title="Subir análisis Tradely" onclick="uploadTradelyImg('${key}')">📊</button>`;
-  }
-}
-
-function uploadTradelyImg(key) {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      localStorage.setItem(key, ev.target.result);
-      document.querySelectorAll(`.tradely-thumb-wrap[data-key="${key}"]`).forEach(w => renderTradelyCell(w, key));
-      showToast('✓ Reporte Tradely guardado');
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
-}
-
-let _tradelyModalKey = null;
-
-function openTradelyModal(key) {
-  const img = localStorage.getItem(key);
-  if (!img) return;
-  _tradelyModalKey = key;
-  document.getElementById('tradeModalImg').src = img;
-  document.getElementById('tradeModal').classList.add('open');
-  // Swap delete button to use tradely key
-  document.getElementById('tradeModalDelBtn').onclick = deleteTradelyImg;
-  hideTradePreview();
-}
-
-function deleteTradelyImg() {
-  if (!_tradelyModalKey) return;
-  if (!confirm('¿Eliminar este reporte Tradely?')) return;
-  localStorage.removeItem(_tradelyModalKey);
-  document.querySelectorAll(`.tradely-thumb-wrap[data-key="${_tradelyModalKey}"]`).forEach(w => renderTradelyCell(w, _tradelyModalKey));
-  closeTradeModal();
-  _tradelyModalKey = null;
-  showToast('Reporte Tradely eliminado');
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── PDF SYSTEM (Firebase Storage) ────────────────────────────────────────────
-// PDFs se suben a Firebase Storage en /pdfs/{key}.pdf
-// La URL de descarga se guarda en D[dayKey].pdfFiles[key] en Firestore
-
-function initPdfs() {
-  document.querySelectorAll('.pdf-wrap').forEach(wrap => {
-    renderPdfCell(wrap, wrap.dataset.key);
-  });
-}
-
-function renderPdfCell(wrap, key) {
-  // key = "pdf_{month}_{dayKey}" — extract dayKey
-  const dayKey = key.replace(/^pdf_\d+_/, '');
-  const row = D[dayKey] || {};
-  const url = row.pdfFiles && row.pdfFiles[key];
-  const name = row.pdfNames && row.pdfNames[key];
-  if (url) {
-    const label = name || 'PDF';
-    wrap.innerHTML = `<button class="pdf-thumb-btn" onclick="openPdfModal('${key}')" title="${label}">
-      📄 <span style="max-width:80px;overflow:hidden;text-overflow:ellipsis;">${label}</span>
-    </button>`;
-  } else {
-    wrap.innerHTML = `<button class="pdf-add-btn" title="Subir PDF" onclick="uploadPdf('${key}')">📄</button>`;
-  }
-}
-
-function uploadPdf(key) {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'application/pdf';
-  input.onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Show uploading state
-    const wraps = document.querySelectorAll(`.pdf-wrap[data-key="${key}"]`);
-    wraps.forEach(w => { w.innerHTML = `<span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);">⏳ Subiendo...</span>`; });
-    showToast('⏳ Subiendo PDF...');
-
-    try {
-      const storageRef = storage.ref(`pdfs/${key}.pdf`);
-      await storageRef.put(file);
-      const url = await storageRef.getDownloadURL();
-
-      // Save URL + name in D
-      const dayKey = key.replace(/^pdf_\d+_/, '');
-      if (!D[dayKey]) D[dayKey] = {};
-      if (!D[dayKey].pdfFiles) D[dayKey].pdfFiles = {};
-      if (!D[dayKey].pdfNames) D[dayKey].pdfNames = {};
-      D[dayKey].pdfFiles[key] = url;
-      D[dayKey].pdfNames[key] = file.name;
-      save();
-
-      wraps.forEach(w => renderPdfCell(w, key));
-      showToast('✓ PDF subido a Firebase');
-    } catch(err) {
-      console.error('PDF upload error:', err);
-      wraps.forEach(w => renderPdfCell(w, key));
-      showToast('⚠ Error al subir el PDF');
-    }
-  };
-  input.click();
-}
-
-let _pdfModalKey = null;
-
-function openPdfModal(key) {
-  const dayKey = key.replace(/^pdf_\d+_/, '');
-  const row = D[dayKey] || {};
-  const url = row.pdfFiles && row.pdfFiles[key];
-  const name = row.pdfNames && row.pdfNames[key];
-  if (!url) return;
-  _pdfModalKey = key;
-  document.getElementById('pdfModalFrame').src = url;
-  document.getElementById('pdfModalName').textContent = name || 'PDF';
-  document.getElementById('pdfModal').style.display = 'flex';
-}
-
-function closePdfModal() {
-  document.getElementById('pdfModal').style.display = 'none';
-  document.getElementById('pdfModalFrame').src = '';
-  _pdfModalKey = null;
-}
-
-async function deletePdf() {
-  if (!_pdfModalKey) return;
-  if (!confirm('¿Eliminar este PDF?')) return;
-  try {
-    // Delete from Storage
-    await storage.ref(`pdfs/${_pdfModalKey}.pdf`).delete();
-  } catch(e) { console.warn('Storage delete:', e); }
-
-  // Remove from D
-  const dayKey = _pdfModalKey.replace(/^pdf_\d+_/, '');
-  if (D[dayKey] && D[dayKey].pdfFiles) {
-    delete D[dayKey].pdfFiles[_pdfModalKey];
-    delete D[dayKey].pdfNames[_pdfModalKey];
-    if (!Object.keys(D[dayKey].pdfFiles).length) {
-      delete D[dayKey].pdfFiles;
-      delete D[dayKey].pdfNames;
-    }
-  }
-  save();
-  document.querySelectorAll(`.pdf-wrap[data-key="${_pdfModalKey}"]`).forEach(w => renderPdfCell(w, _pdfModalKey));
-  closePdfModal();
-  showToast('PDF eliminado');
-}
-// ─────────────────────────────────────────────────────────────────────────────
 
 function renderTradeCell(wrap, key) {
   const img = localStorage.getItem(key);
@@ -3629,27 +3431,15 @@ function openTradeModal(key) {
   const img = localStorage.getItem(key);
   if (!img) return;
   _tradeModalKey = key;
-  _tradelyModalKey = null;
   document.getElementById('tradeModalImg').src = img;
-  document.getElementById('tradeModalDelBtn').onclick = deleteTradeImg;
   document.getElementById('tradeModal').classList.add('open');
   hideTradePreview();
 }
 
 function closeTradeModal() {
-  const modal = document.getElementById('tradeModal');
-  modal.classList.remove('open');
-  modal.classList.remove('zoomed');
+  document.getElementById('tradeModal').classList.remove('open');
   document.getElementById('tradeModalImg').src = '';
-  document.getElementById('tradeModalZoomBtn').textContent = '⤢';
   _tradeModalKey = null;
-}
-
-function toggleZoom() {
-  const modal = document.getElementById('tradeModal');
-  const btn = document.getElementById('tradeModalZoomBtn');
-  const zoomed = modal.classList.toggle('zoomed');
-  btn.textContent = zoomed ? '⤡' : '⤢';
 }
 
 function deleteTradeImg() {
@@ -3663,7 +3453,6 @@ function deleteTradeImg() {
 
 // Attach modal and preview listeners once DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('pdfModal').addEventListener('click', function(e){ if(e.target===this) closePdfModal(); });
   document.getElementById('tradeModal').addEventListener('click', function(e){
     if (e.target === this) closeTradeModal();
   });
@@ -5087,26 +4876,12 @@ function renderLongSide(monthIdx) {
 <!-- ═══════ TRADE IMAGE HOVER PREVIEW ═══════ -->
 <div id="tradeHoverPreview"><img id="tradeHoverImg" src="" alt=""></div>
 
-<!-- ═══════ PDF MODAL ═══════ -->
-<div id="pdfModal" style="position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.92);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:0;display:none;">
-  <div style="position:relative;width:92vw;height:90vh;background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
-      <span id="pdfModalName" style="font-family:'DM Mono',monospace;font-size:11px;color:#e8634a;letter-spacing:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70vw;">—</span>
-      <div style="display:flex;gap:8px;flex-shrink:0;">
-        <button onclick="deletePdf()" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;padding:4px 12px;border-radius:7px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;transition:all .15s;" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--red)'">🗑 Eliminar</button>
-        <button onclick="closePdfModal()" style="width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.7);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" onmouseover="this.style.background='var(--red)';this.style.borderColor='var(--red)'" onmouseout="this.style.background='rgba(0,0,0,.7)';this.style.borderColor='var(--border)'">✕</button>
-      </div>
-    </div>
-    <iframe id="pdfModalFrame" src="" style="flex:1;width:100%;border:none;" title="PDF Viewer"></iframe>
-  </div>
-</div>
 <!-- ═══════ TRADE IMAGE MODAL ═══════ -->
 <div id="tradeModal">
   <div class="modal-box">
     <button class="modal-close" onclick="closeTradeModal()">✕</button>
-    <button class="modal-zoom" id="tradeModalZoomBtn" onclick="toggleZoom()" title="Ampliar / Reducir">⤢</button>
-    <img id="tradeModalImg" src="" alt="Trade screenshot" onclick="toggleZoom()">
-    <button class="modal-del" id="tradeModalDelBtn" onclick="deleteTradeImg()">🗑 Eliminar imagen</button>
+    <img id="tradeModalImg" src="" alt="Trade screenshot">
+    <button class="modal-del" onclick="deleteTradeImg()">🗑 Eliminar imagen</button>
   </div>
 </div>
 

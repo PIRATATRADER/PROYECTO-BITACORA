@@ -1996,133 +1996,6 @@ let chartImageData = null; // Para almacenar la imagen del gráfico
 let sortBy = 'estado'; // Puede ser 'estado' o 'ticker'
 let sortOrder = 'asc'; // Puede ser 'asc' o 'desc'
 
-// ── FMP API ───────────────────────────────────────────────────────────────────
-const FMP_KEY  = 'PU9ZNYoi4aYD2CGWWCmKPljga9unY6WP';
-const FMP_BASE = 'https://financialmodelingprep.com/stable/';
-
-// Mapea mktCap en dólares al bucket del select
-function mktCapBucket(cap) {
-  if (!cap || isNaN(cap)) return '';
-  if (cap < 50e6)   return 'Nano Cap (<$50M)';
-  if (cap < 300e6)  return 'Micro Cap ($50M-$300M)';
-  if (cap < 2e9)    return 'Small Cap ($300M-$2B)';
-  if (cap < 10e9)   return 'Mid Cap ($2B-$10B)';
-  return 'Large Cap (>$10B)';
-}
-
-// Mapea floatShares al bucket del select
-function floatBucket(shares) {
-  if (!shares || isNaN(shares)) return '';
-  const m = shares / 1e6;
-  if (m < 1)   return 'Micro Low Float (<1M)';
-  if (m < 5)   return 'Ultra Low Float (1M-5M)';
-  if (m < 10)  return 'Low Float (5M-10M)';
-  if (m < 20)  return 'Medium Low Float (10M-20M)';
-  if (m < 50)  return 'Medium Float (20M-50M)';
-  if (m < 100) return 'High Float Small Cap (50M-100M)';
-  return 'Large Float (>100M)';
-}
-
-// Resalta un campo en verde brevemente
-function highlightFmp(el) {
-  el.style.transition = 'border-color 0.3s';
-  el.style.borderColor = 'var(--green)';
-  setTimeout(() => { el.style.borderColor = ''; }, 1800);
-}
-
-// Llama a FMP y rellena precio + fundamentales en el modal
-let fmpDebounce = null;
-async function fmpAutoFill(ticker) {
-  if (!ticker) return;
-  clearTimeout(fmpDebounce);
-  fmpDebounce = setTimeout(async () => {
-    try {
-      const [quoteRes, profileRes, floatRes] = await Promise.all([
-        fetch(`${FMP_BASE}quote?symbol=${ticker}&apikey=${FMP_KEY}`),
-        fetch(`${FMP_BASE}profile?symbol=${ticker}&apikey=${FMP_KEY}`),
-        fetch(`${FMP_BASE}shares-float?symbol=${ticker}&apikey=${FMP_KEY}`)
-      ]);
-      const [quoteData, profileData, floatData] = await Promise.all([
-        quoteRes.json(), profileRes.json(), floatRes.json()
-      ]);
-
-      const quote     = Array.isArray(quoteData)   ? quoteData[0]   : null;
-      const profile   = Array.isArray(profileData)  ? profileData[0]  : null;
-      const floatInfo = Array.isArray(floatData)    ? floatData[0]   : null;
-      let fmpFilled = 0;
-
-      // 1. PRECIO desde /quote
-      if (quote && quote.price) {
-        const el = document.getElementById('inputPrecioEntrada');
-        if (el && !el.value) { el.value = Number(quote.price).toFixed(3); highlightFmp(el); fmpFilled++; }
-      }
-
-      // 2. SECTOR, INDUSTRY, PAÍS, MARKET CAP desde /profile
-      if (profile) {
-        const fieldsMap = [
-          { id: 'inputSector',    val: profile.sector   },
-          { id: 'inputIndustry',  val: profile.industry },
-          { id: 'inputPais',      val: profile.country  },
-        ];
-        fieldsMap.forEach(({ id, val }) => {
-          if (!val) return;
-          const el = document.getElementById(id);
-          if (el && !el.value) { el.value = val; highlightFmp(el); fmpFilled++; }
-        });
-
-        const capBucket = mktCapBucket(profile.mktCap);
-        if (capBucket) {
-          const el = document.getElementById('inputMarketCap');
-          if (el && !el.value) { el.value = capBucket; highlightFmp(el); fmpFilled++; }
-        }
-      }
-
-      // 3. FLOAT desde /shares-float (campo correcto: floatShares)
-      if (floatInfo && floatInfo.floatShares) {
-        const flBucket = floatBucket(floatInfo.floatShares);
-        if (flBucket) {
-          const el = document.getElementById('inputFloat');
-          if (el && !el.value) { el.value = flBucket; highlightFmp(el); fmpFilled++; }
-        }
-      }
-
-      if (fmpFilled > 0) showFmpToast(ticker, quote, profile, floatInfo, fmpFilled);
-
-    } catch(e) { console.warn('FMP error:', e); }
-  }, 650);
-}
-
-function showFmpToast(ticker, quote, profile, floatInfo, filled) {
-  const old = document.getElementById('fmpToast');
-  if (old) old.remove();
-
-  const price  = quote?.price != null ? `$${Number(quote.price).toFixed(2)}` : null;
-  const chg    = quote?.changesPercentage != null ? Number(quote.changesPercentage) : null;
-  const chgStr = chg != null ? `<span style="color:${chg>=0?'var(--green)':'var(--red)'};font-weight:700;">${chg>=0?'+':''}${chg.toFixed(2)}%</span>` : '';
-  const vol    = quote?.volume ? Number(quote.volume).toLocaleString() : null;
-  const flStr  = floatInfo?.floatShares ? floatBucket(floatInfo.floatShares) : null;
-
-  const lines = [
-    price ? `💲 <strong>${price}</strong> ${chgStr}` : null,
-    vol   ? `📊 Vol: ${vol}` : null,
-    flStr ? `🔢 Float: ${flStr}` : null,
-  ].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
-
-  const toast = document.createElement('div');
-  toast.id = 'fmpToast';
-  toast.innerHTML = `<span style="color:var(--green);font-weight:700;">⚡ FMP · ${ticker}</span> — ${filled} campo${filled>1?'s':''} rellenado${filled>1?'s':''}<br><span style="font-size:11px;color:var(--muted2);">${lines}</span>`;
-  toast.style.cssText = `
-    position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
-    background:var(--bg3); border:1px solid var(--green); border-radius:10px;
-    padding:12px 22px; font-size:13px; color:var(--text); z-index:9999;
-    box-shadow:0 4px 20px rgba(0,230,118,0.2); white-space:nowrap;
-    animation:fadeUp 0.3s ease forwards;
-  `;
-  document.body.appendChild(toast);
-  setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity 0.4s'; setTimeout(()=>toast.remove(),400); }, 5000);
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   console.log('=== INICIANDO APLICACIÓN ===');
@@ -2849,20 +2722,14 @@ function initTickerAutofill() {
 
   tickerInput.addEventListener('blur', () => {
     const val = tickerInput.value.toUpperCase().trim();
-    if (val) {
-      autoFillFromTicker(val);
-      fmpAutoFill(val);
-    }
+    if (val) autoFillFromTicker(val);
   });
 
   // También al presionar Enter en el campo ticker
   tickerInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const val = tickerInput.value.toUpperCase().trim();
-      if (val) {
-        autoFillFromTicker(val);
-        fmpAutoFill(val);
-      }
+      if (val) autoFillFromTicker(val);
     }
   });
 }
