@@ -2358,26 +2358,73 @@ window._sortTrades = function(col) {
 function _parseFecha(f) {
   if (!f) return 0;
   const months = {ENE:0,FEB:1,MAR:2,ABR:3,MAY:4,JUN:5,JUL:6,AGO:7,SEP:8,OCT:9,NOV:10,DIC:11};
+  // Formato 26MAR26
   const m = f.match(/^(\d{2})([A-Z]{3})(\d{2})$/i);
-  if (!m) return 0;
-  const day = parseInt(m[1],10);
-  const mon = months[(m[2]||'').toUpperCase()] ?? 0;
-  const yr  = 2000 + parseInt(m[3],10);
-  return yr * 10000 + mon * 100 + day;
+  if (m) {
+    const day = parseInt(m[1],10);
+    const mon = months[(m[2]||'').toUpperCase()] ?? 0;
+    const yr  = 2000 + parseInt(m[3],10);
+    return yr * 10000 + mon * 100 + day;
+  }
+  // Formato 26-04-06 (YY-MM-DD) o 2026-04-06
+  const m2 = f.match(/^(\d{2,4})-(\d{2})-(\d{2})$/);
+  if (m2) {
+    const yr  = m2[1].length === 2 ? 2000 + parseInt(m2[1],10) : parseInt(m2[1],10);
+    const mon = parseInt(m2[2],10) - 1;
+    const day = parseInt(m2[3],10);
+    return yr * 10000 + mon * 100 + day;
+  }
+  return 0;
 }
+
 function _monthKey(f) {
-  // Devuelve "MMMYY" para agrupar por mes
   if (!f) return 'N/A';
+  // Formato 26MAR26
   const m = f.match(/^(\d{2})([A-Z]{3})(\d{2})$/i);
-  if (!m) return f.slice(2) || 'N/A';
-  return (m[2]+m[3]).toUpperCase(); // p.ej. "ENE25"
+  if (m) return (m[2]+m[3]).toUpperCase(); // "MAR26"
+  // Formato 26-04-06 o 2026-04-06
+  const m2 = f.match(/^(\d{2,4})-(\d{2})-(\d{2})$/);
+  if (m2) {
+    const yr = m2[1].length === 2 ? m2[1] : m2[1].slice(2); // "26"
+    return m2[2] + yr; // "0426"
+  }
+  return 'N/A';
 }
+
 function _monthLabel(key) {
-  const nombres = {ENE:'Enero',FEB:'Febrero',MAR:'Marzo',ABR:'Abril',MAY:'Mayo',JUN:'Junio',
-                   JUL:'Julio',AGO:'Agosto',SEP:'Septiembre',OCT:'Octubre',NOV:'Noviembre',DIC:'Diciembre'};
+  const MESES_LARGO = {
+    '01':'ENERO','02':'FEBRERO','03':'MARZO','04':'ABRIL','05':'MAYO','06':'JUNIO',
+    '07':'JULIO','08':'AGOSTO','09':'SEPTIEMBRE','10':'OCTUBRE','11':'NOVIEMBRE','12':'DICIEMBRE',
+    'ENE':'ENERO','FEB':'FEBRERO','MAR':'MARZO','ABR':'ABRIL','MAY':'MAYO','JUN':'JUNIO',
+    'JUL':'JULIO','AGO':'AGOSTO','SEP':'SEPTIEMBRE','OCT':'OCTUBRE','NOV':'NOVIEMBRE','DIC':'DICIEMBRE'
+  };
+  // Formato "MAR26"
   const m = key.match(/^([A-Z]{3})(\d{2})$/i);
-  if (!m) return key;
-  return (nombres[m[1].toUpperCase()]||m[1]) + ' 20' + m[2];
+  if (m) return (MESES_LARGO[m[1].toUpperCase()]||m[1]) + ' 20' + m[2];
+  // Formato "0426"
+  const m2 = key.match(/^(\d{2})(\d{2})$/);
+  if (m2) return (MESES_LARGO[m2[1]]||m2[1]) + ' 20' + m2[2];
+  return key;
+}
+
+// Formatea fecha a "01 ABR 2026"
+function _formatDayLabel(f) {
+  if (!f) return f;
+  const MESES_CORTO = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  // Formato 26MAR26
+  const m = f.match(/^(\d{2})([A-Z]{3})(\d{2})$/i);
+  if (m) {
+    const mes = m[2].toUpperCase();
+    return m[1] + ' ' + mes + ' 20' + m[3];
+  }
+  // Formato 26-04-06 o 2026-04-06
+  const m2 = f.match(/^(\d{2,4})-(\d{2})-(\d{2})$/);
+  if (m2) {
+    const yr  = m2[1].length === 2 ? '20' + m2[1] : m2[1];
+    const mon = parseInt(m2[2],10) - 1;
+    return m2[3] + ' ' + MESES_CORTO[mon] + ' ' + yr;
+  }
+  return f;
 }
 
 // Estado de acordeón — qué meses y días están abiertos
@@ -2529,7 +2576,7 @@ function renderTradesTable() {
       html += '<tr onclick="window._toggleDay(\'' + mk + '\',\'' + dk + '\',event)" style="cursor:pointer;background:rgba(68,138,255,0.05);border-top:1px solid var(--border);user-select:none;" onmouseenter="this.style.background=\'rgba(68,138,255,0.1)\'" onmouseleave="this.style.background=\'rgba(68,138,255,0.05)\'">'
         + '<td colspan="4" style="padding:7px 12px 7px 28px;font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted2);letter-spacing:1px;">'
         + '<span style="margin-right:7px;color:#448aff66;">' + dArrow + '</span>'
-        + dk + '</td>'
+        + _formatDayLabel(dk) + '</td>'
         + '<td class="td-mono" style="color:' + dCol + ';font-size:10px;text-align:right;padding-right:8px;">' + (dayPNL>=0?'+':'') + '$' + Math.abs(dayPNL).toFixed(0) + '</td>'
         + '<td class="td-mono" style="color:' + dWrCol + ';font-size:10px;text-align:center;">' + dayWR + '%</td>'
         + '<td style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);text-align:center;">' + tradesInDay.length + '</td>'
@@ -2553,7 +2600,7 @@ function renderTradesTable() {
           pnlColor = t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
         }
         html += '<tr onclick="openModal(window._recentTrades[' + idx + '])" title="Click para ver detalle" style="background:var(--bg2);" onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'var(--bg2)\'">'
-          + '<td class="td-mono" style="padding-left:44px;color:var(--muted);font-size:10px;">↳&nbsp;' + (t.fecha||'-') + '</td>'
+          + '<td class="td-mono" style="padding-left:44px;color:var(--muted);font-size:10px;">↳&nbsp;' + _formatDayLabel(t.fecha||'-') + '</td>'
           + '<td><strong>' + hasImg + (t.stock||'-') + '</strong></td>'
           + '<td><span class="badge badge-blue">' + (t.setup||'-') + '</span></td>'
           + '<td>' + (t.pais||'-') + '</td>'

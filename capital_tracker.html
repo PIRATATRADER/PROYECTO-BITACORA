@@ -3474,11 +3474,15 @@ function renderPdfCell(wrap, key) {
   const dayKey = key.replace(/^pdf_\d+_/, '');
   const row = D[dayKey] || {};
   const url = row.pdfFiles && row.pdfFiles[key];
-  const name = row.pdfNames && row.pdfNames[key];
   if (url) {
-    const label = name || 'PDF';
+    // Siempre calcular el label desde la fecha del dayKey (YYYY-MM-DD)
+    const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    const parts = dayKey.split('-');
+    const label = parts.length === 3
+      ? `${parts[2]} ${MESES[parseInt(parts[1])-1]} ${parts[0]}`
+      : dayKey;
     wrap.innerHTML = `<button class="pdf-thumb-btn" onclick="openPdfModal('${key}')" title="${label}">
-      📄 <span style="max-width:80px;overflow:hidden;text-overflow:ellipsis;">${label}</span>
+      📄 <span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;">${label}</span>
     </button>`;
   } else {
     wrap.innerHTML = `<button class="pdf-add-btn" title="Añadir enlace PDF" onclick="uploadPdf('${key}')">📄</button>`;
