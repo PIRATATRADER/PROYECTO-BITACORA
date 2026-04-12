@@ -3533,14 +3533,21 @@ function openPdfModal(key) {
   const name = row.pdfNames && row.pdfNames[key];
   if (!url) return;
   _pdfModalKey = key;
-  document.getElementById('pdfModalFrame').src = url;
   document.getElementById('pdfModalName').textContent = name || 'PDF';
   document.getElementById('pdfModal').style.display = 'flex';
 }
 
+function openPdfNewTab() {
+  if (!_pdfModalKey) return;
+  const dayKey = _pdfModalKey.replace(/^pdf_\d+_/, '');
+  const row = D[dayKey] || {};
+  const url = row.pdfFiles && row.pdfFiles[_pdfModalKey];
+  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  closePdfModal();
+}
+
 function closePdfModal() {
   document.getElementById('pdfModal').style.display = 'none';
-  document.getElementById('pdfModalFrame').src = '';
   _pdfModalKey = null;
 }
 
@@ -5088,16 +5095,17 @@ function renderLongSide(monthIdx) {
 <div id="tradeHoverPreview"><img id="tradeHoverImg" src="" alt=""></div>
 
 <!-- ═══════ PDF MODAL ═══════ -->
-<div id="pdfModal" style="position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.92);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:0;display:none;">
-  <div style="position:relative;width:92vw;height:90vh;background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
-      <span id="pdfModalName" style="font-family:'DM Mono',monospace;font-size:11px;color:#e8634a;letter-spacing:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70vw;">—</span>
-      <div style="display:flex;gap:8px;flex-shrink:0;">
-        <button onclick="deletePdf()" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;padding:4px 12px;border-radius:7px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;transition:all .15s;" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--red)'">🗑 Eliminar</button>
-        <button onclick="closePdfModal()" style="width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.7);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" onmouseover="this.style.background='var(--red)';this.style.borderColor='var(--red)'" onmouseout="this.style.background='rgba(0,0,0,.7)';this.style.borderColor='var(--border)'">✕</button>
-      </div>
+<div id="pdfModal" style="position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;display:none;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 28px;min-width:320px;max-width:480px;display:flex;flex-direction:column;gap:16px;box-shadow:0 20px 60px rgba(0,0,0,.7);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#e8634a;">📄 PDF</span>
+      <button onclick="closePdfModal()" style="width:28px;height:28px;border-radius:50%;background:transparent;border:1px solid var(--border);color:var(--muted2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">✕</button>
     </div>
-    <iframe id="pdfModalFrame" src="" style="flex:1;width:100%;border:none;" title="PDF Viewer"></iframe>
+    <div id="pdfModalName" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);letter-spacing:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
+    <div style="display:flex;gap:10px;">
+      <button id="pdfOpenBtn" onclick="openPdfNewTab()" style="flex:1;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:1px solid #e8634a;background:#e8634a15;color:#e8634a;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='#e8634a';this.style.color='#fff'" onmouseout="this.style.background='#e8634a15';this.style.color='#e8634a'">🔗 Abrir PDF</button>
+      <button onclick="deletePdf()" style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 14px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;transition:all .15s;" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--red)'">🗑</button>
+    </div>
   </div>
 </div>
 <!-- ═══════ TRADE IMAGE MODAL ═══════ -->
