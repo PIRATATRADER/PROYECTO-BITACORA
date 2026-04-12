@@ -4887,19 +4887,21 @@ async function quickAddTrade(estado) {
     ejecucionStartTime: estado === 'ejecucion' ? Date.now() : null,
   };
 
-  // Añadir a allTrades y guardar
-  allTrades.push(newTrade);
+  // Guardar en Firestore (el onSnapshot se encarga de añadirlo a allTrades automáticamente)
   try {
-    if (typeof db !== 'undefined') {
-      const ref = await db.collection('trades').add(newTrade);
-      newTrade.id = ref.id;
-      allTrades[allTrades.length - 1].id = ref.id;
+    const savedId = await saveSingleTrade(newTrade);
+    newTrade.id = savedId;
+  } catch(e) {
+    console.warn('Firestore save error:', e);
+    // Si falla Firestore, añadir manualmente para que aparezca en el dashboard
+    if (!allTrades.some(t => t.id === newTrade.id)) {
+      allTrades.push(newTrade);
+      renderDashboard();
     }
-  } catch(e) { console.warn('Firestore save error:', e); }
+  }
 
-  // Cerrar panel y re-renderizar
+  // Cerrar panel (el onSnapshot ya hará renderDashboard si Firestore funcionó)
   toggleQuickPanel();
-  renderDashboard();
 
   // Toast confirmación
   const estadoLabel = estado === 'estudio' ? '📋 ESTUDIO' : '▶ EJECUCIÓN';
