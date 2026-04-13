@@ -544,8 +544,23 @@ let saveTimer = null;
 let skipNextSnapshot = false;
 
 function save() {
-  // Respaldo local inmediato
-  try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
+  // Respaldo local — si hay QuotaExceeded por imágenes antiguas, limpia y reintenta
+  try {
+    localStorage.setItem(SK, JSON.stringify(D));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') {
+      // Limpiar imágenes base64 antiguas para liberar espacio
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('tradely_img_') || k.startsWith('trade_img_') || k.startsWith('ai_img_'))) {
+          localStorage.removeItem(k);
+        }
+      }
+      try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e2) {
+        console.warn('localStorage lleno incluso tras limpiar — solo Firebase');
+      }
+    }
+  }
   // Marcar para ignorar el siguiente snapshot propio
   skipNextSnapshot = true;
   // Debounce: guardar en Firebase 300ms después de la última edición
@@ -3405,56 +3420,46 @@ function initTradeImgs() {
   });
 }
 
-// ── TRADELY IMAGE SYSTEM ──────────────────────────────────────────────────────
+// ── TRADELY IMAGE SYSTEM (Google Drive URL) ───────────────────────────────────
+// Igual que el sistema PDF: el usuario pega una URL de Google Drive
+// La URL se guarda en D (Firestore) — sin localStorage, sin base64
+
 function renderTradelyCell(wrap, key) {
-  const img = localStorage.getItem(key);
-  if (img) {
-    wrap.innerHTML = `<img class="trade-thumb tradely-thumb" src="${img}" alt="Tradely" data-key="${key}"
-      onclick="openTradelyModal('${key}')"
-      onmouseenter="showTradePreview(event,'${key}')"
-      onmouseleave="hideTradePreview()">`;
+  const dayKey = key.replace(/^tradely_img_\d+_/, '');
+  const row = D[dayKey] || {};
+  const url = row.tradelyImgs && row.tradelyImgs[key];
+  if (url) {
+    wrap.innerHTML = `<button class="tradely-add-btn" style="background:#7c6af715;border:1px solid #7c6af755;border-radius:6px;padding:4px 8px;cursor:pointer;color:#7c6af7;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;transition:all .15s;white-space:nowrap;"
+      onclick="openImgUrlModal('${key}','tradely')" title="Ver / cambiar imagen">
+      📊 PNL
+    </button>`;
   } else {
-    wrap.innerHTML = `<button class="trade-add-btn tradely-add-btn" title="Subir captura PNL" onclick="uploadTradelyImg('${key}')">📊</button>`;
+    wrap.innerHTML = `<button class="trade-add-btn tradely-add-btn" title="Añadir captura PNL (Google Drive)" onclick="openImgUrlModal('${key}','tradely')">📊</button>`;
   }
 }
 
 function uploadTradelyImg(key) {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      localStorage.setItem(key, ev.target.result);
-      document.querySelectorAll(`.tradely-thumb-wrap[data-key="${key}"]`).forEach(w => renderTradelyCell(w, key));
-      showToast('✓ Captura PNL guardada');
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
+  openImgUrlModal(key, 'tradely');
 }
 
 let _tradelyModalKey = null;
 
 function openTradelyModal(key) {
-  const img = localStorage.getItem(key);
-  if (!img) return;
-  _tradelyModalKey = key;
-  document.getElementById('tradeModalImg').src = img;
-  document.getElementById('tradeModal').classList.add('open');
-  // Swap delete button to use tradely key
-  document.getElementById('tradeModalDelBtn').onclick = deleteTradelyImg;
-  hideTradePreview();
+  openImgUrlModal(key, 'tradely');
 }
 
 function deleteTradelyImg() {
   if (!_tradelyModalKey) return;
   if (!confirm('¿Eliminar este reporte Tradely?')) return;
-  localStorage.removeItem(_tradelyModalKey);
-  document.querySelectorAll(`.tradely-thumb-wrap[data-key="${_tradelyModalKey}"]`).forEach(w => renderTradelyCell(w, _tradelyModalKey));
-  closeTradeModal();
+  const key = _tradelyModalKey;
+  const dayKey = key.replace(/^tradely_img_\d+_/, '');
+  if (D[dayKey] && D[dayKey].tradelyImgs) {
+    delete D[dayKey].tradelyImgs[key];
+    if (!Object.keys(D[dayKey].tradelyImgs).length) delete D[dayKey].tradelyImgs;
+  }
+  save();
+  document.querySelectorAll(`.tradely-thumb-wrap[data-key="${key}"]`).forEach(w => renderTradelyCell(w, key));
+  closeImgUrlModal();
   _tradelyModalKey = null;
   showToast('Reporte Tradely eliminado');
 }
@@ -3583,107 +3588,160 @@ async function deletePdf() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── TRADE SCREENSHOT SYSTEM (Google Drive URL) ────────────────────────────────
+// Mismo sistema que PDF y Tradely: URL de Google Drive guardada en Firestore
+
 function renderTradeCell(wrap, key) {
-  const img = localStorage.getItem(key);
-  if (img) {
-    wrap.innerHTML = `<img class="trade-thumb" src="${img}" alt="trade" data-key="${key}" onclick="openTradeModal('${key}')" onmouseenter="showTradePreview(event,'${key}')" onmouseleave="hideTradePreview()">`;
+  const dayKey = key.replace(/^trade_img_\d+_/, '').replace(/^tradely_img_\d+_/, '');
+  const row = D[dayKey] || {};
+  const url = row.tradeImgs && row.tradeImgs[key];
+  if (url) {
+    // Convertir URL de Drive a URL directa de imagen para mostrar thumbnail
+    const directUrl = convertDriveImgUrl(url);
+    wrap.innerHTML = `<button class="trade-add-btn" style="background:#f5a62315;border:1px solid #f5a62355;border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--gold);font-family:'DM Mono',monospace;font-size:10px;transition:all .15s;white-space:nowrap;"
+      onclick="openImgUrlModal('${key}','trade')" title="Ver / cambiar captura">
+      📸
+    </button>`;
   } else {
-    wrap.innerHTML = `<button class="trade-add-btn" title="Añadir captura" onclick="uploadTradeImg('${key}')">+</button>`;
+    wrap.innerHTML = `<button class="trade-add-btn" title="Añadir captura (Google Drive)" onclick="openImgUrlModal('${key}','trade')">+</button>`;
   }
 }
 
 function uploadTradeImg(key) {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      localStorage.setItem(key, ev.target.result);
-      document.querySelectorAll(`.trade-thumb-wrap[data-key="${key}"]`).forEach(w => renderTradeCell(w, key));
-      showToast('✓ Captura guardada');
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
+  openImgUrlModal(key, 'trade');
 }
-
-
 
 function showTradePreview(e, key) {
-  const img = localStorage.getItem(key);
-  if (!img) return;
-  const preview = document.getElementById('tradeHoverPreview');
-  const pImg = document.getElementById('tradeHoverImg');
-  pImg.src = img;
-  preview.style.display = 'block';
-  positionTradePreview(e);
+  // Preview ya no disponible con URLs de Drive (CORS) — abre modal al click
 }
 
-function positionTradePreview(e) {
-  const preview = document.getElementById('tradeHoverPreview');
-  if (preview.style.display === 'none') return;
-  const pw = 524, ph = 364;
-  const vw = window.innerWidth, vh = window.innerHeight;
-  let x = e.clientX + 16, y = e.clientY - ph / 2;
-  if (x + pw > vw) x = e.clientX - pw - 16;
-  if (y < 8) y = 8;
-  if (y + ph > vh - 8) y = vh - ph - 8;
-  preview.style.left = x + 'px';
-  preview.style.top  = y + 'px';
-}
-
+function positionTradePreview(e) {}
 function hideTradePreview() {
-  document.getElementById('tradeHoverPreview').style.display = 'none';
+  const el = document.getElementById('tradeHoverPreview');
+  if (el) el.style.display = 'none';
 }
 
 function openTradeModal(key) {
-  const img = localStorage.getItem(key);
-  if (!img) return;
-  _tradeModalKey = key;
-  _tradelyModalKey = null;
-  document.getElementById('tradeModalImg').src = img;
-  document.getElementById('tradeModalDelBtn').onclick = deleteTradeImg;
-  document.getElementById('tradeModal').classList.add('open');
-  hideTradePreview();
+  openImgUrlModal(key, 'trade');
 }
 
 function closeTradeModal() {
-  const modal = document.getElementById('tradeModal');
-  modal.classList.remove('open');
-  modal.classList.remove('zoomed');
-  document.getElementById('tradeModalImg').src = '';
-  document.getElementById('tradeModalZoomBtn').textContent = '⤢';
-  _tradeModalKey = null;
+  closeImgUrlModal();
 }
 
-function toggleZoom() {
-  const modal = document.getElementById('tradeModal');
-  const btn = document.getElementById('tradeModalZoomBtn');
-  const zoomed = modal.classList.toggle('zoomed');
-  btn.textContent = zoomed ? '⤡' : '⤢';
-}
+function toggleZoom() {}
 
 function deleteTradeImg() {
   if (!_tradeModalKey) return;
-  if (!confirm('¿Eliminar esta captura y sus datos IA?')) return;
-  localStorage.removeItem(_tradeModalKey);
-  document.querySelectorAll(`.trade-thumb-wrap[data-key="${_tradeModalKey}"]`).forEach(w => renderTradeCell(w, _tradeModalKey));
-  closeTradeModal();
+  if (!confirm('¿Eliminar esta captura?')) return;
+  const key = _tradeModalKey;
+  const dayKey = key.replace(/^trade_img_\d+_/, '');
+  if (D[dayKey] && D[dayKey].tradeImgs) {
+    delete D[dayKey].tradeImgs[key];
+    if (!Object.keys(D[dayKey].tradeImgs).length) delete D[dayKey].tradeImgs;
+  }
+  save();
+  document.querySelectorAll(`.trade-thumb-wrap[data-key="${key}"]`).forEach(w => renderTradeCell(w, key));
+  closeImgUrlModal();
   showToast('Captura eliminada');
 }
+
+// Convierte URL de Google Drive a URL directa para imagen
+function convertDriveImgUrl(url) {
+  const m1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  const fileId = m1 ? m1[1] : (m2 ? m2[1] : null);
+  if (fileId) return `https://drive.google.com/file/d/${fileId}/view`;
+  return url;
+}
+
+// ── MODAL IMAGEN (Google Drive) ───────────────────────────────────────────────
+let _imgModalKey = null;
+let _imgModalType = null; // 'trade' | 'tradely'
+
+function openImgUrlModal(key, type) {
+  _imgModalKey = key;
+  _imgModalType = type;
+  if (type === 'tradely') _tradelyModalKey = key;
+  else _tradeModalKey = key;
+
+  const dayKey = type === 'tradely'
+    ? key.replace(/^tradely_img_\d+_/, '')
+    : key.replace(/^trade_img_\d+_/, '');
+  const row = D[dayKey] || {};
+  const store = type === 'tradely' ? row.tradelyImgs : row.tradeImgs;
+  const existingUrl = store && store[key] ? store[key] : '';
+
+  // Fecha legible
+  const parts = dayKey.split('-');
+  const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  const label = parts.length === 3
+    ? `${parts[2]} ${MESES[parseInt(parts[1])-1]} ${parts[0]}`
+    : dayKey;
+
+  document.getElementById('imgModalTitle').textContent = type === 'tradely' ? '📊 PNL · GOOGLE DRIVE' : '📸 CAPTURA · GOOGLE DRIVE';
+  document.getElementById('imgModalLabel').textContent = label;
+  document.getElementById('imgUrlInput').value = existingUrl;
+  document.getElementById('imgModalDelBtn').style.display = existingUrl ? 'inline-flex' : 'none';
+  document.getElementById('imgModalOpenBtn').style.display = existingUrl ? 'inline-flex' : 'none';
+  document.getElementById('imgModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('imgUrlInput').focus(), 100);
+}
+
+function closeImgUrlModal() {
+  document.getElementById('imgModal').style.display = 'none';
+  _imgModalKey = null;
+  _imgModalType = null;
+  _tradeModalKey = null;
+  _tradelyModalKey = null;
+}
+
+function saveImgUrl() {
+  if (!_imgModalKey) return;
+  const rawUrl = document.getElementById('imgUrlInput').value.trim();
+  if (!rawUrl) { showToast('⚠ Pega una URL de Google Drive'); return; }
+  const url = convertDriveImgUrl(rawUrl);
+  const type = _imgModalType;
+  const dayKey = type === 'tradely'
+    ? _imgModalKey.replace(/^tradely_img_\d+_/, '')
+    : _imgModalKey.replace(/^trade_img_\d+_/, '');
+  if (!D[dayKey]) D[dayKey] = {};
+  if (type === 'tradely') {
+    if (!D[dayKey].tradelyImgs) D[dayKey].tradelyImgs = {};
+    D[dayKey].tradelyImgs[_imgModalKey] = url;
+    document.querySelectorAll(`.tradely-thumb-wrap[data-key="${_imgModalKey}"]`).forEach(w => renderTradelyCell(w, _imgModalKey));
+  } else {
+    if (!D[dayKey].tradeImgs) D[dayKey].tradeImgs = {};
+    D[dayKey].tradeImgs[_imgModalKey] = url;
+    document.querySelectorAll(`.trade-thumb-wrap[data-key="${_imgModalKey}"]`).forEach(w => renderTradeCell(w, _imgModalKey));
+  }
+  save();
+  closeImgUrlModal();
+  showToast('✓ Imagen enlazada correctamente');
+}
+
+function openImgInNewTab() {
+  if (!_imgModalKey || !_imgModalType) return;
+  const dayKey = _imgModalType === 'tradely'
+    ? _imgModalKey.replace(/^tradely_img_\d+_/, '')
+    : _imgModalKey.replace(/^trade_img_\d+_/, '');
+  const row = D[dayKey] || {};
+  const store = _imgModalType === 'tradely' ? row.tradelyImgs : row.tradeImgs;
+  const url = store && store[_imgModalKey];
+  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  closeImgUrlModal();
+}
+
+function deleteImgUrl() {
+  if (_imgModalType === 'tradely') deleteTradelyImg();
+  else deleteTradeImg();
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Attach modal and preview listeners once DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pdfModal').addEventListener('click', function(e){ if(e.target===this) closePdfModal(); });
-  document.getElementById('tradeModal').addEventListener('click', function(e){
-    if (e.target === this) closeTradeModal();
-  });
-  document.addEventListener('mousemove', e => {
-    if (document.getElementById('tradeHoverPreview').style.display !== 'none') positionTradePreview(e);
-  });
+  document.getElementById('imgModal').addEventListener('click', function(e){ if(e.target===this) closeImgUrlModal(); });
 });
 
 // ── DATOS IA PRE-INYECTADOS ───────────────────────────────────────────────────
@@ -5101,8 +5159,7 @@ function renderLongSide(monthIdx) {
 <!-- ═══════ TRADE IMAGE HOVER PREVIEW ═══════ -->
 <div id="tradeHoverPreview"><img id="tradeHoverImg" src="" alt=""></div>
 
-<!-- ═══════ PDF MODAL ═══════ -->
-<div id="pdfModal" style="position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;display:none;">
+<!-- ═══════ PDF MODAL ═══════ --> style="position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;display:none;">
   <div id="pdfModalMode" data-mode="add" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 28px;width:480px;max-width:95vw;display:flex;flex-direction:column;gap:16px;box-shadow:0 20px 60px rgba(0,0,0,.7);">
     
     <!-- Header -->
@@ -5139,13 +5196,32 @@ function renderLongSide(monthIdx) {
     </div>
   </div>
 </div>
-<!-- ═══════ TRADE IMAGE MODAL ═══════ -->
-<div id="tradeModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeTradeModal()">✕</button>
-    <button class="modal-zoom" id="tradeModalZoomBtn" onclick="toggleZoom()" title="Ampliar / Reducir">⤢</button>
-    <img id="tradeModalImg" src="" alt="Trade screenshot" onclick="toggleZoom()">
-    <button class="modal-del" id="tradeModalDelBtn" onclick="deleteTradeImg()">🗑 Eliminar imagen</button>
+<!-- ═══════ IMAGE URL MODAL (Google Drive) ═══════ -->
+<div id="imgModal" style="position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;display:none;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 28px;width:480px;max-width:95vw;display:flex;flex-direction:column;gap:16px;box-shadow:0 20px 60px rgba(0,0,0,.7);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span id="imgModalTitle" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#7c6af7;">📸 CAPTURA · GOOGLE DRIVE</span>
+      <button onclick="closeImgUrlModal()" style="width:28px;height:28px;border-radius:50%;background:transparent;border:1px solid var(--border);color:var(--muted2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">✕</button>
+    </div>
+    <div id="imgModalLabel" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);letter-spacing:1px;"></div>
+    <div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">Enlace de Google Drive</div>
+      <input id="imgUrlInput" type="text" placeholder="https://drive.google.com/file/d/..." 
+        style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);outline:none;transition:border-color .15s;"
+        onfocus="this.style.borderColor='#7c6af7'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter') saveImgUrl()">
+    </div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);line-height:1.8;">
+      <div style="color:var(--gold);margin-bottom:4px;letter-spacing:1px;">CÓMO OBTENER EL ENLACE:</div>
+      <div>1. Sube la imagen a Google Drive</div>
+      <div>2. Clic derecho → <span style="color:var(--text)">Compartir</span> → <span style="color:var(--text)">Cualquiera con el enlace</span></div>
+      <div>3. Copia el enlace y pégalo aquí</div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="saveImgUrl()" style="flex:1;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:1px solid #7c6af7;background:#7c6af715;color:#7c6af7;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='#7c6af7';this.style.color='#fff'" onmouseout="this.style.background='#7c6af715';this.style.color='#7c6af7'">💾 Guardar</button>
+      <button id="imgModalOpenBtn" onclick="openImgInNewTab()" style="flex:1;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:1px solid var(--cyan);background:#00b0ff15;color:var(--cyan);cursor:pointer;transition:all .15s;display:none;" onmouseover="this.style.background='var(--cyan)';this.style.color='#000'" onmouseout="this.style.background='#00b0ff15';this.style.color='var(--cyan)'">🔗 Abrir</button>
+      <button id="imgModalDelBtn" onclick="deleteImgUrl()" style="font-family:'DM Mono',monospace;font-size:11px;padding:10px 14px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;transition:all .15s;display:none;" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--red)'">🗑</button>
+    </div>
   </div>
 </div>
 
