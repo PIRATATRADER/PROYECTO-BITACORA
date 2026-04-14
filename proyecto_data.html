@@ -1835,13 +1835,17 @@
                 <option value="Canada">
               </datalist>
             </div>
+          </div>
+          <div class="form-grid-2" style="margin-top: 16px;">
             <div class="form-group">
               <label class="form-label">Sector</label>
-              <input type="text" class="form-input" id="disc_sector" placeholder="Tech, Biotech, Energy...">
+              <input type="text" class="form-input" id="disc_sector" list="disc_sectorList" placeholder="Tech, Biotech, Energy...">
+              <datalist id="disc_sectorList"></datalist>
             </div>
             <div class="form-group">
               <label class="form-label">Industry</label>
-              <input type="text" class="form-input" id="disc_industry" placeholder="Software, Pharmaceuticals...">
+              <input type="text" class="form-input" id="disc_industry" list="disc_industryList" placeholder="Software, Pharmaceuticals...">
+              <datalist id="disc_industryList"></datalist>
             </div>
           </div>
         </div>
@@ -1865,7 +1869,8 @@
               <label class="form-label">Float</label>
               <select class="form-select" id="disc_float">
                 <option value="">Seleccionar...</option>
-                <option value="Ultra Low Float (<5M)">Ultra Low Float (&lt;5M)</option>
+                <option value="Micro Low Float (<1M)">Micro Low Float (&lt;1M)</option>
+                <option value="Ultra Low Float (1M-5M)">Ultra Low Float (1M-5M)</option>
                 <option value="Low Float (5M-10M)">Low Float (5M-10M)</option>
                 <option value="Medium Low Float (10M-20M)">Medium Low Float (10M-20M)</option>
                 <option value="Medium Float (20M-50M)">Medium Float (20M-50M)</option>
@@ -1880,8 +1885,11 @@
                 <option value="0%-25%">0%-25%</option>
                 <option value="25%-50%">25%-50%</option>
                 <option value=">50%">&gt;50%</option>
+                <option value="NO DISPONIBLE">NO DISPONIBLE</option>
               </select>
             </div>
+          </div>
+          <div class="form-grid-3" style="margin-top: 16px;">
             <div class="form-group">
               <label class="form-label">Inst. Own</label>
               <select class="form-select" id="disc_instOwn">
@@ -1913,40 +1921,52 @@
               </select>
             </div>
           </div>
-
-          <!-- DILUCIÓN -->
-          <div style="margin-top:16px;">
-            <label class="form-label" style="display:block;margin-bottom:10px;">Dilución</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;">
-              <label class="checkbox-label"><input type="checkbox" id="disc_dilucionNoTiene" value="• NO TIENE DILUCIÓN"><span>• NO TIENE DILUCIÓN</span></label>
-              <label class="checkbox-label"><input type="checkbox" id="disc_dilucionS1" value="S-1 OFFERING"><span>S-1 OFFERING</span></label>
-              <label class="checkbox-label" style="display:flex;align-items:center;gap:6px;">
-                <input type="checkbox" id="disc_dilucionWarrants" value="WARRANTS"><span>WARRANTS</span>
-                <input type="number" step="0.01" id="disc_warrantsPrice" class="form-input" placeholder="$" style="width:58px;padding:4px 6px;font-size:11px;">
-                <input type="number" step="0.1" id="disc_warrantsAmount" class="form-input" placeholder="M" style="width:52px;padding:4px 6px;font-size:11px;">
-              </label>
-              <label class="checkbox-label" style="display:flex;align-items:center;gap:6px;">
-                <input type="checkbox" id="disc_dilucionConvNote" value="CONVERTIBLE NOTE"><span>CONV. NOTE</span>
-                <input type="number" step="0.01" id="disc_convNotePrice" class="form-input" placeholder="$" style="width:58px;padding:4px 6px;font-size:11px;">
-                <input type="number" step="0.1" id="disc_convNoteAmount" class="form-input" placeholder="M" style="width:52px;padding:4px 6px;font-size:11px;">
-              </label>
-              <label class="checkbox-label" style="display:flex;align-items:center;gap:6px;">
-                <input type="checkbox" id="disc_dilucionConvPref" value="CONVERTIBLE PREFERRED"><span>CONV. PREF</span>
-                <input type="number" step="0.01" id="disc_convPrefPrice" class="form-input" placeholder="$" style="width:58px;padding:4px 6px;font-size:11px;">
-                <input type="number" step="0.1" id="disc_convPrefAmount" class="form-input" placeholder="M" style="width:52px;padding:4px 6px;font-size:11px;">
-              </label>
-              <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;">
-                <input type="checkbox" id="disc_dilucionEquityLine" value="EQUITY LINE"><span>EQUITY LINE</span>
-                <input type="number" step="0.1" id="disc_equityLineAmount" class="form-input" placeholder="M" style="width:72px;padding:4px 8px;font-size:12px;margin-left:auto;">
-              </label>
-              <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;">
-                <input type="checkbox" id="disc_dilucionATM" value="ATM"><span>ATM</span>
-                <input type="number" step="0.1" id="disc_atmAmount" class="form-input" placeholder="M" style="width:72px;padding:4px 8px;font-size:12px;margin-left:auto;">
-              </label>
-              <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;">
-                <input type="checkbox" id="disc_dilucionShelf" value="SHELF"><span>SHELF</span>
-                <input type="number" step="0.1" id="disc_shelfAmount" class="form-input" placeholder="M" style="width:72px;padding:4px 8px;font-size:12px;margin-left:auto;">
-              </label>
+          <div class="form-grid-3" style="margin-top: 16px;">
+            <div class="form-group" style="grid-column: span 3;">
+              <label class="form-label">Dilución</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="disc_dilucionNoTiene" value="• NO TIENE DILUCIÓN">
+                  <span>• NO TIENE DILUCIÓN</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="disc_dilucionS1" value="S-1 OFFERING">
+                  <span>S-1 OFFERING</span>
+                </label>
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" id="disc_dilucionWarrants" value="WARRANTS">
+                  <span>WARRANTS</span>
+                  <input type="number" step="0.01" id="disc_warrantsPrice" class="form-input" placeholder="$" style="width: 60px; padding: 4px 6px; font-size: 11px;">
+                  <input type="number" step="0.1" id="disc_warrantsAmount" class="form-input" placeholder="M" style="width: 55px; padding: 4px 6px; font-size: 11px;">
+                </label>
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" id="disc_dilucionConvNote" value="CONVERTIBLE NOTE">
+                  <span>CONV. NOTE</span>
+                  <input type="number" step="0.01" id="disc_convNotePrice" class="form-input" placeholder="$" style="width: 60px; padding: 4px 6px; font-size: 11px;">
+                  <input type="number" step="0.1" id="disc_convNoteAmount" class="form-input" placeholder="M" style="width: 55px; padding: 4px 6px; font-size: 11px;">
+                </label>
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" id="disc_dilucionConvPref" value="CONVERTIBLE PREFERRED">
+                  <span>CONV. PREF</span>
+                  <input type="number" step="0.01" id="disc_convPrefPrice" class="form-input" placeholder="$" style="width: 60px; padding: 4px 6px; font-size: 11px;">
+                  <input type="number" step="0.1" id="disc_convPrefAmount" class="form-input" placeholder="M" style="width: 55px; padding: 4px 6px; font-size: 11px;">
+                </label>
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="disc_dilucionEquityLine" value="EQUITY LINE">
+                  <span>EQUITY LINE</span>
+                  <input type="number" step="0.1" id="disc_equityLineAmount" class="form-input" placeholder="M" style="width: 80px; padding: 4px 8px; font-size: 12px; margin-left: auto;">
+                </label>
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="disc_dilucionATM" value="ATM">
+                  <span>ATM</span>
+                  <input type="number" step="0.1" id="disc_atmAmount" class="form-input" placeholder="M" style="width: 80px; padding: 4px 8px; font-size: 12px; margin-left: auto;">
+                </label>
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="disc_dilucionShelf" value="SHELF">
+                  <span>SHELF</span>
+                  <input type="number" step="0.1" id="disc_shelfAmount" class="form-input" placeholder="M" style="width: 80px; padding: 4px 8px; font-size: 12px; margin-left: auto;">
+                </label>
+              </div>
             </div>
           </div>
         </div>
