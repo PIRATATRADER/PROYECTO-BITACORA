@@ -2395,6 +2395,20 @@ function renderDays() {
     const dayWins = finalizados.filter(t => sPNL(t) > 0).length;
     const dayWR = finalizados.length > 0 ? Math.round((dayWins / finalizados.length) * 100) : 0;
 
+    // Calcular media de R por trade (sumando rrShort + rrLong de cada trade finalizado)
+    const rValues = finalizados.map(t => {
+      const rs = t.rrShort != null ? parseFloat(t.rrShort) : null;
+      const rl = t.rrLong  != null ? parseFloat(t.rrLong)  : null;
+      // Si tiene ambos, suma los dos; si solo uno, usa ese
+      if (rs != null && rl != null) return rs + rl;
+      if (rs != null) return rs;
+      if (rl != null) return rl;
+      return null;
+    }).filter(v => v != null && !isNaN(v));
+    const avgR = rValues.length > 0 ? (rValues.reduce((a, b) => a + b, 0) / rValues.length) : null;
+    const avgRStr = avgR != null ? (avgR >= 0 ? '+' : '') + avgR.toFixed(2) + 'R' : '-';
+    const avgRColor = avgR == null ? 'var(--muted2)' : avgR > 0 ? 'var(--green)' : avgR < 0 ? 'var(--red)' : 'var(--muted2)';
+
     html += `
       <div class="day-card">
         <div class="day-header" onclick="toggleDay(this)">
@@ -2406,6 +2420,10 @@ function renderDays() {
             <div class="day-stat">
               <div class="day-stat-label">PNL</div>
               <div class="day-stat-val" style="color: ${dayPNL >= 0 ? 'var(--green)' : 'var(--red)'}">${finalizados.length > 0 ? formatPNL(dayPNL) : '-'}</div>
+            </div>
+            <div class="day-stat">
+              <div class="day-stat-label">Media R/trade</div>
+              <div class="day-stat-val" style="color: ${avgRColor}">${avgRStr}</div>
             </div>
             <div class="day-stat">
               <div class="day-stat-label">Win Rate</div>
