@@ -1548,11 +1548,15 @@
               <datalist id="sectorList">
               </datalist>
             </div>
-            <div class="form-group">
-              <label class="form-label">Industry</label>
-              <input type="text" class="form-input" id="inputIndustry" list="industryList" placeholder="Software, Pharmaceuticals...">
-              <datalist id="industryList">
-              </datalist>
+          </div>
+        </div>
+
+        <!-- PLAYBOOK -->
+        <div class="form-section">
+          <div class="form-section-title">🎯 Playbook</div>
+          <div class="form-group">
+            <label class="form-label" style="margin-bottom:10px;">Play <span style="color:var(--muted2);font-size:10px;font-weight:400;">(puedes seleccionar varios)</span></label>
+            <div id="playbook-selector" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
             </div>
           </div>
         </div>
@@ -2090,8 +2094,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCountryInput();
   loadSectorList();
   initSectorInput();
-  loadIndustryList();
-  initIndustryInput();
+  initPlaybookSelector();
   startCountdownTimers();
   initTickerAutofill();
   
@@ -2445,7 +2448,7 @@ function renderDays() {
                 <th>Float</th>
                 <th>País</th>
                 <th>Setup</th>
-                <th>Industry</th>
+                <th>Plays</th>
                 <th>Insiders</th>
                 <th>Inst. Own</th>
                 <th>Overhead</th>
@@ -2542,7 +2545,6 @@ function renderDays() {
                   trade.noticia, // noticia
                   trade.pais, // pais
                   trade.sector, // sector
-                  trade.industry, // industry
                   trade.marketCap, // m.cap
                   trade.float, // float
                   trade.insiders, // insiders
@@ -2562,7 +2564,7 @@ function renderDays() {
                   <td class="td-mono" style="font-size: 10px; ${trade.float === 'Micro Low Float (<1M)' ? 'color: #ff1744; font-weight: 700;' : ''}">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
                   <td class="td-mono">${trade.setupEntrada || '-'}</td>
-                  <td class="td-mono">${trade.industry || '-'}</td>
+                  <td class="td-mono" style="font-size:10px;">${(trade.plays && trade.plays.length) ? trade.plays.map(p=>`<span style="display:inline-block;background:rgba(177,106,255,0.15);color:var(--purple);border-radius:4px;padding:1px 6px;font-size:9px;margin:1px;">${p}</span>`).join('') : '-'}</td>
                   <td class="td-mono" style="${trade.insiders === '>50%' ? 'color:var(--red);font-weight:700;' : trade.insiders === '25%-50%' ? 'color:#ffd600;font-weight:700;' : trade.insiders === 'NO DISPONIBLE' ? 'color:#ff7043;font-weight:700;' : ''}">${trade.insiders || '-'}</td>
                   <td class="td-mono">${(() => {
                     const v = trade.instOwn; if (!v) return '-';
@@ -2643,6 +2645,8 @@ function openAddModal() {
   document.getElementById('btnDelete').style.display = 'none';
   removeChart();
   setDefaultDate();
+  initPlaybookSelector();
+  setSelectedPlays([]);
   document.getElementById('tradeModal').classList.add('open');
 }
 
@@ -2663,7 +2667,6 @@ function autoFillFromTicker(ticker) {
   const fields = [
     { formId: 'inputPais',       tradeKey: 'pais'       },
     { formId: 'inputSector',     tradeKey: 'sector'     },
-    { formId: 'inputIndustry',   tradeKey: 'industry'   },
     { formId: 'inputMarketCap',  tradeKey: 'marketCap'  },
     { formId: 'inputFloat',      tradeKey: 'float'      },
     { formId: 'inputInsiders',   tradeKey: 'insiders'   },
@@ -2860,7 +2863,8 @@ function editTrade(globalIdx) {
   document.getElementById('inputNoticia').value = trade.noticia || '';
   document.getElementById('inputPais').value = trade.pais || '';
   document.getElementById('inputSector').value = trade.sector || '';
-  document.getElementById('inputIndustry').value = trade.industry || '';
+  initPlaybookSelector();
+  setSelectedPlays(trade.plays || []);
   
   // Fundamentales
   document.getElementById('inputMarketCap').value = trade.marketCap || '';
@@ -3060,7 +3064,7 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     pais: document.getElementById('inputPais').value || '',
     locatesRegSho: document.getElementById('inputLocatesRegSho').checked,
     sector: document.getElementById('inputSector').value || '',
-    industry: document.getElementById('inputIndustry').value || '',
+    plays: getSelectedPlays(),
     
     // Fundamentales
     marketCap: document.getElementById('inputMarketCap').value || '',
@@ -3441,58 +3445,49 @@ function saveCountryToList(country) {
   }
 }
 
-// ── INDUSTRY LIST FUNCTIONS ────────────────────────────────────────────────────
-function loadIndustryList() {
-  const savedIndustries = localStorage.getItem('customIndustries');
-  if (savedIndustries) {
-    const industries = JSON.parse(savedIndustries);
-    const datalist = document.getElementById('industryList');
-    
-    // Añadir las industries guardadas al datalist
-    industries.forEach(industry => {
-      // Comprobar si ya existe para no duplicar
-      const exists = Array.from(datalist.options).some(opt => opt.value === industry);
-      if (!exists) {
-        const option = document.createElement('option');
-        option.value = industry;
-        datalist.appendChild(option);
-      }
-    });
-  }
-}
 
-function initIndustryInput() {
-  const inputIndustry = document.getElementById('inputIndustry');
-  
-  inputIndustry.addEventListener('blur', function() {
-    const value = this.value.trim();
-    if (value) {
-      saveIndustryToList(value);
-    }
+// ── PLAYBOOK FUNCTIONS ───────────────────────────────────────────────────────
+const PLAYS_LIST = [
+  'BREAKOUT','FAIL BREAKOUT','LOWER HIGH','LOWER HIGH VWAP',
+  'GAP & EXTENSION','GAP & CRAP','GAP & GO','SIR vs PMH','SIR vs HOD'
+];
+
+function initPlaybookSelector() {
+  const container = document.getElementById('playbook-selector');
+  if (!container) return;
+  container.innerHTML = PLAYS_LIST.map(p => `
+    <label class="play-chip" data-play="${p}" style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px;cursor:pointer;transition:all 0.15s;user-select:none;">
+      <input type="checkbox" class="play-checkbox" value="${p}" style="display:none;">
+      <span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;letter-spacing:0.5px;">${p}</span>
+    </label>`).join('');
+  container.querySelectorAll('.play-chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      const cb = this.querySelector('.play-checkbox');
+      cb.checked = !cb.checked;
+      this.style.background = cb.checked ? 'rgba(177,106,255,0.25)' : 'var(--bg3)';
+      this.style.borderColor = cb.checked ? 'var(--purple)' : 'var(--border)';
+      this.querySelector('span').style.color = cb.checked ? 'var(--purple)' : '';
+    });
   });
 }
 
-function saveIndustryToList(industry) {
-  if (!industry) return;
-  
-  // Obtener lista actual
-  let industries = [];
-  const savedIndustries = localStorage.getItem('customIndustries');
-  if (savedIndustries) {
-    industries = JSON.parse(savedIndustries);
-  }
-  
-  // Añadir solo si no existe
-  if (!industries.includes(industry)) {
-    industries.push(industry);
-    localStorage.setItem('customIndustries', JSON.stringify(industries));
-    
-    // Añadir al datalist
-    const datalist = document.getElementById('industryList');
-    const option = document.createElement('option');
-    option.value = industry;
-    datalist.appendChild(option);
-  }
+function getSelectedPlays() {
+  const container = document.getElementById('playbook-selector');
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('.play-checkbox:checked')).map(cb => cb.value);
+}
+
+function setSelectedPlays(plays) {
+  const container = document.getElementById('playbook-selector');
+  if (!container) return;
+  container.querySelectorAll('.play-chip').forEach(chip => {
+    const cb = chip.querySelector('.play-checkbox');
+    const active = plays.includes(cb.value);
+    cb.checked = active;
+    chip.style.background = active ? 'rgba(177,106,255,0.25)' : 'var(--bg3)';
+    chip.style.borderColor = active ? 'var(--purple)' : 'var(--border)';
+    chip.querySelector('span').style.color = active ? 'var(--purple)' : '';
+  });
 }
 
 // ── SECTOR LIST FUNCTIONS ────────────────────────────────────────────────────
@@ -5000,7 +4995,7 @@ function renderSectoresTable() {
     else if (sectoresSortCol === 'mcap')     { va = (a.marketCap||'').toUpperCase();    vb = (b.marketCap||'').toUpperCase(); }
     else if (sectoresSortCol === 'float')    { va = (a.float||'').toUpperCase();        vb = (b.float||'').toUpperCase(); }
     else if (sectoresSortCol === 'pais')     { va = (a.pais||'').toUpperCase();         vb = (b.pais||'').toUpperCase(); }
-    else if (sectoresSortCol === 'industry') { va = (a.industry||'').toUpperCase();     vb = (b.industry||'').toUpperCase(); }
+
     else { va = (a[sectoresSortCol]||'').toString().toUpperCase(); vb = (b[sectoresSortCol]||'').toString().toUpperCase(); }
     if (va < vb) return sectoresSortDir==='asc' ? -1 : 1;
     if (va > vb) return sectoresSortDir==='asc' ? 1 : -1;
@@ -5098,7 +5093,7 @@ function renderSectoresTable() {
     const count = allSectorTrades.filter(t => (t.ticker||'').toUpperCase().trim() === (trade.ticker||'').toUpperCase().trim()).length;
     const incompleto = ![trade.setupEntrada,trade.inicio,trade.closed,
       (trade.pnlShort!=null||trade.pnlLong!=null),(trade.rrShort!=null||trade.rrLong!=null),
-      trade.precioEntrada,trade.noticia,trade.pais,trade.sector,trade.industry,
+      trade.precioEntrada,trade.noticia,trade.pais,trade.sector,
       trade.marketCap,trade.float,trade.insiders,trade.instOwn,trade.cashNeed,
       (trade.dilucion&&trade.dilucion.length>0)].every(Boolean);
 
@@ -5118,7 +5113,7 @@ function renderSectoresTable() {
       <td class="td-mono" style="font-size:10px;${trade.float === 'Micro Low Float (<1M)' ? 'color:#ff1744;font-weight:700;' : ''}">${trade.float || '—'}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text);">${trade.pais||'<span style="color:var(--muted)">—</span>'}</span></td>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);" title="${trade.setupEntrada||''}">${trade.setupEntrada ? (trade.setupEntrada.length>18 ? trade.setupEntrada.substring(0,18)+'…' : trade.setupEntrada) : '—'}</span></td>
-      <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);" title="${trade.industry||''}">${trade.industry ? (trade.industry.length>22 ? trade.industry.substring(0,22)+'…' : trade.industry) : '—'}</span></td>
+      <td>${(trade.plays && trade.plays.length) ? trade.plays.map(p=>`<span style="display:inline-block;background:rgba(177,106,255,0.15);color:var(--purple);border-radius:3px;padding:1px 5px;font-size:9px;margin:1px;">${p}</span>`).join('') : '—'}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:12px;${insiderStyle(trade.insiders)}">${trade.insiders||'—'}</span></td>
       <td>${(() => {
         const v = trade.instOwn; if (!v) return '<span style="color:var(--muted)">—</span>';
@@ -5207,7 +5202,7 @@ function renderSectoresTable() {
             <th class="sortable" onclick="sortSectoresBy('float')">Float ${ar('float')}</th>
             <th class="sortable" onclick="sortSectoresBy('pais')">País ${ar('pais')}</th>
             <th>Setup</th>
-            <th class="sortable" onclick="sortSectoresBy('industry')">Industry ${ar('industry')}</th>
+            <th>Plays</th>
             <th>Insiders</th>
             <th>Inst. Own</th>
             <th>Overhead</th>
@@ -5349,7 +5344,7 @@ async function quickAddTrade(estado) {
     estado:      estado,
     pais:        prev.pais        || '',
     sector:      prev.sector      || '',
-    industry:    prev.industry    || '',
+    plays:       prev.plays        || [],
     marketCap:   prev.marketCap   || '',
     float:       prev.float       || '',
     insiders:    prev.insiders    || '',
