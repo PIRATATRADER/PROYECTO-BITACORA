@@ -875,12 +875,12 @@ function renderMain() {
 
 // ── OBJECTIVES TABLE ──────────────────────────────────────────────────────────
 // Lógica:
-// - startOfMonth = primer SOD del mes
+// - startOfMonth = primer SOD del mes (base para calcular los targets compuestos)
 // - Target día N = startOfMonth × (1+rate)^N   (interés compuesto)
-// - Para colorear: se compara el target con (SOD_del_día + PNL_del_día)
-//   → Si el SOD ya está en 9000, todos los targets hasta 9000 se colorean
-//   → Además se suma el PNL ganado ese mismo día para ver si supera el siguiente tramo
-// - Un target de un día anterior también se colorea si el capital actual (SOD+PNL) lo supera
+// - Para COLOREAR: lo que manda es el SOD del último día registrado (= capital real de la cuenta)
+//   → Si el SOD del día X es $9.750, se colorean todos los targets ≤ $9.750
+//   → Si ese mismo día X también tiene PNL, se suma (SOD + PNL - HTB) para ver si supera más targets
+//   → Al día siguiente, el nuevo SOD manda (no se acumula el PNL del día anterior)
 function renderObj() {
   const m = MONTHS[month];
   const tbody = document.getElementById('ob');
@@ -897,19 +897,28 @@ function renderObj() {
     return;
   }
 
-  // Capital máximo real alcanzado hasta ahora:
-  // Para cada día con SOD, el capital al cierre = SOD + PNL (si existe), o SOD si no hay PNL aún.
-  // Tomamos el máximo de todos esos valores.
-  let maxCapReached = som;
+  // Capital actual de la cuenta = SOD del último día que tenga SOD registrado.
+  // Si ese mismo día también tiene PNL, se suma (SOD + PNL - HTB) para reflejar
+  // el cierre del día en curso. El PNL de días anteriores ya está reflejado en el
+  // SOD del día siguiente, por lo que NO se acumula hacia atrás.
+  let lastSOD = som;
+  let lastPNL = null;
+  let lastHTB = null;
   m.days.forEach(d => {
     const row = D[dk(d)] || {};
     const s = pd(row.startOfDay);
-    if (s === null) return;
-    const p = pd(row.pnlDay);
-    // Capital al cierre del día: SOD + PNL (si hay PNL), o SOD solo (si no hay PNL todavía)
-    const capClose = (p !== null) ? s + p : s;
-    if (capClose > maxCapReached) maxCapReached = capClose;
+    if (s !== null) {
+      lastSOD = s;
+      lastPNL = pd(row.pnlDay);
+      lastHTB = pd(row.htb);
+    }
   });
+
+  // Capital de referencia para colorear:
+  // - Si el último día con SOD ya tiene PNL cerrado → SOD + PNL - HTB
+  // - Si no hay PNL todavía (día en curso sin cerrar) → solo el SOD
+  const htbAmt = (lastHTB !== null) ? lastHTB : 0;
+  const currentCap = (lastPNL !== null) ? lastSOD + lastPNL - htbAmt : lastSOD;
 
   // Targets compuestos calculados desde el capital inicial del mes
   const t1 = m.days.map((_,i) => som * Math.pow(1.01, i+1));
@@ -925,10 +934,10 @@ function renderObj() {
   </tr>`;
 
   m.days.forEach((d,i) => {
-    // Un target se colorea si el capital máximo real alcanzado (SOD+PNL) lo supera
-    const h1 = t1[i] <= maxCapReached;
-    const h2 = t2[i] <= maxCapReached;
-    const h3 = t3[i] <= maxCapReached;
+    // Un target se colorea si el capital actual (SOD del último día ± PNL del día) lo supera
+    const h1 = t1[i] <= currentCap;
+    const h2 = t2[i] <= currentCap;
+    const h3 = t3[i] <= currentCap;
 
     const c1 = h1 ? 'oh1' : '';
     const c2 = h2 ? 'oh2' : '';

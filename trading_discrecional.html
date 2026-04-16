@@ -1279,9 +1279,129 @@
     padding: 20px;
   }
 
+  /* ── SETUP DRILL-DOWN DRAWER ── */
+  #setupDrawer {
+    position: fixed;
+    top: 0; right: -520px;
+    width: 500px;
+    height: 100vh;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: -8px 0 40px rgba(0,0,0,0.6);
+  }
+  #setupDrawer.open { right: 0; }
+  #setupDrawerBackdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(3px);
+    z-index: 1999;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  #setupDrawerBackdrop.open { display: block; opacity: 1; }
+  .drawer-header {
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+    flex-shrink: 0;
+  }
+  .drawer-header-top {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 10px;
+  }
+  .drawer-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 2px; color: var(--purple);
+    max-width: 360px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .drawer-close {
+    width: 30px; height: 30px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 7px; color: var(--muted2); font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .drawer-close:hover { border-color: var(--red); color: var(--red); }
+  .drawer-kpis {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .drawer-kpi {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; text-align: center;
+  }
+  .drawer-kpi-l {
+    font-family: 'DM Mono', monospace; font-size: 8px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .drawer-kpi-v {
+    font-family: 'Bebas Neue', sans-serif; font-size: 17px;
+    letter-spacing: 1px; line-height: 1;
+  }
+  .drawer-body {
+    flex: 1; overflow-y: auto; padding: 14px 16px;
+  }
+  .drawer-body::-webkit-scrollbar { width: 4px; }
+  .drawer-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .drawer-trade-row {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 9px; padding: 11px 14px; margin-bottom: 8px;
+    cursor: pointer; transition: all 0.15s;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 4px 10px; align-items: center;
+  }
+  .drawer-trade-row:hover { border-color: var(--purple); background: rgba(177,106,255,0.07); }
+  .drawer-trade-ticker {
+    font-family: 'Bebas Neue', sans-serif; font-size: 17px;
+    letter-spacing: 1px; color: var(--text);
+  }
+  .drawer-trade-date {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--muted2); letter-spacing: 1px;
+  }
+  .drawer-trade-pnl {
+    font-family: 'DM Mono', monospace; font-size: 14px;
+    font-weight: 600; text-align: right;
+  }
+  .drawer-trade-meta {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--muted2); letter-spacing: 0.5px;
+  }
+  .drawer-trade-meta span { color: var(--text); }
+  .drawer-edit-hint {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--muted); letter-spacing: 1px;
+    text-align: right; padding: 4px 0 2px;
+  }
+  .setup-row-clickable { cursor: pointer; transition: background 0.15s; }
+  .setup-row-clickable:hover { background: rgba(177,106,255,0.08) !important; }
+  .setup-row-clickable td:first-child::after {
+    content: ' ↗'; font-size: 10px; color: var(--purple); opacity: 0.6;
+  }
+
 </style>
 </head>
 <body>
+
+<!-- ── SETUP DRILL-DOWN DRAWER ── -->
+<div id="setupDrawerBackdrop" onclick="closeSetupDrawer()"></div>
+<div id="setupDrawer">
+  <div class="drawer-header">
+    <div class="drawer-header-top">
+      <div class="drawer-title" id="drawerSetupTitle">SETUP</div>
+      <button class="drawer-close" onclick="closeSetupDrawer()">✕</button>
+    </div>
+    <div class="drawer-kpis" id="drawerKpis"></div>
+  </div>
+  <div class="drawer-edit-hint" style="padding:6px 16px 0;">Click en un trade para editarlo</div>
+  <div class="drawer-body" id="drawerTradeList"></div>
+</div>
 
 <div class="container">
   <header>
@@ -1344,7 +1464,7 @@
       <span class="count" id="countFinalizado">0</span>
     </button>
   </div>
-  <!-- Segunda fila: Estadísticas + Sectores -->
+  <!-- Segunda fila: Estadísticas + Sectores + Insertar Gráficos -->
   <div style="display: flex; gap: 12px; margin-bottom: 24px;">
     <button class="filter-tab" style="flex: none; background: var(--purple); color: #fff; border-color: var(--purple);" onclick="openStatsModal()">
       <span>📈 Estadísticas</span>
@@ -1359,6 +1479,7 @@
         <div id="sectoresMenuList" style="max-height: 320px; overflow-y: auto;"></div>
       </div>
     </div>
+
   </div>
 
   <!-- Days Container -->
@@ -4239,13 +4360,17 @@ function buildSetupTab(fin) {
     options: { ...baseOpts(100) }
   });
 
+  // Guardar mapa para el drawer
+  window._setupMapCache = { map: setupMap, fin };
+
   const rows = sKeys.map(k => {
     const ts = setupMap[k];
     const wr = sWR(ts);
     const totPNL = ts.reduce((s,t)=>s+sPNL(t),0);
     const avgPNL = totPNL / ts.length;
     const pf = sPF(ts);
-    return `<tr>
+    const escapedK = k.replace(/'/g, "\\'");
+    return `<tr class="setup-row-clickable" onclick="openSetupDrawer('${escapedK}')">
       <td>${k || 'Sin setup'}</td>
       <td class="right">${ts.length}</td>
       <td>${sWRBarHTML(wr)}</td>
@@ -4261,6 +4386,83 @@ function buildSetupTab(fin) {
       <thead><tr><th>Setup</th><th class="right">Trades</th><th>Win Rate</th><th class="right">Avg PNL</th><th class="right">PNL Total</th><th class="right">P.Factor</th><th class="right">Avg R</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+// ── SETUP DRAWER ──────────────────────────────────────────────────────────────
+function openSetupDrawer(setupKey) {
+  const cache = window._setupMapCache;
+  if (!cache) return;
+  const ts = cache.map[setupKey] || [];
+
+  // Header
+  document.getElementById('drawerSetupTitle').textContent = setupKey || 'Sin setup';
+
+  // KPIs
+  const totPNL = ts.reduce((s,t) => s + sPNL(t), 0);
+  const avgPNL = ts.length ? totPNL / ts.length : 0;
+  const wr = sWR(ts);
+  const avgR = sAvgR(ts);
+  const pnlColor = totPNL >= 0 ? 'var(--green)' : 'var(--red)';
+  const avgColor = avgPNL >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('drawerKpis').innerHTML = `
+    <div class="drawer-kpi">
+      <div class="drawer-kpi-l">Trades</div>
+      <div class="drawer-kpi-v" style="color:var(--purple)">${ts.length}</div>
+    </div>
+    <div class="drawer-kpi">
+      <div class="drawer-kpi-l">Win Rate</div>
+      <div class="drawer-kpi-v" style="color:${wr>=50?'var(--green)':'var(--red)'}">${wr}%</div>
+    </div>
+    <div class="drawer-kpi">
+      <div class="drawer-kpi-l">PNL Total</div>
+      <div class="drawer-kpi-v" style="color:${pnlColor}">${formatPNL(totPNL)}</div>
+    </div>
+    <div class="drawer-kpi">
+      <div class="drawer-kpi-l">Avg R</div>
+      <div class="drawer-kpi-v" style="color:${avgR>=0?'var(--green)':'var(--red)'}">${avgR.toFixed(2)}R</div>
+    </div>
+  `;
+
+  // Trade list - ordenados por fecha desc
+  const sorted = [...ts].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+  document.getElementById('drawerTradeList').innerHTML = sorted.map(t => {
+    const pnl = sPNL(t);
+    const pnlColor = pnl > 0 ? 'var(--green)' : pnl < 0 ? 'var(--red)' : 'var(--muted2)';
+    const pnlStr = pnl > 0 ? `+${formatPNL(pnl)}` : formatPNL(pnl);
+    // Buscar globalIdx
+    const gIdx = allTrades.findIndex(x => x === t || x.id === t.id);
+    const fecha = t.fecha ? t.fecha.split('-').reverse().join('/') : '—';
+    const rStr = (t.rrShort != null || t.rrLong != null)
+      ? `R: <span>${[(t.rrShort != null ? t.rrShort+'R short' : ''), (t.rrLong != null ? t.rrLong+'R long' : '')].filter(Boolean).join(' · ')}</span>`
+      : '';
+    const precioStr = t.precioEntrada ? `Entrada: <span>$${t.precioEntrada}</span>` : '';
+    const metaParts = [precioStr, rStr].filter(Boolean).join(' &nbsp;·&nbsp; ');
+    return `<div class="drawer-trade-row" onclick="openTradeFromDrawer(${gIdx})">
+      <div>
+        <div class="drawer-trade-ticker">${t.ticker || '—'}</div>
+        <div class="drawer-trade-date">${fecha}</div>
+        ${metaParts ? `<div class="drawer-trade-meta" style="margin-top:4px">${metaParts}</div>` : ''}
+      </div>
+      <div>
+        <div class="drawer-trade-pnl" style="color:${pnlColor}">${pnlStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Abrir
+  document.getElementById('setupDrawer').classList.add('open');
+  document.getElementById('setupDrawerBackdrop').classList.add('open');
+}
+
+function closeSetupDrawer() {
+  document.getElementById('setupDrawer').classList.remove('open');
+  document.getElementById('setupDrawerBackdrop').classList.remove('open');
+}
+
+function openTradeFromDrawer(gIdx) {
+  if (gIdx < 0 || gIdx >= allTrades.length) return;
+  closeSetupDrawer();
+  setTimeout(() => editTrade(gIdx), 180);
 }
 
 // ── TAB: PRECIO ───────────────────────────────────────────────────────────────
@@ -5408,6 +5610,8 @@ document.addEventListener('click', function(e) {
     panel.style.display = 'none';
   }
 });
+
+
 </script>
 
 </body>
