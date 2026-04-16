@@ -449,8 +449,8 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
         <thead><tr>
           <th>Fecha</th>
           <th style="color:var(--green)">+1%/día</th>
-          <th style="color:var(--yellow)">+2%/día</th>
-          <th style="color:var(--cyan)">+3%/día</th>
+          <th style="color:var(--yellow)">+1.5%/día</th>
+          <th style="color:var(--cyan)">+2%/día</th>
         </tr></thead>
         <tbody id="ob"></tbody>
       </table>
@@ -658,7 +658,7 @@ function calc(sod, date) {
     ml,                    // Max Loss 5%
     rt: ml/5,              // Risk Trade = MaxLoss/5 = 1% SOD
     t1: sod*0.01,          // Target 1%
-    t3: sod*0.03,          // Target 3%
+    t3: sod*0.02,          // Target 2%
     t5: sod*0.05,          // Target 5%
     sd: sod*0.05,          // Setup DATA 5%
     sa: useNewPercentages ? sod*0.125 : sod*0.12,  // Setup A: 12.5% nuevo, 12% antiguo
@@ -707,7 +707,7 @@ function calcScore(pnl, sod, htb) {
 
   // ── Factor 3: Targets superados ──
   if      (pnl >= sod * 0.05) score += 1.5; // superó T5
-  else if (pnl >= sod * 0.03) score += 1;   // superó T3
+  else if (pnl >= sod * 0.02) score += 1;   // superó T3
   else if (pnl >= sod * 0.01) score += 0.5; // superó T1
 
   // ── Factor 4: Max Loss respetado (penalización dura) ──
@@ -922,8 +922,8 @@ function renderObj() {
 
   // Targets compuestos calculados desde el capital inicial del mes
   const t1 = m.days.map((_,i) => som * Math.pow(1.01, i+1));
-  const t2 = m.days.map((_,i) => som * Math.pow(1.02, i+1));
-  const t3 = m.days.map((_,i) => som * Math.pow(1.03, i+1));
+  const t2 = m.days.map((_,i) => som * Math.pow(1.015, i+1));
+  const t3 = m.days.map((_,i) => som * Math.pow(1.02, i+1));
 
   // INICIAL row
   let rows=`<tr class="tr-ini">
@@ -1531,12 +1531,12 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
     objetivo1Pct.push(capitalAcumulado1);
     
     // Aplicar 2% compuesto diario por cada día de mercado del mes
-    capitalAcumulado2 = capitalAcumulado2 * Math.pow(1.02, diasMercadoMes);
+    capitalAcumulado2 = capitalAcumulado2 * Math.pow(1.015, diasMercadoMes);
     objetivo2Pct.push(capitalAcumulado2);
   }
   
   console.log('Objetivos 1% diario (capital total):', objetivo1Pct);
-  console.log('Objetivos 2% diario (capital total):', objetivo2Pct);
+  console.log('Objetivos 1.5% diario (capital total):', objetivo2Pct);
   
   // Crear datasets
   const datasets = [
@@ -1566,7 +1566,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
       pointHoverRadius: 4
     },
     {
-      label: 'Objetivo +2%/día',
+      label: 'Objetivo +1.5%/día',
       data: objetivo2Pct,
       borderColor: '#00b0ff',
       borderWidth: 2,
@@ -2340,9 +2340,9 @@ function renderStats() {
     });
     const maxTramo = Math.max(...tramos.map(t => t.count), 1);
 
-    // % días que superaron cada target (1%, 3%, 5% del SOD)
+    // % días que superaron cada target (1%, 2%, 5% del SOD)
     const hitT1 = rRows.filter(x => x.pnl >= x.sod * 0.01).length;
-    const hitT3 = rRows.filter(x => x.pnl >= x.sod * 0.03).length;
+    const hitT3 = rRows.filter(x => x.pnl >= x.sod * 0.02).length;
     const hitT5 = rRows.filter(x => x.pnl >= x.sod * 0.05).length;
     const pctT1 = Math.round(hitT1 / rRows.length * 100);
     const pctT3 = Math.round(hitT3 / rRows.length * 100);
@@ -2357,7 +2357,7 @@ function renderStats() {
       ? '✅ Más días por encima de +1R que por debajo de -1R'
       : '⚠️ Más días perdedores grandes que ganadores grandes';
     const targetInsight = pctT3 >= 40
-      ? '🔥 Alcanzas el Target 3% frecuentemente'
+      ? '🔥 Alcanzas el Target 2% frecuentemente'
       : pctT1 >= 60 ? '✅ Superas el Target 1% la mayoría de días ganadores'
       : '';
 
@@ -2403,7 +2403,7 @@ function renderStats() {
           </div>
           <div>
             <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold)">${pctT3}%</div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">Target 3%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)">Target 2%</div>
             <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">${hitT3}/${rRows.length} días</div>
           </div>
           <div>
@@ -2562,8 +2562,8 @@ function renderStats() {
     } else {
       // Targets compuestos
       const t1pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.01, i+1) }));
-      const t2pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.02, i+1) }));
-      const t3pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.03, i+1) }));
+      const t2pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.015, i+1) }));
+      const t3pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.02, i+1) }));
 
       // Rango Y
       const allVals = [
@@ -2620,9 +2620,9 @@ function renderStats() {
       const beatsT2 = capFinal >= lastT2;
       const beatsT3 = capFinal >= lastT3;
 
-      const perfInsight = beatsT3 ? '🔥 Por encima del target +3% compuesto — rendimiento excepcional'
-        : beatsT2 ? '✅ Por encima del target +2% compuesto'
-        : beatsT1 ? '⚠️ Por encima del +1% pero sin alcanzar el +2%'
+      const perfInsight = beatsT3 ? '🔥 Por encima del target +2% compuesto — rendimiento excepcional'
+        : beatsT2 ? '✅ Por encima del target +1.5% compuesto'
+        : beatsT1 ? '⚠️ Por encima del +1% pero sin alcanzar el +1.5%'
         : ganancia >= 0 ? '⚠️ Capital en positivo pero por debajo del target mínimo (+1%)'
         : '❌ Capital por debajo del inicio del mes';
 
@@ -2671,11 +2671,11 @@ function renderStats() {
           <polyline points="${pts(t1pts)}" fill="none" stroke="#00e676" stroke-width="1"
             stroke-dasharray="3,3" opacity="0.5"/>
 
-          <!-- Target +2% compuesto -->
+          <!-- Target +1.5% compuesto -->
           <polyline points="${pts(t2pts)}" fill="none" stroke="#ffd600" stroke-width="1"
             stroke-dasharray="3,3" opacity="0.5"/>
 
-          <!-- Target +3% compuesto -->
+          <!-- Target +2% compuesto -->
           <polyline points="${pts(t3pts)}" fill="none" stroke="#00b0ff" stroke-width="1"
             stroke-dasharray="3,3" opacity="0.5"/>
 
@@ -2705,8 +2705,8 @@ function renderStats() {
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:12px;padding:0 4px;">
           <span><span style="display:inline-block;width:16px;height:2px;background:${eqColor};vertical-align:middle;margin-right:4px;border-radius:1px"></span>Capital real</span>
           <span><span style="display:inline-block;width:16px;height:2px;background:#00e676;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #00e676"></span>+1%/día</span>
-          <span><span style="display:inline-block;width:16px;height:2px;background:#ffd600;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #ffd600"></span>+2%/día</span>
-          <span><span style="display:inline-block;width:16px;height:2px;background:#00b0ff;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #00b0ff"></span>+3%/día</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#ffd600;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #ffd600"></span>+1.5%/día</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#00b0ff;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #00b0ff"></span>+2%/día</span>
           <span><span style="color:var(--green)">●</span> día ganador &nbsp;<span style="color:var(--red)">●</span> día perdedor</span>
         </div>
 
@@ -2719,8 +2719,8 @@ function renderStats() {
             <div style="margin-top:6px;font-size:10px;color:var(--muted2);">
               Targets al cierre →
               <span style="color:${beatsT1?'var(--green)':'var(--red)'}">+1% ${beatsT1?'✓':'✗'}</span> &nbsp;
-              <span style="color:${beatsT2?'var(--yellow)':'var(--red)'}">+2% ${beatsT2?'✓':'✗'}</span> &nbsp;
-              <span style="color:${beatsT3?'var(--cyan)':'var(--red)'}">+3% ${beatsT3?'✓':'✗'}</span>
+              <span style="color:${beatsT2?'var(--yellow)':'var(--red)'}">+1.5% ${beatsT2?'✓':'✗'}</span> &nbsp;
+              <span style="color:${beatsT3?'var(--cyan)':'var(--red)'}">+2% ${beatsT3?'✓':'✗'}</span>
             </div>
           </div>
         </div>
@@ -3023,7 +3023,7 @@ function renderStats() {
         const curr = dayData[i];
         if (prev.pnl < 0)  trasDiaMalo.push(curr.pnl);
         if (prev.pnl > 0)  trasDiaBueno.push(curr.pnl);
-        if (prev.sod && prev.pnl >= prev.sod * 0.03) trasDiaGrande.push(curr.pnl); // tras día +3%
+        if (prev.sod && prev.pnl >= prev.sod * 0.02) trasDiaGrande.push(curr.pnl); // tras día +2%
       }
 
       const avgTrasMalo   = trasDiaMalo.length   ? trasDiaMalo.reduce((a,b)=>a+b,0)   / trasDiaMalo.length   : null;
@@ -3043,7 +3043,7 @@ function renderStats() {
       const wrSinHTB   = sinHTB.length  ? Math.round(sinHTB.filter(x=>x.pnl>0).length  / sinHTB.length  * 100) : null;
 
       // ── Patrón 3: Días perfectos vs días Max Loss ──
-      const diasPerfectos  = dayData.filter(x => x.sod && x.pnl >= x.sod * 0.03).length;
+      const diasPerfectos  = dayData.filter(x => x.sod && x.pnl >= x.sod * 0.02).length;
       const diasMaxLoss    = dayData.filter(x => x.sod && x.pnl < 0 && Math.abs(x.pnl) >= x.sod * 0.05).length;
       const diasGanNoT1    = dayData.filter(x => x.sod && x.pnl > 0 && x.pnl < x.sod * 0.01).length; // ganó pero <T1
 
@@ -3065,7 +3065,7 @@ function renderStats() {
         else                   insights.push(`✅ Tras un día malo: recuperas bien — PNL medio ${fd(avgTrasMalo)} (WR ${wrTrasMalo}%)`);
       }
       if (avgTrasGrande !== null) {
-        if (avgTrasGrande < avgTrasBueno) insights.push(`⚠️ Tras un día excepcional (+3%): relajación — PNL siguiente cae a ${fd(avgTrasGrande)}`);
+        if (avgTrasGrande < avgTrasBueno) insights.push(`⚠️ Tras un día excepcional (+2%): relajación — PNL siguiente cae a ${fd(avgTrasGrande)}`);
         else                              insights.push(`🔥 Tras un día excepcional: mantienes el nivel — PNL siguiente ${fd(avgTrasGrande)}`);
       }
       if (wrConHTB !== null && wrSinHTB !== null) {
@@ -3088,7 +3088,7 @@ function renderStats() {
               ${[
                 { label: 'Tras día negativo', avg: avgTrasMalo,   wr: wrTrasMalo,   n: trasDiaMalo.length },
                 { label: 'Tras día positivo', avg: avgTrasBueno,  wr: wrTrasBueno,  n: trasDiaBueno.length },
-                { label: 'Tras día +3% SOD',  avg: avgTrasGrande, wr: wrTrasGrande, n: trasDiaGrande.length },
+                { label: 'Tras día +2% SOD',  avg: avgTrasGrande, wr: wrTrasGrande, n: trasDiaGrande.length },
               ].map(r => r.avg !== null ? `
                 <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;">
                   <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:6px;">${r.label} <span style="color:var(--muted)">(${r.n} días)</span></div>
@@ -3122,7 +3122,7 @@ function renderStats() {
             <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:12px;">🏷️ Clasificación de días</div>
             <div style="display:flex;flex-direction:column;gap:6px;">
               ${[
-                { label: '🔥 Días perfectos (≥ T3%)',     val: diasPerfectos,  col: 'var(--green)' },
+                { label: '🔥 Días perfectos (≥ T2%)',     val: diasPerfectos,  col: 'var(--green)' },
                 { label: '💀 Días Max Loss (≥ 5% SOD)',   val: diasMaxLoss,    col: 'var(--red)'   },
                 { label: '😑 Ganaste pero < Target 1%',   val: diasGanNoT1,    col: 'var(--yellow)'},
                 { label: '📊 Días analizados total',      val: dayData.length, col: 'var(--muted2)'},
