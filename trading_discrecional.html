@@ -1385,12 +1385,97 @@
     content: ' ↗'; font-size: 10px; color: var(--purple); opacity: 0.6;
   }
 
+  /* Play drill-down modal */
+  .play-row-clickable { cursor: pointer; transition: background 0.15s; }
+  .play-row-clickable:hover { background: rgba(177,106,255,0.10) !important; }
+  .play-row-clickable td:first-child::after {
+    content: ' ↗'; font-size: 10px; color: var(--purple); opacity: 0.6;
+  }
+
+  #playDrillModal {
+    display: none; position: fixed; inset: 0; z-index: 3000;
+    background: rgba(0,0,0,0.82); backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+  }
+  #playDrillModal.open { display: flex; }
+  .play-drill-box {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+    width: min(860px, 96vw); max-height: 88vh; overflow-y: auto;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+    display: flex; flex-direction: column;
+  }
+  .play-drill-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    background: var(--bg3); border-radius: 16px 16px 0 0;
+    position: sticky; top: 0; z-index: 2; flex-shrink: 0;
+  }
+  .play-drill-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px;
+  }
+  .play-drill-title span { color: var(--purple); }
+  .play-drill-close {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+    color: var(--text); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .play-drill-close:hover { background: var(--red); border-color: var(--red); }
+  .play-drill-kpis {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .play-drill-kpi {
+    background: var(--bg3); border-radius: 8px; padding: 10px 12px; text-align: center;
+  }
+  .play-drill-kpi-l {
+    font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted2); margin-bottom: 5px;
+  }
+  .play-drill-kpi-v {
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1px;
+  }
+  .play-drill-body { padding: 20px 24px; }
+  .play-drill-trade-row {
+    display: grid;
+    grid-template-columns: 80px 90px 80px 1fr 80px 80px 70px;
+    gap: 8px; align-items: center;
+    padding: 10px 14px; border-radius: 8px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    transition: background .12s; cursor: default;
+  }
+  .play-drill-trade-row:last-child { border-bottom: none; }
+  .play-drill-trade-row:hover { background: var(--bg3); }
+  .play-drill-trade-row.header {
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); padding: 6px 14px; cursor: default;
+    border-bottom: 2px solid var(--border); background: transparent;
+  }
+  .play-drill-trade-row.header:hover { background: transparent; }
+
 </style>
 </head>
 <body>
 
 <!-- ── SETUP DRILL-DOWN DRAWER ── -->
 <div id="setupDrawerBackdrop" onclick="closeSetupDrawer()"></div>
+
+<!-- ── PLAY DRILL-DOWN MODAL ── -->
+<div id="playDrillModal" onclick="closePlayDrillModal(event)">
+  <div class="play-drill-box" onclick="event.stopPropagation()">
+    <div class="play-drill-hdr">
+      <div>
+        <div class="play-drill-title">TRADES · <span id="playDrillName"></span></div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:3px;" id="playDrillSub"></div>
+      </div>
+      <button class="play-drill-close" onclick="closePlayDrillModal()">✕</button>
+    </div>
+    <div class="play-drill-kpis" id="playDrillKpis"></div>
+    <div class="play-drill-body" id="playDrillBody"></div>
+  </div>
+</div>
 <div id="setupDrawer">
   <div class="drawer-header">
     <div class="drawer-header-top">
@@ -1761,9 +1846,10 @@
                   <input type="checkbox" id="dilucionNoTiene" value="• NO TIENE DILUCIÓN">
                   <span>• NO TIENE DILUCIÓN</span>
                 </label>
-                <label class="checkbox-label">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px;">
                   <input type="checkbox" id="dilucionS1" value="S-1 OFFERING">
                   <span>S-1 OFFERING</span>
+                  <input type="number" step="0.1" id="s1Amount" class="form-input" placeholder="M" style="width: 80px; padding: 4px 8px; font-size: 12px; margin-left: auto;">
                 </label>
                 <label class="checkbox-label" style="display: flex; align-items: center; gap: 6px;">
                   <input type="checkbox" id="dilucionWarrants" value="WARRANTS">
@@ -1890,6 +1976,7 @@
       <button class="stats-tab" onclick="switchStatsTab('precio',this)">💲 Precio</button>
       <button class="stats-tab" onclick="switchStatsTab('float',this)">📊 Float</button>
       <button class="stats-tab" onclick="switchStatsTab('mcap',this)">💰 Market Cap</button>
+      <button class="stats-tab" onclick="switchStatsTab('plays',this)">🎯 Plays</button>
     </div>
 
     <!-- Body scrollable -->
@@ -2137,6 +2224,40 @@
 
       </div>
 
+      <!-- ══════════════════ TAB: PLAYS ══════════════════ -->
+      <div class="stats-panel" id="statsPanel-plays">
+
+        <div class="stats-kpi-row" id="playsKpiRow" style="grid-template-columns:repeat(5,1fr);"></div>
+
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Win Rate por Play</div>
+            <div class="stats-chart-wrap" style="height:280px"><canvas id="s_chartPlaysWR"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">PNL Total por Play</div>
+            <div class="stats-chart-wrap" style="height:280px"><canvas id="s_chartPlaysPNL"></canvas></div>
+          </div>
+        </div>
+
+        <div class="stats-charts-grid">
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">Nº de Trades por Play</div>
+            <div class="stats-chart-wrap" style="height:240px"><canvas id="s_chartPlaysTrades"></canvas></div>
+          </div>
+          <div class="stats-chart-box">
+            <div class="stats-chart-title">R Promedio por Play</div>
+            <div class="stats-chart-wrap" style="height:240px"><canvas id="s_chartPlaysR"></canvas></div>
+          </div>
+        </div>
+
+        <div class="stats-chart-box" style="margin-top:0">
+          <div class="stats-chart-title">Tabla detallada por Play</div>
+          <div id="s_tablaPlays"></div>
+        </div>
+
+      </div>
+
     </div>
   </div>
 </div>
@@ -2150,9 +2271,10 @@
       <div class="time-alert-icon">⏰</div>
       <div class="time-alert-title" style="color:var(--red);">¿CÓMO VAS?</div>
       <div class="time-alert-ticker" id="timeAlertTicker">TICKER</div>
-      <div style="display:flex;gap:20px;justify-content:center;margin-top:10px;">
+      <div style="display:flex;gap:16px;justify-content:center;margin-top:10px;flex-wrap:wrap;">
         <button class="time-alert-btn btn-winning" onclick="alertVoyGanando()">✅ VOY GANANDO</button>
         <button class="time-alert-btn btn-losing"  onclick="alertVoyPerdiendo()">❌ VOY PERDIENDO</button>
+        <button class="time-alert-btn" onclick="alertData()" style="background:rgba(68,138,255,0.15);border-color:var(--blue);color:var(--blue);">📊 DATA</button>
       </div>
     </div>
 
@@ -2628,7 +2750,14 @@ function renderDays() {
                       if (amountMatch) label += ` <span style="color:#ff9800;font-weight:800;">${amountMatch[1]}M</span>`;
                       return `<span style="display:block;color:#b16aff;font-weight:700;font-size:10px;letter-spacing:0.3px;white-space:nowrap;">${label}</span>`;
                     }
-                    // Resto (S-1, etc.) → gris normal
+                    // S-1 OFFERING con cantidad → gris/naranja
+                    if (s.startsWith('S-1 OFFERING')) {
+                      const amountMatch = s.match(/(\d+(?:[.,]\d+)?)\s*M\s*$/i);
+                      let label = 'S-1 OFFERING';
+                      if (amountMatch) label += ` <span style="color:#ff9800;font-weight:800;">${amountMatch[1]}M</span>`;
+                      return `<span style="display:block;color:var(--muted2);font-size:9px;white-space:nowrap;">${label}</span>`;
+                    }
+                    // Resto → gris normal
                     return `<span style="display:block;color:var(--muted2);font-size:9px;">${s}</span>`;
                   });
                   return `<div style="display:flex;flex-direction:column;gap:1px;">${items.join('')}</div>`;
@@ -2757,7 +2886,7 @@ function openAddModal() {
     if (el) el.checked = false;
   });
   // Reset campos numéricos de dilución
-  ['warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
+  ['s1Amount','warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
    'convertiblePreferredPrice','convertiblePreferredAmount',
    'equityLineAmount','atmAmount','shelfAmount'].forEach(id => {
     const el = document.getElementById(id);
@@ -2822,14 +2951,21 @@ function autoFillFromTicker(ticker) {
     ['dilucionNoTiene','dilucionS1','dilucionWarrants','dilucionConvertibleNote',
      'dilucionConvertiblePreferred','dilucionEquityLine','dilucionATM','dilucionShelf']
       .forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
-    ['warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
+    ['s1Amount','warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
      'convertiblePreferredPrice','convertiblePreferredAmount',
      'equityLineAmount','atmAmount','shelfAmount']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
     const dilucion = tradeConDilucion.dilucion;
     document.getElementById('dilucionNoTiene').checked = dilucion.some(d => d.includes('• NO TIENE DILUCIÓN'));
-    document.getElementById('dilucionS1').checked = dilucion.some(d => d.includes('S-1 OFFERING'));
+    const s1Item = dilucion.find(d => d.startsWith('S-1 OFFERING'));
+    if (s1Item) {
+      document.getElementById('dilucionS1').checked = true;
+      const s1Match = s1Item.match(/([\d.]+)\s*M\s*$/i);
+      if (s1Match) { const el = document.getElementById('s1Amount'); if (el) el.value = s1Match[1]; }
+    } else {
+      document.getElementById('dilucionS1').checked = dilucion.some(d => d.includes('S-1 OFFERING'));
+    }
 
     const warrantsItem = dilucion.find(d => d.startsWith('WARRANTS'));
     if (warrantsItem) {
@@ -3000,7 +3136,7 @@ function editTrade(globalIdx) {
   ['dilucionNoTiene','dilucionS1','dilucionWarrants','dilucionConvertibleNote',
    'dilucionConvertiblePreferred','dilucionEquityLine','dilucionATM','dilucionShelf']
     .forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
-  ['warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
+  ['s1Amount','warrantsPrice','warrantsAmount','convertibleNotePrice','convertibleNoteAmount',
    'convertiblePreferredPrice','convertiblePreferredAmount',
    'equityLineAmount','atmAmount','shelfAmount']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -3008,7 +3144,14 @@ function editTrade(globalIdx) {
 
   const dilucion = trade.dilucion || [];
   document.getElementById('dilucionNoTiene').checked = dilucion.some(d => d.includes('• NO TIENE DILUCIÓN'));
-  document.getElementById('dilucionS1').checked = dilucion.some(d => d.includes('S-1 OFFERING'));
+  const s1Item = dilucion.find(d => d.startsWith('S-1 OFFERING'));
+  if (s1Item) {
+    document.getElementById('dilucionS1').checked = true;
+    const s1Match = s1Item.match(/([\d.]+)\s*M\s*$/i);
+    if (s1Match) { const el = document.getElementById('s1Amount'); if (el) el.value = s1Match[1]; }
+  } else {
+    document.getElementById('dilucionS1').checked = dilucion.some(d => d.includes('S-1 OFFERING'));
+  }
   
   // WARRANTS con precio y cantidad
   const warrantsItem = dilucion.find(d => d.startsWith('WARRANTS'));
@@ -3110,7 +3253,10 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
   // Recoger dilución seleccionada
   const dilucion = [];
   if (document.getElementById('dilucionNoTiene').checked) dilucion.push('• NO TIENE DILUCIÓN');
-  if (document.getElementById('dilucionS1').checked) dilucion.push('S-1 OFFERING');
+  if (document.getElementById('dilucionS1').checked) {
+    const amount = document.getElementById('s1Amount').value;
+    dilucion.push(amount ? `S-1 OFFERING ${amount}M` : 'S-1 OFFERING');
+  }
   
   // WARRANTS con precio y cantidad
   if (document.getElementById('dilucionWarrants').checked) {
@@ -3222,6 +3368,11 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
   if (editingTradeId !== null) {
     trade.id = allTrades[editingTradeId].id || null;
     allTrades[editingTradeId] = trade;
+    // Si el trade pasa a finalizado, resetear el estado del timer para ese ticker
+    // así si se añade un nuevo trade con el mismo ticker la cuenta atrás empieza de cero
+    if (newEstado === 'finalizado' && trade.ticker) {
+      delete timerAlertState[trade.ticker.toUpperCase().trim()];
+    }
     try {
       await saveSingleTrade(trade);
     } catch (error) {
@@ -3569,9 +3720,15 @@ function saveCountryToList(country) {
 
 // ── PLAYBOOK FUNCTIONS ───────────────────────────────────────────────────────
 const PLAYS_LIST = [
-  'BREAKOUT','FAIL BREAKOUT','LOWER HIGH','LOWER HIGH VWAP',
-  'GAP & EXTENSION','GAP & CRAP','GAP & GO','SIR vs PMH','SIR vs HOD'
+  // LONG
+  'BREAKOUT', 'BREAKOUT PMH', 'GAP & GO',
+  // SHORT
+  'SIR vs PMH', 'SIR vs HOD', 'FAIL BREAKOUT',
+  'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD'
 ];
+
+const PLAYS_LONG  = new Set(['BREAKOUT', 'BREAKOUT PMH', 'GAP & GO']);
+const PLAYS_SHORT = new Set(['SIR vs PMH', 'SIR vs HOD', 'FAIL BREAKOUT', 'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD']);
 
 function initPlaybookSelector() {
   const container = document.getElementById('playbook-selector');
@@ -3688,7 +3845,19 @@ function updateAllCountdowns() {
     }
     const state = timerAlertState[ticker];
 
-    // Si el usuario dijo "voy ganando", mostrar guión y salir
+    // Si el usuario dijo "voy ganando" (modo win), mostrar badge WIN
+    if (state.mode === 'win') {
+      timer.innerHTML = '<span style="background:rgba(0,230,118,0.2);color:var(--green);padding:2px 8px;border-radius:4px;font-size:11px;letter-spacing:1px;border:1px solid rgba(0,230,118,0.4);">✅ WIN</span>';
+      return;
+    }
+
+    // Si el usuario dijo "data", mostrar DATA hasta que llegue el PNL
+    if (state.mode === 'data') {
+      timer.innerHTML = '<span style="background:rgba(68,138,255,0.15);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:11px;letter-spacing:1px;border:1px solid rgba(68,138,255,0.35);">📊 DATA</span>';
+      return;
+    }
+
+    // Si el usuario dijo "voy ganando" (modo done antiguo), mostrar guión y salir
     if (state.mode === 'done') {
       timer.textContent = '—';
       timer.style.color = 'var(--muted)';
@@ -3741,15 +3910,22 @@ function showTimeAlert(ticker, mode) {
   playBeep();
 }
 
-// VOY GANANDO → mostrar pantalla Stop Loss
+// VOY GANANDO → mostrar pantalla Stop Loss + badge WIN en el timer
 function alertVoyGanando() {
   const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
   // Pasar a modo "esperando stop loss"
   document.getElementById('alertScreen1').style.display = 'none';
   document.getElementById('alertScreen2').style.display = 'block';
   document.getElementById('timeAlertTicker2').textContent = ticker;
-  // El timer queda en "done" — cronómetro desaparece
-  if (ticker) timerAlertState[ticker] = { mode: 'done', alertShown: true, phaseStart: 0 };
+  // El timer queda en "win" — cronómetro muestra badge WIN
+  if (ticker) timerAlertState[ticker] = { mode: 'win', alertShown: true, phaseStart: 0 };
+}
+
+// DATA → cerrar overlay y mostrar "DATA" en el timer hasta que llegue el PNL
+function alertData() {
+  const ticker = document.getElementById('timeAlertOverlay').getAttribute('data-ticker');
+  if (ticker) timerAlertState[ticker] = { mode: 'data', alertShown: true, phaseStart: 0 };
+  closeTimeAlert();
 }
 
 // Stop Loss confirmado → cerrar todo
@@ -3798,6 +3974,7 @@ function closeTimeAlert() {
   setTimeout(() => {
     document.getElementById('alertScreen1').style.display = 'block';
     document.getElementById('alertScreen2').style.display = 'none';
+    document.getElementById('alertScreen3').style.display = 'none';
   }, 300);
 }
 
@@ -3968,6 +4145,7 @@ function switchStatsTab(tab, btn) {
   else if (tab === 'precio') buildPrecioTab(fin);
   else if (tab === 'float') buildFloatTab(fin);
   else if (tab === 'mcap') buildMcapTab(fin);
+  else if (tab === 'plays') buildPlaysTab(fin);
 }
 
 // ── Open / Close ───────────────────────────────────────────────────────────────
@@ -5108,6 +5286,155 @@ function buildMcapTab(fin) {
     </table>`;
 }
 
+// ── TAB: PLAYS ────────────────────────────────────────────────────────────────
+
+function buildPlaysTab(fin) {
+  // Construir mapa play → trades (un trade puede tener varios plays)
+  const playsMap = {};
+  fin.forEach(t => {
+    const plays = t.plays || [];
+    if (!plays.length) {
+      if (!playsMap['Sin play']) playsMap['Sin play'] = [];
+      playsMap['Sin play'].push(t);
+    } else {
+      plays.forEach(p => {
+        if (!playsMap[p]) playsMap[p] = [];
+        playsMap[p].push(t);
+      });
+    }
+  });
+
+  // Ordenar plays por número de trades (desc), poniendo "Sin play" al final
+  const labels = Object.keys(playsMap)
+    .filter(k => k !== 'Sin play')
+    .sort((a, b) => playsMap[b].length - playsMap[a].length);
+  if (playsMap['Sin play']) labels.push('Sin play');
+
+  if (!labels.length) {
+    document.getElementById('playsKpiRow').innerHTML = '<div class="stats-empty">No hay trades con plays registrados</div>';
+    document.getElementById('s_tablaPlays').innerHTML = '';
+    return;
+  }
+
+  // KPIs globales de plays
+  const tradesConPlay = fin.filter(t => t.plays && t.plays.length > 0);
+  const totalPNLPlays = tradesConPlay.reduce((s, t) => s + sPNL(t), 0);
+  const bestPlay = labels.filter(k => k !== 'Sin play').reduce((best, k) =>
+    sWR(playsMap[k]) > sWR(playsMap[best] || []) ? k : best,
+    labels.filter(k => k !== 'Sin play')[0] || '—');
+  const bestPlayPNL = labels.filter(k => k !== 'Sin play').reduce((best, k) =>
+    playsMap[k].reduce((s,t)=>s+sPNL(t),0) > (playsMap[best] ? playsMap[best].reduce((s,t)=>s+sPNL(t),0) : -Infinity) ? k : best,
+    labels.filter(k => k !== 'Sin play')[0] || '—');
+
+  document.getElementById('playsKpiRow').innerHTML = [
+    { label: 'Plays distintos', val: labels.filter(k => k !== 'Sin play').length, color: C.purpleB },
+    { label: 'Trades con play', val: tradesConPlay.length, color: '' },
+    { label: 'Win Rate global', val: sWR(tradesConPlay) + '%', color: sWR(tradesConPlay) >= 50 ? C.greenB : C.redB },
+    { label: 'PNL plays', val: formatPNL(totalPNLPlays), color: totalPNLPlays >= 0 ? C.greenB : C.redB },
+    { label: 'Mejor WR', val: bestPlay, color: C.purpleB },
+  ].map(k => `
+    <div class="stats-kpi">
+      <div class="stats-kpi-label">${k.label}</div>
+      <div class="stats-kpi-val" style="${k.color ? 'color:'+k.color : ''}">${k.val}</div>
+    </div>`).join('');
+
+  const playColors = labels.map((_, i) => {
+    const palette = [C.purple, C.blue, C.green, C.yellow, 'rgba(255,112,67,0.7)', 'rgba(38,198,218,0.7)', 'rgba(156,204,101,0.7)', 'rgba(255,167,38,0.7)', 'rgba(240,98,146,0.7)', 'rgba(102,187,106,0.7)'];
+    return palette[i % palette.length];
+  });
+
+  // Gráfico Win Rate por play
+  sMakeChart('s_chartPlaysWR', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: labels.map(k => sWR(playsMap[k])), backgroundColor: playColors }]
+    },
+    options: { ...baseOpts(100), indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true, max: 100, ticks: { color: C.tick, callback: v => v + '%' }, grid: { color: C.grid } },
+        y: { ticks: { color: C.tick, font: { size: 10 } }, grid: { color: C.grid } }
+      }
+    }
+  });
+
+  // Gráfico PNL Total por play
+  const pnlVals = labels.map(k => parseFloat(playsMap[k].reduce((s,t)=>s+sPNL(t),0).toFixed(2)));
+  sMakeChart('s_chartPlaysPNL', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: pnlVals, backgroundColor: pnlVals.map(v => v >= 0 ? C.green : C.red) }]
+    },
+    options: { ...baseOpts(), indexAxis: 'y',
+      scales: {
+        x: { ticks: { color: C.tick, callback: v => '$' + v }, grid: { color: C.grid } },
+        y: { ticks: { color: C.tick, font: { size: 10 } }, grid: { color: C.grid } }
+      }
+    }
+  });
+
+  // Gráfico Nº trades por play
+  sMakeChart('s_chartPlaysTrades', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: labels.map(k => playsMap[k].length), backgroundColor: playColors }]
+    },
+    options: { ...baseOpts(), plugins: { legend: { display: false } } }
+  });
+
+  // Gráfico R promedio por play
+  const rVals = labels.map(k => parseFloat(sAvgR(playsMap[k]).toFixed(2)));
+  sMakeChart('s_chartPlaysR', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: rVals, backgroundColor: rVals.map(v => v >= 0 ? C.green : C.red) }]
+    },
+    options: { ...baseOpts(),
+      scales: {
+        y: { ticks: { color: C.tick, callback: v => v + 'R' }, grid: { color: C.grid } },
+        x: { ticks: { color: C.tick, maxRotation: 40 }, grid: { color: C.grid } }
+      }
+    }
+  });
+
+  // Tabla detallada por play
+  const rows = labels.map(k => {
+    const ts = playsMap[k];
+    const wr = sWR(ts);
+    const totPNL = ts.reduce((s,t) => s + sPNL(t), 0);
+    const avgPNL = totPNL / ts.length;
+    const avgR = sAvgR(ts);
+    const pf = sPF(ts);
+    const escapedK = k.replace(/'/g, "\\'");
+    return `<tr class="play-row-clickable" onclick="openPlayDrillModal('${escapedK}')">
+      <td><span style="font-family:'DM Mono',monospace;background:rgba(177,106,255,0.15);color:var(--purple);border-radius:4px;padding:2px 8px;font-size:10px;">${k}</span></td>
+      <td class="right">${ts.length}</td>
+      <td>${sWRBarHTML(wr)}</td>
+      <td class="right" style="color:${avgPNL>=0?C.greenB:C.redB}">${formatPNL(avgPNL)}</td>
+      <td class="right" style="color:${totPNL>=0?C.greenB:C.redB}">${formatPNL(totPNL)}</td>
+      <td class="right" style="color:${parseFloat(pf)>=1?C.greenB:C.redB}">${pf}</td>
+      <td class="right" style="color:${avgR>=0?C.greenB:C.redB}">${avgR.toFixed(2)}R</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('s_tablaPlays').innerHTML = `
+    <table class="breakdown-table">
+      <thead><tr>
+        <th>Play</th>
+        <th class="right">Trades</th>
+        <th>Win Rate</th>
+        <th class="right">Avg PNL</th>
+        <th class="right">PNL Total</th>
+        <th class="right">P.Factor</th>
+        <th class="right">Avg R</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 function toggleSectoresMenu() {
   const dropdown = document.getElementById('sectoresDropdown');
   const isVisible = dropdown.style.display !== 'none';
@@ -5608,6 +5935,155 @@ document.addEventListener('click', function(e) {
   const btn   = document.getElementById('quickAddBtn');
   if (panel.style.display === 'flex' && !panel.contains(e.target) && !btn.contains(e.target)) {
     panel.style.display = 'none';
+  }
+});
+
+// ── PLAY DRILL-DOWN MODAL ────────────────────────────────────────────────────
+function openPlayDrillModal(playName) {
+  const fin = allTrades.filter(t => t.estado === 'finalizado');
+  const isSinPlay = playName === 'Sin play';
+
+  const trades = isSinPlay
+    ? fin.filter(t => !t.plays || !t.plays.length)
+    : fin.filter(t => t.plays && t.plays.includes(playName));
+
+  trades.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+  if (!trades.length) return;
+
+  // Header
+  document.getElementById('playDrillName').textContent = isSinPlay ? 'SIN PLAY ASIGNADO' : playName;
+  document.getElementById('playDrillSub').textContent = isSinPlay
+    ? `${trades.length} trade${trades.length !== 1 ? 's' : ''} pendientes de clasificar — pulsa en uno para añadir el play`
+    : `${trades.length} trade${trades.length !== 1 ? 's' : ''} finalizados`;
+
+  // KPIs
+  const totPNL  = trades.reduce((s, t) => s + sPNL(t), 0);
+  const wins    = trades.filter(t => sPNL(t) > 0).length;
+  const losses  = trades.filter(t => sPNL(t) < 0).length;
+  const wr      = sWR(trades);
+  const avgR    = sAvgR(trades);
+  const avgPNL  = totPNL / trades.length;
+
+  const kpis = isSinPlay ? [
+    { l: 'Sin clasificar', v: trades.length,          color: 'var(--yellow)' },
+    { l: 'Win Rate',       v: wr + '%',                color: wr >= 50 ? C.greenB : C.redB },
+    { l: 'PNL Total',      v: formatPNL(totPNL),       color: totPNL >= 0 ? C.greenB : C.redB },
+    { l: 'Avg PNL',        v: formatPNL(avgPNL),       color: avgPNL >= 0 ? C.greenB : C.redB },
+    { l: 'Avg R',          v: avgR.toFixed(2) + 'R',   color: avgR >= 0 ? C.greenB : C.redB },
+  ] : [
+    { l: 'Trades',      v: trades.length,          color: '' },
+    { l: 'Win Rate',    v: wr + '%',                color: wr >= 50 ? C.greenB : C.redB },
+    { l: 'PNL Total',   v: formatPNL(totPNL),       color: totPNL >= 0 ? C.greenB : C.redB },
+    { l: 'Avg PNL',     v: formatPNL(avgPNL),       color: avgPNL >= 0 ? C.greenB : C.redB },
+    { l: 'Avg R',       v: avgR.toFixed(2) + 'R',   color: avgR >= 0 ? C.greenB : C.redB },
+  ];
+  document.getElementById('playDrillKpis').innerHTML = kpis.map(k => `
+    <div class="play-drill-kpi">
+      <div class="play-drill-kpi-l">${k.l}</div>
+      <div class="play-drill-kpi-v" style="${k.color ? 'color:' + k.color : ''}">${k.v}</div>
+    </div>`).join('');
+
+  // ¿Es un play Long o Short? → mostrar solo la parte correspondiente
+  const isLongPlay  = PLAYS_LONG.has(playName);
+  const isShortPlay = PLAYS_SHORT.has(playName);
+
+  // Columnas: Sin play usa grid diferente (sin Dir, con badge "añadir play")
+  const headerCols   = isSinPlay
+    ? `<span>Fecha</span><span>Ticker</span><span>Setup</span><span>PNL</span><span>R</span><span></span>`
+    : `<span>Fecha</span><span>Ticker</span><span>Setup</span><span>Plays</span><span>PNL</span><span>R</span><span>Dir</span>`;
+  const gridCols = isSinPlay
+    ? 'grid-template-columns: 80px 90px 1fr 90px 70px 90px'
+    : 'grid-template-columns: 80px 90px 80px 1fr 80px 80px 70px';
+
+  const header = `<div class="play-drill-trade-row header" style="${gridCols}">${headerCols}</div>`;
+
+  const tradeRows = trades.map(t => {
+    const pnl      = sPNL(t);
+    const r        = sR(t);
+    const pnlColor = pnl >= 0 ? C.greenB : C.redB;
+    const rColor   = r   >= 0 ? C.greenB : C.redB;
+    const gIdx     = allTrades.findIndex(x => x === t || x.id === t.id);
+
+    if (isSinPlay) {
+      // PNL completo (short + long si los hay)
+      let pnlHtml = '';
+      if (t.pnlShort != null || t.pnlLong != null) {
+        const parts = [];
+        if (t.pnlShort != null) parts.push(`<span style="color:var(--red);font-size:9px">S:</span> <span style="color:${t.pnlShort>=0?C.greenB:C.redB}">${formatPNL(t.pnlShort)}</span>`);
+        if (t.pnlLong  != null) parts.push(`<span style="color:var(--green);font-size:9px">L:</span> <span style="color:${t.pnlLong>=0?C.greenB:C.redB}">${formatPNL(t.pnlLong)}</span>`);
+        pnlHtml = `<div style="line-height:1.7">${parts.join('<br>')}</div>`;
+      } else {
+        pnlHtml = `<span style="color:${pnlColor};font-weight:600">${formatPNL(pnl)}</span>`;
+      }
+      return `<div class="play-drill-trade-row" style="cursor:pointer;${gridCols}" onclick="openTradeFromPlayDrill(${gIdx})" title="Abrir y añadir play">
+        <span style="color:var(--muted2)">${t.fecha || '—'}</span>
+        <span style="color:var(--text);font-weight:600">${t.ticker || '—'} <span style="font-size:9px;color:var(--purple);opacity:.7">↗</span></span>
+        <span style="color:var(--muted2);font-size:10px">${t.setupEntrada || '—'}</span>
+        <span>${pnlHtml}</span>
+        <span style="color:${rColor}">${r !== 0 ? r.toFixed(2) + 'R' : '—'}</span>
+        <span><span style="background:rgba(255,214,0,0.12);color:var(--yellow);border-radius:4px;padding:2px 7px;font-size:9px;letter-spacing:0.5px;">+ añadir play</span></span>
+      </div>`;
+    }
+
+    // Trades con play — lógica original
+    const dir      = isLongPlay ? 'Long' : isShortPlay ? 'Short' : (t.direccion || t.direction || '—');
+    const dirColor = dir === 'Long' ? C.greenB : dir === 'Short' ? C.redB : '';
+    const otherPlays = (t.plays || []).filter(p => p !== playName)
+      .map(p => `<span style="background:rgba(177,106,255,0.12);color:var(--purple);border-radius:3px;padding:1px 5px;font-size:9px;">${p}</span>`)
+      .join(' ');
+
+    let pnlHtml = '';
+    if (isLongPlay && t.pnlLong != null) {
+      pnlHtml = `<span style="color:${t.pnlLong>=0?C.greenB:C.redB};font-weight:600">${formatPNL(t.pnlLong)}</span>`;
+    } else if (isShortPlay && t.pnlShort != null) {
+      pnlHtml = `<span style="color:${t.pnlShort>=0?C.greenB:C.redB};font-weight:600">${formatPNL(t.pnlShort)}</span>`;
+    } else if ((isLongPlay || isShortPlay) && t.pnl != null) {
+      pnlHtml = `<span style="color:${t.pnl>=0?C.greenB:C.redB};font-weight:600">${formatPNL(t.pnl)}</span>`;
+    } else if (t.pnlShort != null || t.pnlLong != null) {
+      const parts = [];
+      if (t.pnlShort != null) parts.push(`<span style="color:var(--red);font-size:9px">S:</span> <span style="color:${t.pnlShort>=0?C.greenB:C.redB}">${formatPNL(t.pnlShort)}</span>`);
+      if (t.pnlLong  != null) parts.push(`<span style="color:var(--green);font-size:9px">L:</span> <span style="color:${t.pnlLong>=0?C.greenB:C.redB}">${formatPNL(t.pnlLong)}</span>`);
+      pnlHtml = `<div style="line-height:1.7">${parts.join('<br>')}</div>`;
+    } else {
+      pnlHtml = `<span style="color:${pnlColor};font-weight:600">${formatPNL(pnl)}</span>`;
+    }
+
+    return `<div class="play-drill-trade-row" style="cursor:pointer;${gridCols}" onclick="openTradeFromPlayDrill(${gIdx})" title="Abrir trade">
+      <span style="color:var(--muted2)">${t.fecha || '—'}</span>
+      <span style="color:var(--text);font-weight:600">${t.ticker || '—'} <span style="font-size:9px;color:var(--purple);opacity:.7">↗</span></span>
+      <span style="color:var(--muted2);font-size:10px">${t.setupEntrada || '—'}</span>
+      <span>${otherPlays || '<span style="color:var(--muted);font-size:10px">—</span>'}</span>
+      <span>${pnlHtml}</span>
+      <span style="color:${rColor}">${r !== 0 ? r.toFixed(2) + 'R' : '—'}</span>
+      <span style="color:${dirColor || 'var(--muted2)'};font-size:10px">${dir}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('playDrillBody').innerHTML = header + tradeRows;
+  document.getElementById('playDrillModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePlayDrillModal(e) {
+  if (e && e.target !== document.getElementById('playDrillModal')) return;
+  document.getElementById('playDrillModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function openTradeFromPlayDrill(gIdx) {
+  // Cerrar modal de play y modal de stats, luego abrir el trade
+  document.getElementById('playDrillModal').classList.remove('open');
+  document.body.style.overflow = '';
+  closeStatsModal();
+  setTimeout(() => editTrade(gIdx), 200);
+}
+
+// Cerrar con Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('playDrillModal').classList.contains('open')) {
+    document.getElementById('playDrillModal').classList.remove('open');
+    document.body.style.overflow = '';
   }
 });
 
