@@ -455,9 +455,33 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
       <table id="ot">
         <thead><tr>
           <th>Fecha</th>
-          <th style="color:var(--green)">+1%/día</th>
-          <th style="color:var(--yellow)">+1.5%/día</th>
-          <th style="color:var(--cyan)">+2%/día</th>
+          <th style="color:var(--green)">
+            <select id="rate1Sel" onchange="onRateChange()" style="background:transparent;border:none;color:var(--green);font-family:'DM Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;outline:none;text-align:center;">
+              <option value="0">+0%/día</option>
+              <option value="0.0025">+0.25%/día</option>
+              <option value="0.005">+0.50%/día</option>
+              <option value="0.0075">+0.75%/día</option>
+              <option value="0.01" selected>+1%/día</option>
+            </select>
+          </th>
+          <th style="color:var(--yellow)">
+            <select id="rate2Sel" onchange="onRateChange()" style="background:transparent;border:none;color:var(--yellow);font-family:'DM Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;outline:none;text-align:center;">
+              <option value="0.01">+1%/día</option>
+              <option value="0.0125">+1.25%/día</option>
+              <option value="0.015">+1.50%/día</option>
+              <option value="0.0175" selected>+1.75%/día</option>
+              <option value="0.02">+2%/día</option>
+            </select>
+          </th>
+          <th style="color:var(--cyan)">
+            <select id="rate3Sel" onchange="onRateChange()" style="background:transparent;border:none;color:var(--cyan);font-family:'DM Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;outline:none;text-align:center;">
+              <option value="0.02">+2%/día</option>
+              <option value="0.0225">+2.25%/día</option>
+              <option value="0.025" selected>+2.5%/día</option>
+              <option value="0.0275">+2.75%/día</option>
+              <option value="0.03">+3%/día</option>
+            </select>
+          </th>
         </tr></thead>
         <tbody id="ob"></tbody>
       </table>
@@ -888,6 +912,24 @@ function renderMain() {
 //   → Si el SOD del día X es $9.750, se colorean todos los targets ≤ $9.750
 //   → Si ese mismo día X también tiene PNL, se suma (SOD + PNL - HTB) para ver si supera más targets
 //   → Al día siguiente, el nuevo SOD manda (no se acumula el PNL del día anterior)
+function onRateChange() {
+  // Save selections to localStorage
+  localStorage.setItem('compRate1', document.getElementById('rate1Sel').value);
+  localStorage.setItem('compRate2', document.getElementById('rate2Sel').value);
+  localStorage.setItem('compRate3', document.getElementById('rate3Sel').value);
+  renderObj();
+  renderYear();
+}
+
+function restoreRateSelects() {
+  const r1 = localStorage.getItem('compRate1');
+  const r2 = localStorage.getItem('compRate2');
+  const r3 = localStorage.getItem('compRate3');
+  if (r1) document.getElementById('rate1Sel').value = r1;
+  if (r2) document.getElementById('rate2Sel').value = r2;
+  if (r3) document.getElementById('rate3Sel').value = r3;
+}
+
 function renderObj() {
   const m = MONTHS[month];
   const tbody = document.getElementById('ob');
@@ -928,9 +970,12 @@ function renderObj() {
   const currentCap = (lastPNL !== null) ? lastSOD + lastPNL - htbAmt : lastSOD;
 
   // Targets compuestos calculados desde el capital inicial del mes
-  const t1 = m.days.map((_,i) => som * Math.pow(1.01, i+1));
-  const t2 = m.days.map((_,i) => som * Math.pow(1.015, i+1));
-  const t3 = m.days.map((_,i) => som * Math.pow(1.02, i+1));
+  const r1 = parseFloat(document.getElementById('rate1Sel')?.value ?? 0.01);
+  const r2 = parseFloat(document.getElementById('rate2Sel')?.value ?? 0.0175);
+  const r3 = parseFloat(document.getElementById('rate3Sel')?.value ?? 0.025);
+  const t1 = m.days.map((_,i) => som * Math.pow(1 + r1, i+1));
+  const t2 = m.days.map((_,i) => som * Math.pow(1 + r2, i+1));
+  const t3 = m.days.map((_,i) => som * Math.pow(1 + r3, i+1));
 
   // INICIAL row
   let rows=`<tr class="tr-ini">
@@ -1514,7 +1559,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
   console.log('Data capital total:', dataCapitalTotal);
   console.log('PNL mensual completo:', pnlMensual);
   
-  // Calcular líneas de objetivo diario compuesto (1%, 1.5%, 2%, 2.5%)
+  // Calcular líneas de objetivo diario compuesto (1%, 2%, 3%)
   // Estas líneas muestran el CAPITAL TOTAL esperado acumulando X% cada día de mercado
   const objetivo1Pct   = [];
   const objetivo15Pct  = [];
@@ -1539,7 +1584,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
     
     // Aplicar compuesto diario por cada día de mercado del mes
     capitalAcumulado1   = capitalAcumulado1   * Math.pow(1.010,  diasMercadoMes);
-    capitalAcumulado15  = capitalAcumulado15  * Math.pow(1.015,  diasMercadoMes);
+    capitalAcumulado15  = capitalAcumulado15  * Math.pow(1.0175, diasMercadoMes);
     capitalAcumulado2   = capitalAcumulado2   * Math.pow(1.020,  diasMercadoMes);
     capitalAcumulado25  = capitalAcumulado25  * Math.pow(1.025,  diasMercadoMes);
     objetivo1Pct.push(capitalAcumulado1);
@@ -1549,7 +1594,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
   }
   
   console.log('Objetivos 1% diario (capital total):', objetivo1Pct);
-  console.log('Objetivos 1.5% diario (capital total):', objetivo15Pct);
+  console.log('Objetivos 1.75% diario (capital total):', objetivo15Pct);
   console.log('Objetivos 2% diario (capital total):', objetivo2Pct);
   console.log('Objetivos 2.5% diario (capital total):', objetivo25Pct);
   
@@ -1581,7 +1626,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
       pointHoverRadius: 4
     },
     {
-      label: 'Objetivo +1.5%/día',
+      label: 'Objetivo +1.75%/día',
       data: objetivo15Pct,
       borderColor: '#f5a623',
       borderWidth: 2,
@@ -1592,7 +1637,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
       pointHoverRadius: 4
     },
     {
-      label: 'Objetivo +2%/día',
+      label: 'Objetivo +1.75%/día',
       data: objetivo2Pct,
       borderColor: '#00e676',
       borderWidth: 2,
@@ -2598,9 +2643,12 @@ function renderStats() {
       document.getElementById('stEquity').innerHTML = `<span style="font-size:12px;color:var(--muted2)">Necesitas al menos 2 días con datos para ver la curva</span>`;
     } else {
       // Targets compuestos
-      const t1pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.01, i+1) }));
-      const t2pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.015, i+1) }));
-      const t3pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1.02, i+1) }));
+      const _r1 = parseFloat(document.getElementById('rate1Sel')?.value ?? 0.01);
+      const _r2 = parseFloat(document.getElementById('rate2Sel')?.value ?? 0.0175);
+      const _r3 = parseFloat(document.getElementById('rate3Sel')?.value ?? 0.025);
+      const t1pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1 + _r1, i+1) }));
+      const t2pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1 + _r2, i+1) }));
+      const t3pts = equityPoints.map((p, i) => ({ d: p.d, v: som * Math.pow(1 + _r3, i+1) }));
 
       // Rango Y
       const allVals = [
@@ -2657,9 +2705,9 @@ function renderStats() {
       const beatsT2 = capFinal >= lastT2;
       const beatsT3 = capFinal >= lastT3;
 
-      const perfInsight = beatsT3 ? '🔥 Por encima del target +2% compuesto — rendimiento excepcional'
-        : beatsT2 ? '✅ Por encima del target +1.5% compuesto'
-        : beatsT1 ? '⚠️ Por encima del +1% pero sin alcanzar el +1.5%'
+      const perfInsight = beatsT3 ? '🔥 Por encima del target +2.5% compuesto — rendimiento excepcional'
+        : beatsT2 ? '✅ Por encima del target +1.75% compuesto'
+        : beatsT1 ? '⚠️ Por encima del +1% pero sin alcanzar el +1.75%'
         : ganancia >= 0 ? '⚠️ Capital en positivo pero por debajo del target mínimo (+1%)'
         : '❌ Capital por debajo del inicio del mes';
 
@@ -2708,7 +2756,7 @@ function renderStats() {
           <polyline points="${pts(t1pts)}" fill="none" stroke="#00e676" stroke-width="1"
             stroke-dasharray="3,3" opacity="0.5"/>
 
-          <!-- Target +1.5% compuesto -->
+          <!-- Target +2% compuesto -->
           <polyline points="${pts(t2pts)}" fill="none" stroke="#ffd600" stroke-width="1"
             stroke-dasharray="3,3" opacity="0.5"/>
 
@@ -2742,8 +2790,8 @@ function renderStats() {
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:12px;padding:0 4px;">
           <span><span style="display:inline-block;width:16px;height:2px;background:${eqColor};vertical-align:middle;margin-right:4px;border-radius:1px"></span>Capital real</span>
           <span><span style="display:inline-block;width:16px;height:2px;background:#00e676;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #00e676"></span>+1%/día</span>
-          <span><span style="display:inline-block;width:16px;height:2px;background:#ffd600;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #ffd600"></span>+1.5%/día</span>
-          <span><span style="display:inline-block;width:16px;height:2px;background:#00b0ff;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #00b0ff"></span>+2%/día</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#ffd600;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #ffd600"></span>+1.75%/día</span>
+          <span><span style="display:inline-block;width:16px;height:2px;background:#00b0ff;opacity:.5;vertical-align:middle;margin-right:4px;border-radius:1px;border-top:1px dashed #00b0ff"></span>+1.75%/día</span>
           <span><span style="color:var(--green)">●</span> día ganador &nbsp;<span style="color:var(--red)">●</span> día perdedor</span>
         </div>
 
@@ -2756,8 +2804,8 @@ function renderStats() {
             <div style="margin-top:6px;font-size:10px;color:var(--muted2);">
               Targets al cierre →
               <span style="color:${beatsT1?'var(--green)':'var(--red)'}">+1% ${beatsT1?'✓':'✗'}</span> &nbsp;
-              <span style="color:${beatsT2?'var(--yellow)':'var(--red)'}">+1.5% ${beatsT2?'✓':'✗'}</span> &nbsp;
-              <span style="color:${beatsT3?'var(--cyan)':'var(--red)'}">+2% ${beatsT3?'✓':'✗'}</span>
+              <span style="color:${beatsT2?'var(--yellow)':'var(--red)'}">+1.75% ${beatsT2?'✓':'✗'}</span> &nbsp;
+              <span style="color:${beatsT3?'var(--cyan)':'var(--red)'}">+2.5% ${beatsT3?'✓':'✗'}</span>
             </div>
           </div>
         </div>
@@ -3788,6 +3836,7 @@ function deleteImgUrl() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pdfModal').addEventListener('click', function(e){ if(e.target===this) closePdfModal(); });
   document.getElementById('imgModal').addEventListener('click', function(e){ if(e.target===this) closeImgUrlModal(); });
+  restoreRateSelects();
 });
 
 // ── DATOS IA PRE-INYECTADOS ───────────────────────────────────────────────────
