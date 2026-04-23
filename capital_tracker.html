@@ -1584,7 +1584,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
     
     // Aplicar compuesto diario por cada día de mercado del mes
     capitalAcumulado1   = capitalAcumulado1   * Math.pow(1.010,  diasMercadoMes);
-    capitalAcumulado15  = capitalAcumulado15  * Math.pow(1.0175, diasMercadoMes);
+    capitalAcumulado15  = capitalAcumulado15  * Math.pow(1.015,  diasMercadoMes);
     capitalAcumulado2   = capitalAcumulado2   * Math.pow(1.020,  diasMercadoMes);
     capitalAcumulado25  = capitalAcumulado25  * Math.pow(1.025,  diasMercadoMes);
     objetivo1Pct.push(capitalAcumulado1);
@@ -1594,7 +1594,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
   }
   
   console.log('Objetivos 1% diario (capital total):', objetivo1Pct);
-  console.log('Objetivos 1.75% diario (capital total):', objetivo15Pct);
+  console.log('Objetivos 1.5% diario (capital total):', objetivo15Pct);
   console.log('Objetivos 2% diario (capital total):', objetivo2Pct);
   console.log('Objetivos 2.5% diario (capital total):', objetivo25Pct);
   
@@ -1626,7 +1626,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
       pointHoverRadius: 4
     },
     {
-      label: 'Objetivo +1.75%/día',
+      label: 'Objetivo +1.5%/día',
       data: objetivo15Pct,
       borderColor: '#f5a623',
       borderWidth: 2,
@@ -1637,7 +1637,7 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
       pointHoverRadius: 4
     },
     {
-      label: 'Objetivo +1.75%/día',
+      label: 'Objetivo +2%/día',
       data: objetivo2Pct,
       borderColor: '#00e676',
       borderWidth: 2,
