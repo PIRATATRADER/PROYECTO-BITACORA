@@ -402,6 +402,13 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     display:inline-flex;align-items:center;gap:6px;">
     💸 Retiros
   </button>
+  <button id="btnSimulacion" onclick="openSimulacionModal()" style="
+    font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    padding:6px 16px;border-radius:7px;border:1px solid var(--gold);background:#f5a62315;
+    color:var(--gold);cursor:pointer;transition:all .15s;margin-left:10px;flex-shrink:0;
+    display:inline-flex;align-items:center;gap:6px;">
+    🔮 Simulación Próximos Meses
+  </button>
 </div>
 
 <div class="trow">
@@ -5578,6 +5585,16 @@ function tmSave() {
   <!-- KPIs resumen -->
   <div id="retiroKpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:18px 24px 0;"></div>
 
+
+  <!-- Fechas de retiro del broker -->
+  <div style="padding:18px 24px 0;">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+      color:var(--muted2);margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+      &#128197; VENTANAS DE RETIRO BROKER
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+    </div>
+    <div id="retiroBrokerFechas" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
+  </div>
   <!-- Tabla por meses: disponible acumulado -->
   <div style="padding:18px 24px 0;">
     <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;
@@ -5729,7 +5746,86 @@ function fmtDate(s) {
 }
 
 // Renderizar el modal completo
+
+// ── Fechas de retiro del broker ──
+function renderBrokerFechas() {
+  const BROKER_DATES = [
+    { label: '01 ENE', month: 0, day: 1 },
+    { label: '01 ABR', month: 3, day: 1 },
+    { label: '01 JUL', month: 6, day: 1 },
+    { label: '01 OCT', month: 9, day: 1 },
+  ];
+
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  const year = hoy.getFullYear();
+
+  // Calcular la fecha real para cada ventana (este año o el siguiente)
+  const fechas = BROKER_DATES.map(bd => {
+    let d = new Date(year, bd.month, bd.day);
+    if (d < hoy) d = new Date(year + 1, bd.month, bd.day);
+    const diffMs = d - hoy;
+    const diffDias = Math.ceil(diffMs / 86400000);
+    const esPasada = d.getFullYear() === year && d < hoy;
+    return { ...bd, date: d, diffDias, esPasada };
+  });
+
+  // La próxima es la de menor diffDias
+  const minDias = Math.min(...fechas.map(f => f.diffDias));
+
+  const html = fechas.map(f => {
+    const isNext = f.diffDias === minDias;
+    const hoy0 = f.diffDias === 0;
+
+    let accentColor = 'var(--muted)';
+    let bgColor = 'var(--bg3)';
+    let borderColor = 'var(--border)';
+    let badge = '';
+    let daysText = '';
+
+    if (hoy0) {
+      accentColor = '#00e676';
+      borderColor = '#00e67650';
+      bgColor = '#00e67608';
+      badge = `<span style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;
+        background:#00e67630;color:#00e676;border-radius:4px;padding:2px 6px;">HOY</span>`;
+      daysText = `<span style="color:#00e676;">¡HOY!</span>`;
+    } else if (isNext) {
+      accentColor = 'var(--red)';
+      borderColor = '#ff3d5750';
+      bgColor = '#ff3d5708';
+      badge = `<span style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;
+        background:#ff3d5730;color:var(--red);border-radius:4px;padding:2px 6px;">PRÓXIMA</span>`;
+      daysText = `<span style="color:var(--red);">en ${f.diffDias}d</span>`;
+    } else {
+      accentColor = 'var(--muted)';
+      daysText = `<span style="color:var(--muted2);">en ${f.diffDias}d</span>`;
+    }
+
+    const dateLabel = f.date.toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' })
+      .replace('.','').toUpperCase();
+
+    return `<div style="background:${bgColor};border:1px solid ${borderColor};border-radius:10px;
+      padding:12px 14px;text-align:center;position:relative;overflow:hidden;transition:all .15s;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${accentColor};"></div>
+      <div style="display:flex;justify-content:center;margin-bottom:6px;">${badge || '<span style="height:18px;display:block;"></span>'}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);line-height:1;">
+        ${f.label}
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px;">
+        ${dateLabel}
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;margin-top:6px;">
+        ${daysText}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('retiroBrokerFechas').innerHTML = html;
+}
+
 function renderRetirosModal() {
+  renderBrokerFechas();
   const meses    = calcMonthlyNeto();
   const retiros  = getRetiros();
   const totalDisponible = meses.reduce((s, m) => s + m.disponible10, 0);
@@ -5824,7 +5920,258 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('retirosModal').addEventListener('click', function(e) {
   if (e.target === this) closeRetirosModal();
 });
+
+// ══════════════════════════════════════════════════ SIMULACIÓN CAPITAL COMPUESTO
+let _simPctOverride = null;
+
+function openSimulacionModal() {
+  _simPctOverride = null;
+  // Reset manual input and highlight AUTO btn
+  document.getElementById('simPctManual').value = '';
+  ['simBtnAuto','simBtn5','simBtn10','simBtn15','simBtn20','simBtn25'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.borderColor = 'var(--border)'; el.style.background = 'transparent'; el.style.color = 'var(--muted2)';
+  });
+  const auto = document.getElementById('simBtnAuto');
+  if (auto) { auto.style.borderColor='var(--gold)'; auto.style.background='#f5a62325'; auto.style.color='var(--gold)'; }
+  renderSimulacion();
+  document.getElementById('simulacionModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSimulacionModal() {
+  document.getElementById('simulacionModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function setSimPct(pct, source) {
+  _simPctOverride = (pct !== null && !isNaN(pct)) ? pct : null;
+  if (source !== 'manual') document.getElementById('simPctManual').value = '';
+  const map = { 'null':'simBtnAuto', '5':'simBtn5', '10':'simBtn10', '15':'simBtn15', '20':'simBtn20', '25':'simBtn25' };
+  ['simBtnAuto','simBtn5','simBtn10','simBtn15','simBtn20','simBtn25'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.style.borderColor='var(--border)'; el.style.background='transparent'; el.style.color='var(--muted2)';
+  });
+  if (source !== 'manual') {
+    const activeId = map[String(pct)];
+    if (activeId) {
+      const el = document.getElementById(activeId);
+      if (el) { el.style.borderColor='var(--gold)'; el.style.background='#f5a62325'; el.style.color='var(--gold)'; }
+    }
+  }
+  renderSimulacion();
+}
+
+function renderSimulacion() {
+  const hoy = new Date();
+  const mesActual = hoy.getMonth();
+
+  // Media real de meses cerrados
+  const mesesCerrados = [];
+  MONTHS.forEach((m, mi) => {
+    if (mi >= mesActual) return;
+    let pnlTotal=0, htbTotal=0, hasData=false, sodInicial=null;
+    m.days.forEach(d => {
+      const row=D[dk(d)]||{};
+      const p=pd(row.pnlDay), h=pd(row.htb)||0;
+      if (p!==null) { pnlTotal+=p; htbTotal+=h; hasData=true; }
+      if (sodInicial===null) { const s=pd(row.startOfDay); if(s) sodInicial=s; }
+    });
+    if (!hasData || !sodInicial) return;
+    const neto=pnlTotal-htbTotal;
+    mesesCerrados.push({ name:m.name, neto, sodInicial, pct:(neto/sodInicial)*100 });
+  });
+
+  // Capital actual: SOD + PNL del día más reciente registrado
+  let capitalActual = null;
+  for (let mi=mesActual; mi>=0 && capitalActual===null; mi--) {
+    const m=MONTHS[mi];
+    for (let di=m.days.length-1; di>=0; di--) {
+      const row=D[dk(m.days[di])]||{};
+      const s=pd(row.startOfDay);
+      if (s!==null) { capitalActual=s+(pd(row.pnlDay)||0); break; }
+    }
+  }
+  if (!capitalActual) capitalActual=0;
+
+  const avgPct = mesesCerrados.length
+    ? mesesCerrados.reduce((s,m)=>s+m.pct,0)/mesesCerrados.length : 0;
+  const pctUsado = (_simPctOverride!==null) ? _simPctOverride : avgPct;
+  const N = 12;
+  const capitalFinal  = capitalActual * Math.pow(1+pctUsado/100, N);
+  const gananciaTotal = capitalFinal - capitalActual;
+
+  // KPIs
+  document.getElementById('simKpis').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--cyan);"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">Capital Actual</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--cyan);">${fd(capitalActual)}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">Punto de partida</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">% Mensual Aplicado</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);">${pctUsado.toFixed(2)}%</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">${_simPctOverride!==null?'Manual':'Media real ('+mesesCerrados.length+' meses)'}</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid ${gananciaTotal>=0?'#00e67640':'#ff3d5740'};border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${gananciaTotal>=0?'var(--green)':'var(--red)'};"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">Capital en 12 Meses</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${gananciaTotal>=0?'var(--green)':'var(--red)'};">${fd(capitalFinal)}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">${gananciaTotal>=0?'+':''}${fd(gananciaTotal)} en 12 meses</div>
+    </div>`;
+
+  // Nombres de meses en español
+  const MONTH_NAMES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+
+  // Tabla — siempre 12 meses desde el mes siguiente al actual
+  let html = `<div style="display:grid;grid-template-columns:140px 1fr 1fr 1fr 1fr;gap:8px;
+    padding:6px 12px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);margin-bottom:6px;">
+    <span>Mes</span>
+    <span style="text-align:right">Capital Inicio</span>
+    <span style="text-align:right">Ganancia Est.</span>
+    <span style="text-align:right">Capital Fin</span>
+    <span style="text-align:right">Acum. vs Hoy</span>
+  </div>`;
+
+  let cap = capitalActual;
+  const startMonth = mesActual + 1; // próximo mes (0-based)
+  const startYear  = hoy.getFullYear();
+
+  for (let i = 0; i < N; i++) {
+    const absMonth = startMonth + i;
+    const mn   = MONTH_NAMES[absMonth % 12];
+    const yr   = startYear + Math.floor(absMonth / 12);
+    const label = mn + ' ' + yr;
+    const ganancia = cap * pctUsado / 100;
+    const capFin   = cap + ganancia;
+    const acum     = capFin - capitalActual;
+    const isLast   = i === N - 1;
+    const barPct   = capitalActual > 0 ? Math.min(100, (acum / capitalActual) * 100) : 0;
+
+    html += `<div style="display:grid;grid-template-columns:140px 1fr 1fr 1fr 1fr;gap:8px;
+      align-items:center;padding:10px 12px;
+      background:${isLast?'#f5a62308':'var(--bg3)'};
+      border:1px solid ${isLast?'#f5a62340':'var(--border)'};
+      border-radius:8px;margin-bottom:6px;font-family:'DM Mono',monospace;font-size:11px;
+      position:relative;overflow:hidden;">
+      <div style="position:absolute;bottom:0;left:0;height:2px;width:${barPct}%;background:${gananciaTotal>=0?'#00e67630':'#ff3d5730'};"></div>
+      <span style="color:${isLast?'var(--gold)':'var(--text)'};font-weight:600;letter-spacing:1px;position:relative;">${isLast?'🏁 ':''}${label}</span>
+      <span style="text-align:right;color:var(--muted2);position:relative;">${fd(cap)}</span>
+      <span style="text-align:right;color:var(--green);font-weight:600;position:relative;">+${fd(ganancia)} <span style="font-size:9px;color:var(--muted);font-weight:400;">(${pctUsado.toFixed(1)}%)</span></span>
+      <span style="text-align:right;color:var(--text);font-weight:600;position:relative;">${fd(capFin)}</span>
+      <span style="text-align:right;color:${acum>=0?'var(--gold)':'var(--red)'};position:relative;">+${fd(acum)}</span>
+    </div>`;
+    cap = capFin;
+  }
+  document.getElementById('simTabla').innerHTML = html;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key==='Escape' && document.getElementById('simulacionModal').style.display==='flex')
+    closeSimulacionModal();
+});
+document.getElementById('simulacionModal').addEventListener('click', function(e) {
+  if (e.target===this) closeSimulacionModal();
+});
+
 </script>
 
+
+<!-- ══════════════════════════════════════════════════════ SIMULACIÓN MODAL -->
+<div id="simulacionModal" style="display:none;position:fixed;inset:0;background:#000000cc;
+  z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+    width:min(780px,100%);max-height:90vh;overflow-y:auto;position:relative;">
+
+    <!-- Top bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:20px 24px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;
+      background:var(--bg2);z-index:2;border-radius:16px 16px 0 0;">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:var(--gold);">
+          🔮 SIMULACIÓN 12 MESES · CAPITAL COMPUESTO
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;
+          color:var(--muted2);text-transform:uppercase;margin-top:3px;">
+          Proyección 12 meses vista basada en tu media mensual real · Capital compuesto
+        </div>
+      </div>
+      <button onclick="closeSimulacionModal()" style="width:32px;height:32px;border-radius:8px;
+        border:1px solid var(--border);background:transparent;color:var(--muted2);
+        cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
+        transition:all .15s;flex-shrink:0;"
+        onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">✕</button>
+    </div>
+
+    <!-- KPIs base -->
+    <div id="simKpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:18px 24px 0;"></div>
+
+    <!-- Ajuste de % -->
+    <div style="padding:14px 24px 0;">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+        padding:14px 18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;
+          text-transform:uppercase;color:var(--muted2);flex-shrink:0;">Ajustar % mensual:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1;">
+          <button onclick="setSimPct(null)" id="simBtnAuto"
+            style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 12px;
+            border-radius:6px;border:1px solid var(--gold);background:#f5a62325;color:var(--gold);
+            cursor:pointer;transition:all .15s;">AUTO (media real)</button>
+          <button onclick="setSimPct(5)"  id="simBtn5"
+            style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 12px;
+            border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);
+            cursor:pointer;transition:all .15s;">5%</button>
+          <button onclick="setSimPct(10)" id="simBtn10"
+            style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 12px;
+            border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);
+            cursor:pointer;transition:all .15s;">10%</button>
+          <button onclick="setSimPct(15)" id="simBtn15"
+            style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 12px;
+            border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);
+            cursor:pointer;transition:all .15s;">15%</button>
+          <button onclick="setSimPct(20)" id="simBtn20"
+            style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 12px;
+            border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);
+            cursor:pointer;transition:all .15s;">20%</button>
+          <button onclick="setSimPct(25)" id="simBtn25"
+            style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 12px;
+            border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);
+            cursor:pointer;transition:all .15s;">25%</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);">Manual:</span>
+          <input id="simPctManual" type="number" min="0" max="200" step="0.1" placeholder="%" 
+            oninput="setSimPct(parseFloat(this.value)||null,'manual')"
+            style="width:60px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;
+            color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:4px 8px;text-align:center;outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla proyección -->
+    <div style="padding:16px 24px 0;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+        color:var(--muted2);margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+        PROYECCIÓN MES A MES
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+      <div id="simTabla"></div>
+    </div>
+
+    <!-- Footer nota -->
+    <div style="padding:16px 24px 22px;">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);line-height:1.7;
+        border-top:1px solid var(--border);padding-top:12px;">
+        ⚠ Simulación orientativa basada en rendimiento histórico. Los resultados pasados no garantizan rendimientos futuros.
+        El capital compuesto aplica el % sobre el capital resultante de cada mes anterior.
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

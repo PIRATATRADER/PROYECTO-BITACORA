@@ -286,6 +286,11 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @keyframes notasIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 </style>
 </head>
 <body>
@@ -496,10 +501,19 @@
       const dil = (t.dilucion && t.dilucion.length)
         ? t.dilucion.map(d => `<span style="color:var(--text);">${d}</span>`).join('<br>')
         : '<span style="color:var(--muted);">—</span>';
+      // Notas: buscar la más reciente con contenido
+      const notasText = matches.map(m => m.notas || '').find(n => n.trim() !== '') || '';
+      const notasBlock = notasText
+        ? `<div style="margin-top:8px;padding:8px 10px;background:rgba(255,214,0,0.07);border:1px solid rgba(255,214,0,0.35);border-left:2px solid var(--yellow);border-radius:6px;">
+            <div style="font-size:9px;letter-spacing:1.5px;color:var(--yellow);font-weight:700;margin-bottom:4px;">⚠ NOTAS ANTERIORES</div>
+            <div style="color:var(--muted2);font-size:10px;white-space:pre-wrap;word-break:break-word;max-height:55px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,black 55%,transparent 100%);mask-image:linear-gradient(to bottom,black 55%,transparent 100%);">${notasText}</div>
+          </div>`
+        : '';
       histBlock = `
         <span style="color:var(--purple);font-weight:700;">↺ ${matches.length} trade${matches.length>1?'s':''} anterior${matches.length>1?'es':''}</span><br>
         <span style="color:var(--muted2);">Último &nbsp;</span><span style="color:var(--text);">${fechaStr}</span><br>
         <span style="color:var(--muted2);">Dil &nbsp;&nbsp;&nbsp;&nbsp;</span>${dil}
+        ${notasBlock}
       `;
     } else {
       histBlock = `<span style="color:var(--muted);">⚠ Ticker nuevo — sin historial</span>`;
@@ -584,6 +598,45 @@
       document.getElementById('quickTicker').className = '';
       document.getElementById('quickPreview').style.display = 'none';
       setTimeout(() => document.getElementById('quickTicker').focus(), 50);
+
+      // ── Aviso de notas anteriores ────────────────────────────────────────────
+      const notasText = matches.map(m => m.notas || '').find(n => n.trim() !== '') || '';
+      if (notasText) {
+        // Quitar aviso anterior si existía
+        const old = document.getElementById('notasAlertPanel');
+        if (old) old.remove();
+
+        const panel = document.createElement('div');
+        panel.id = 'notasAlertPanel';
+        panel.innerHTML = `
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:18px;flex-shrink:0;margin-top:1px;">📋</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:9px;letter-spacing:1.5px;color:var(--yellow);font-weight:700;margin-bottom:5px;font-family:'DM Mono',monospace;">⚠ ${ticker} — NOTAS ANTERIORES</div>
+              <div style="color:var(--muted2);font-size:11px;font-family:'DM Mono',monospace;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:80px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,black 60%,transparent 100%);mask-image:linear-gradient(to bottom,black 60%,transparent 100%);">${notasText}</div>
+            </div>
+          </div>
+          <button onclick="document.getElementById('notasAlertPanel').remove()" style="
+            margin-top:10px;width:100%;
+            background:rgba(255,214,0,0.15);border:1px solid rgba(255,214,0,0.4);
+            border-radius:7px;color:var(--yellow);font-family:'DM Mono',monospace;
+            font-size:10px;font-weight:700;letter-spacing:0.5px;
+            padding:8px;cursor:pointer;transition:background 0.15s;
+          " onmouseover="this.style.background='rgba(255,214,0,0.28)'" onmouseout="this.style.background='rgba(255,214,0,0.15)'">✓ YA LAS LEÍ</button>
+        `;
+        panel.style.cssText = `
+          background:rgba(255,214,0,0.06);
+          border:1px solid rgba(255,214,0,0.45);
+          border-left:3px solid var(--yellow);
+          border-radius:10px;
+          padding:12px 14px;
+          animation:notasIn 0.3s ease forwards;
+        `;
+        // Insertar en el .content, después del toast
+        const content = document.querySelector('.content');
+        const toastEl = document.getElementById('toast');
+        toastEl.insertAdjacentElement('afterend', panel);
+      }
 
     } catch(err) {
       showToast('✗ Error al guardar', 'error-t');
