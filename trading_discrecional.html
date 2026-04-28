@@ -1737,11 +1737,11 @@
               <label class="form-label">Setup</label>
               <select class="form-select" id="inputSetupEntrada">
                 <option value="">— Seleccionar —</option>
-                <option value="SETUP A+ (+$1400)">SETUP A+ (+$1400)</option>
-                <option value="SETUP A ($1200 - $1400)">SETUP A ($1200 - $1400)</option>
-                <option value="SETUP B ($1000 - $1200)">SETUP B ($1000 - $1200)</option>
-                <option value="SETUP C ($750 - $1000)">SETUP C ($750 - $1000)</option>
-                <option value="BABY SIZE (<$750)">BABY SIZE (<$750)</option>
+                <option value="SETUP A+ (>$1750)">SETUP A+ (&gt;$1750)</option>
+                <option value="SETUP A ($1500 - $1750)">SETUP A ($1500 - $1750)</option>
+                <option value="SETUP B ($1250 - $1500)">SETUP B ($1250 - $1500)</option>
+                <option value="SETUP C ($1000 - $1250)">SETUP C ($1000 - $1250)</option>
+                <option value="BABY SIZE (<$1000)">BABY SIZE (&lt;$1000)</option>
               </select>
             </div>
             <div class="form-group">
@@ -3829,11 +3829,11 @@ const PLAYS_LIST = [
   // SHORT
   'SIR vs PMH', 'SIR vs HOD', 'FAIL BREAKOUT',
   'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD',
-  'LDF', 'FRD', 'VWAP REJECTION'
+  'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD'
 ];
 
 const PLAYS_LONG  = new Set(['BREAKOUT', 'BREAKOUT PMH', 'GAP & GO', 'VWAP RECLAIM']);
-const PLAYS_SHORT = new Set(['SIR vs PMH', 'SIR vs HOD', 'FAIL BREAKOUT', 'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD', 'LDF', 'FRD', 'VWAP REJECTION']);
+const PLAYS_SHORT = new Set(['SIR vs PMH', 'SIR vs HOD', 'FAIL BREAKOUT', 'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD', 'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD']);
 
 function initPlaybookSelector() {
   const container = document.getElementById('playbook-selector');
