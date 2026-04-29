@@ -433,9 +433,9 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="color:var(--text)">Start of Day</th>
           <th style="color:var(--red)">Max Loss</th>
           <th style="color:#ff8a8a">Risk Trade</th>
-          <th style="color:#6effa3">Target 1</th>
-          <th style="color:#6effa3">Target 3</th>
-          <th style="color:#6effa3">Target 5</th>
+          <th style="color:#6effa3">Target 1 (1%)</th>
+          <th style="color:#6effa3">Target 2 (3%)</th>
+          <th style="color:#6effa3">Target 3 (5%)</th>
           <th style="text-align:center;color:var(--blue)">Setup DATA</th>
           <th style="text-align:center">Setup A</th>
           <th style="text-align:center">Setup B</th>
@@ -699,7 +699,7 @@ function calc(sod, date) {
     ml,                    // Max Loss 5%
     rt: ml/5,              // Risk Trade = MaxLoss/5 = 1% SOD
     t1: sod*0.01,          // Target 1%
-    t3: sod*0.02,          // Target 2%
+    t3: sod*0.03,          // Target 3%
     t5: sod*0.05,          // Target 5%
     sd: sod*0.05,          // Setup DATA 5%
     sa: useNewPercentages ? sod*0.125 : sod*0.12,  // Setup A: 12.5% nuevo, 12% antiguo

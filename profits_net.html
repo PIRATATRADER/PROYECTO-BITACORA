@@ -7,6 +7,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 :root {
   --bg: #0a0c0f;
@@ -647,6 +649,19 @@ body::before {
     <div id="summary-content"></div>
   </div>
 
+  <!-- GRÁFICO EVOLUCIÓN CAPITAL (Adj Net acumulado) -->
+  <div class="section" id="capital-chart-section" style="animation-delay:0.32s;margin-bottom:20px;">
+    <div class="section-header">
+      <div class="section-title">💰 EVOLUCIÓN DEL CAPITAL — ADJ NET ACUMULADO</div>
+      <div class="section-badge" id="chart-badge">Dinero real ingresado por el broker</div>
+    </div>
+    <div style="position:relative;height:380px;width:100%;">
+      <canvas id="chartAdjNet"></canvas>
+    </div>
+    <!-- Observaciones dinámicas -->
+    <div id="chart-observaciones" style="margin-top:20px;display:none;"></div>
+  </div>
+
   <!-- TWO COL: Fees breakdown + Platform costs -->
   <div class="two-col">
     <div class="section" style="animation-delay:0.35s">
@@ -906,7 +921,7 @@ function renderSummary(rows) {
   const tableHead = `<table class="data-table"><thead><tr>
     <th>Periodo</th><th>Días</th><th>Órdenes</th><th>Shares</th>
     <th>Gross P&L</th><th>Comm</th><th>ECN</th><th>Locates</th>
-    <th>Software</th><th>Quotes</th><th>Créditos</th><th>Adj Net</th><th>WR</th>
+    <th>Software</th><th>Quotes</th><th>Créditos</th><th>Adj Net</th><th style="color:#b16aff">% Cuenta</th><th>WR</th>
   </tr></thead><tbody>`;
 
   if (currentPeriod === 'annual') {
@@ -914,10 +929,38 @@ function renderSummary(rows) {
     const months = [...new Set(rows.map(r => getMonth(r)))].sort((a,b)=>a-b);
     badge.textContent = months.map(m => MONTH_NAMES[m-1]).join(' · ') + ' ' + currentYear;
 
-    const monthRows = months.map(m => {
+    // Para % crecimiento: endBalance del último día del mes anterior como base
+    // Si no hay mes anterior en los datos, usamos adjNet del mes como % sobre sí mismo (N/A)
+    const allSortedRows = rows.slice().sort((a,b) => parseDate(a.date) - parseDate(b.date));
+
+    const monthRows = months.map((m, idx) => {
       const mrs = rows.filter(r => getMonth(r) === m);
       const a = aggregateRows(mrs);
       const credits = a.creditComm + a.creditSoftware;
+
+      // % crecimiento real: adjNet del mes / endBalance al inicio del mes
+      // Base = endBalance del último día del mes anterior (o primer endBalance disponible antes)
+      let pctCrecimiento = null;
+      const mrsSorted = mrs.slice().sort((a,b) => parseDate(a.date) - parseDate(b.date));
+      const endBalanceFin = mrsSorted.length > 0 ? (mrsSorted[mrsSorted.length-1].endBalance || 0) : 0;
+
+      // Buscar el endBalance del último día antes de este mes
+      const firstDayOfMonth = mrsSorted.length > 0 ? parseDate(mrsSorted[0].date) : null;
+      const rowsBefore = firstDayOfMonth
+        ? allSortedRows.filter(r => parseDate(r.date) < firstDayOfMonth && (r.endBalance !== undefined && r.endBalance !== 0))
+        : [];
+      const baseBalance = rowsBefore.length > 0
+        ? rowsBefore[rowsBefore.length-1].endBalance
+        : null;
+
+      if (baseBalance && Math.abs(baseBalance) > 0.01) {
+        pctCrecimiento = (a.adjNet / Math.abs(baseBalance)) * 100;
+      }
+
+      const pctStr = pctCrecimiento !== null
+        ? `<span style="color:${pctCrecimiento>=0?'#b16aff':'var(--red)'};font-weight:600">${pctCrecimiento>=0?'+':''}${pctCrecimiento.toFixed(2)}%</span>`
+        : '<span style="color:var(--muted)">—</span>';
+
       return `<tr>
         <td>${MONTH_FULL[m-1]} ${currentYear}</td>
         <td>${a.tradingDays}</td>
@@ -931,12 +974,24 @@ function renderSummary(rows) {
         <td class="${a.quotes>0?'neg':''}">-${$plain(a.quotes)}</td>
         <td class="${credits>0?'pos':''}">${credits>0?'+'+$plain(credits):'—'}</td>
         <td>${$f(a.adjNet)}</td>
+        <td style="text-align:right">${pctStr}</td>
         <td class="${a.wr>=50?'pos':a.wr>=35?'blue-t':'neg'}">${a.wr}%</td>
       </tr>`;
     });
 
     const tot = aggregateRows(rows);
     const totCredits = tot.creditComm + tot.creditSoftware;
+    // % crecimiento total del año: adjNet total / endBalance inicial del año
+    const yearSorted = rows.slice().sort((a,b) => parseDate(a.date) - parseDate(b.date));
+    const lastEndBal = yearSorted.filter(r => r.endBalance !== undefined && r.endBalance !== 0);
+    const firstEndBal = lastEndBal.length > 0 ? lastEndBal[0].endBalance : null;
+    const lastEndBalVal = lastEndBal.length > 0 ? lastEndBal[lastEndBal.length-1].endBalance : null;
+    const pctAnual = firstEndBal && Math.abs(firstEndBal) > 0.01
+      ? (tot.adjNet / Math.abs(firstEndBal)) * 100
+      : null;
+    const pctAnualStr = pctAnual !== null
+      ? `${pctAnual>=0?'+':''}${pctAnual.toFixed(2)}%`
+      : '—';
     const totalRow = `<tr class="total-row">
       <td>TOTAL ${currentYear}</td>
       <td>${tot.tradingDays}</td>
@@ -950,6 +1005,7 @@ function renderSummary(rows) {
       <td>-${$plain(tot.quotes)}</td>
       <td>${totCredits>0?'+'+$plain(totCredits):'—'}</td>
       <td>${$f(tot.adjNet)}</td>
+      <td style="text-align:right;color:#b16aff;font-weight:600">${pctAnualStr}</td>
       <td>${tot.wr}%</td>
     </tr>`;
 
@@ -1244,10 +1300,253 @@ function renderAll() {
   updateKPIs(filtered);
   renderMonthFilterTabs(rows);
   renderSummary(filtered);
+  renderCapitalChart(rows);
   renderFeesBreakdown(filtered);
   renderIncomeExpenses(filtered);
   renderDailyTabs(rows);
   renderDailyTable(rows);
+}
+
+// ── Capital Chart (Adj Net acumulado por mes) ─────────────────────────────────
+let _capitalChart = null;
+
+function renderCapitalChart(rows) {
+  if (_capitalChart) { _capitalChart.destroy(); _capitalChart = null; }
+  const ctx = document.getElementById('chartAdjNet');
+  if (!ctx || !rows || !rows.length) return;
+
+  const ALL_MONTHS_12 = Array.from({length:12}, (_,i) => i+1);
+  const labels = ALL_MONTHS_12.map(m => MONTH_NAMES[m-1]);
+
+  // Línea real: adjNet acumulado mes a mes
+  let acum = 0;
+  const dataAdjNet = ALL_MONTHS_12.map(m => {
+    const mrs = rows.filter(r => getMonth(r) === m);
+    if (!mrs.length) return null;
+    acum += mrs.reduce((s,r) => s + (r.adjNet||0), 0);
+    return Math.round(acum * 100) / 100;
+  });
+
+  // Promedio mensual real
+  const mesesConDatos = ALL_MONTHS_12.filter(m => rows.some(r => getMonth(r) === m));
+  const totalAdjNet = rows.reduce((s,r) => s + (r.adjNet||0), 0);
+  const prom = mesesConDatos.length > 0 ? totalAdjNet / mesesConDatos.length : 0;
+
+  // 4 proyecciones lineales acumuladas (x1, x1.5, x2, x2.5 del promedio mensual)
+  const mults   = [1, 1.5, 2, 2.5];
+  const colors  = ['#ff3d57', '#f5a623', '#00e676', '#00b0ff'];
+  const dashes  = [[6,4], [6,4], [10,4], [10,4]];
+
+  const makeDataset = (mult, color, dash) => {
+    let a = 0;
+    return {
+      label: `x${mult} · $${Math.round(prom*mult)}/mes`,
+      data: ALL_MONTHS_12.map(() => { a = Math.round((a + prom * mult)*100)/100; return a; }),
+      borderColor: color,
+      borderWidth: 2,
+      borderDash: dash,
+      backgroundColor: 'transparent',
+      fill: false,
+      tension: 0,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      spanGaps: true,
+    };
+  };
+
+  _capitalChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Adj Net Real (broker)',
+          data: dataAdjNet,
+          borderColor: '#00e5ff',
+          backgroundColor: 'rgba(0,229,255,0.07)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 7,
+          pointBackgroundColor: '#00e5ff',
+          pointBorderColor: '#0a0c0f',
+          pointBorderWidth: 2,
+          spanGaps: false,
+        },
+        ...mults.map((m,i) => makeDataset(m, colors[i], dashes[i]))
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { color:'#e8eaf0', font:{family:'DM Mono',size:11}, padding:15, usePointStyle:true }
+        },
+        tooltip: {
+          backgroundColor: '#111318',
+          titleColor: '#e8eaf0',
+          bodyColor: '#e8eaf0',
+          borderColor: '#1e2530',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: c => {
+              const sign = c.parsed.y >= 0 ? '+' : '';
+              return ` ${c.dataset.label}: ${sign}$${c.parsed.y.toFixed(2)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            color: '#7a8599',
+            font: { family:'DM Mono', size:10 },
+            callback: v => (v>=0?'+':'')+'$'+v.toLocaleString('en-US',{maximumFractionDigits:0})
+          },
+          grid: { color: '#1e2530' }
+        },
+        x: {
+          ticks: { color:'#7a8599', font:{family:'DM Mono',size:11} },
+          grid: { color: '#1e2530' }
+        }
+      }
+    }
+  });
+
+  renderChartObservaciones(rows, mesesConDatos, prom, dataAdjNet);
+}
+
+function renderChartObservaciones(rows, mesesConDatos, prom, dataAdjNet) {
+  const el = document.getElementById('chart-observaciones');
+  if (!el) return;
+
+  if (!rows.length || mesesConDatos.length === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+
+  // ── Calcular métricas ──
+  const totalAdjNet  = rows.reduce((s,r) => s + (r.adjNet||0), 0);
+  const totalDias    = rows.length;
+  const adjNetDiario = totalDias > 0 ? totalAdjNet / totalDias : 0;
+
+  // adjNet por mes (solo meses con datos)
+  const mesesData = mesesConDatos.map(m => {
+    const mrs = rows.filter(r => getMonth(r) === m);
+    return { mes: m, nombre: MONTH_FULL[m-1], adjNet: mrs.reduce((s,r) => s+(r.adjNet||0),0), dias: mrs.length };
+  });
+
+  // Tendencia: comparar último mes con anterior
+  const ultimoMes   = mesesData[mesesData.length - 1];
+  const penultimoMes= mesesData.length >= 2 ? mesesData[mesesData.length - 2] : null;
+  const tendencia   = penultimoMes ? ultimoMes.adjNet - penultimoMes.adjNet : 0;
+  const tendenciaPct= penultimoMes && penultimoMes.adjNet !== 0 ? (tendencia / Math.abs(penultimoMes.adjNet)) * 100 : 0;
+
+  // Mejor y peor mes
+  const mejorMes = mesesData.reduce((a,b) => b.adjNet > a.adjNet ? b : a);
+  const peorMes  = mesesData.reduce((a,b) => b.adjNet < a.adjNet ? b : a);
+
+  // Racha: meses consecutivos positivos desde el final
+  let rachaMeses = 0;
+  for (let i = mesesData.length - 1; i >= 0; i--) {
+    if (mesesData[i].adjNet > 0) rachaMeses++; else break;
+  }
+
+  // Win rate diario
+  const diasPos  = rows.filter(r => r.adjNet > 0).length;
+  const diasNeg  = rows.filter(r => r.adjNet < 0).length;
+  const wrDiario = totalDias > 0 ? Math.round(diasPos / totalDias * 100) : 0;
+
+  // Proyección a fin de año (meses restantes)
+  const mesActual    = new Date().getMonth() + 1;
+  const mesesRestantes = Math.max(0, 12 - mesActual);
+  const proyeccionFin = totalAdjNet + prom * mesesRestantes;
+
+  // ¿Qué objetivo se está cumpliendo?
+  // x1 = ritmo actual, x1.5, x2, x2.5
+  // Comparamos el último mes real con las proyecciones
+  const objMults  = [2.5, 2, 1.5, 1];
+  const objNames  = ['x2.5 🔥', 'x2 💪', 'x1.5 ✅', 'x1 (ritmo base)'];
+  const objColors = ['#00b0ff', '#00e676', '#f5a623', '#ff3d57'];
+  let nivelActual = -1;
+  for (let i = 0; i < objMults.length; i++) {
+    if (ultimoMes.adjNet >= prom * objMults[i]) { nivelActual = i; break; }
+  }
+
+  // ── Helpers HTML ──
+  const fd = v => (v >= 0 ? '+' : '') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const fc = v => v >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const obs = (icon, titulo, texto, color='var(--muted2)') => `
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--bg3);border-radius:10px;border:1px solid var(--border);">
+      <span style="font-size:18px;line-height:1.3">${icon}</span>
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:${color};margin-bottom:3px">${titulo}</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);line-height:1.5">${texto}</div>
+      </div>
+    </div>`;
+
+  const items = [];
+
+  // 1. Nivel de objetivo alcanzado
+  if (nivelActual >= 0) {
+    const lvl = objNames[nivelActual];
+    const col = objColors[nivelActual];
+    items.push(obs('🎯', 'Objetivo cumplido', `En <strong>${ultimoMes.nombre}</strong> superaste el nivel <strong style="color:${col}">${lvl}</strong> con <strong style="color:var(--green)">${fd(ultimoMes.adjNet)}</strong>. El objetivo base era <strong>${fd(prom)}</strong>/mes.`, col));
+  } else {
+    items.push(obs('⚠️', 'Por debajo del ritmo base', `En <strong>${ultimoMes.nombre}</strong> ingresaste <strong style="color:var(--red)">${fd(ultimoMes.adjNet)}</strong>, por debajo del promedio base de <strong>${fd(prom)}</strong>/mes. Analiza qué pasó.`, 'var(--red)'));
+  }
+
+  // 2. Tendencia
+  if (penultimoMes) {
+    const icon = tendencia >= 0 ? '📈' : '📉';
+    const signo = tendencia >= 0 ? '+' : '';
+    const color = tendencia >= 0 ? 'var(--green)' : 'var(--red)';
+    items.push(obs(icon, 'Tendencia mensual', `De <strong>${penultimoMes.nombre}</strong> a <strong>${ultimoMes.nombre}</strong>: <strong style="color:${color}">${signo}${fd(tendencia)}</strong> (${signo}${tendenciaPct.toFixed(1)}%). ${tendencia >= 0 ? 'Vas en la dirección correcta.' : 'El ritmo bajó respecto al mes anterior.'}`, color));
+  }
+
+  // 3. Racha positiva
+  if (rachaMeses >= 2) {
+    items.push(obs('🔥', 'Racha positiva', `Llevas <strong style="color:var(--green)">${rachaMeses} meses consecutivos</strong> con Adj Net positivo. Mantén la disciplina.`, 'var(--green)'));
+  } else if (rachaMeses === 1) {
+    items.push(obs('✅', 'Mes en positivo', `El último mes cerró en positivo (<strong style="color:var(--green)">${fd(ultimoMes.adjNet)}</strong>). Busca encadenar otro mes.`, 'var(--green)'));
+  } else if (ultimoMes.adjNet < 0) {
+    items.push(obs('🛑', 'Mes en negativo', `<strong>${ultimoMes.nombre}</strong> cerró en <strong style="color:var(--red)">${fd(ultimoMes.adjNet)}</strong>. Revisa gestión de riesgo y costes (locates/borrows).`, 'var(--red)'));
+  }
+
+  // 4. Win rate diario
+  const wrColor = wrDiario >= 55 ? 'var(--green)' : wrDiario >= 40 ? 'var(--gold)' : 'var(--red)';
+  const wrMsg   = wrDiario >= 55 ? 'Excelente consistencia.' : wrDiario >= 40 ? 'Consistencia aceptable, pero hay margen de mejora.' : 'Baja consistencia — más días perdedores que ganadores.';
+  items.push(obs('📊', 'Consistencia diaria', `<strong style="color:${wrColor}">${wrDiario}% win rate</strong> (${diasPos} días pos. / ${diasNeg} días neg. de ${totalDias} días). ${wrMsg}`, wrColor));
+
+  // 5. Mejor mes
+  if (mesesData.length > 1) {
+    items.push(obs('🏆', 'Mejor mes del año', `<strong>${mejorMes.nombre}</strong> con <strong style="color:var(--green)">${fd(mejorMes.adjNet)}</strong> netos. ${mejorMes.mes === ultimoMes.mes ? '¡Es tu mes actual!' : 'Úsalo como referencia para saber de qué eres capaz.'}`));
+  }
+
+  // 6. Proyección fin de año
+  if (mesesRestantes > 0) {
+    const projColor = proyeccionFin >= 0 ? 'var(--green)' : 'var(--red)';
+    items.push(obs('🔭', 'Proyección fin de año', `Manteniendo tu ritmo actual (<strong>${fd(prom)}</strong>/mes), cerrarías el año en <strong style="color:${projColor}">${fd(proyeccionFin)}</strong> acumulados. Quedan <strong>${mesesRestantes} meses</strong>.`, projColor));
+  } else {
+    items.push(obs('🏁', 'Año completado', `El año cerró con <strong style="color:${fc(totalAdjNet)}">${fd(totalAdjNet)}</strong> de Adj Net total. Promedio de <strong>${fd(prom)}</strong>/mes.`));
+  }
+
+  // 7. Adj Net diario
+  const adColor = adjNetDiario >= 0 ? 'var(--green)' : 'var(--red)';
+  items.push(obs('⚡', 'Rendimiento diario medio', `Generas una media de <strong style="color:${adColor}">${fd(adjNetDiario)}/día</strong> de trading real (${totalDias} días). ${adjNetDiario >= 200 ? 'Ritmo muy sólido.' : adjNetDiario >= 80 ? 'Ritmo razonable, con margen de crecimiento.' : 'Hay margen de mejora en el edge diario.'}`, adColor));
+
+  el.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--text)">📋 ANÁLISIS DEL GRÁFICO</span>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-left:10px">Basado en ${mesesConDatos.length} mes${mesesConDatos.length>1?'es':''} de datos reales</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      ${items.join('')}
+    </div>`;
 }
 
 // ── Empty state ────────────────────────────────────────────────────────────────
