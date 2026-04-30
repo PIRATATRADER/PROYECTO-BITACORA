@@ -366,13 +366,13 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 
 <div class="kpis">
   <div class="kpi" style="--ac:var(--gold)"><div class="kpi-l">Capital Inicial</div><div class="kpi-v kgo" id="kCap">—</div></div>
-  <div class="kpi" style="--ac:var(--green)"><div class="kpi-l">PNL Bruto</div><div class="kpi-v" id="kPNLBruto">$0</div></div>
+  <div class="kpi" style="--ac:var(--green)"><div class="kpi-l">PNL Bruto</div><div class="kpi-v" id="kPNL">$0</div></div>
   <div class="kpi" style="--ac:#ff6b9d"><div class="kpi-l">HTB</div><div class="kpi-v" id="kHTB" style="color:#ff6b9d">$0</div></div>
-  <div class="kpi" style="--ac:var(--cyan)"><div class="kpi-l">PNL Neto</div><div class="kpi-v" id="kPNL">$0</div></div>
+  <div class="kpi" style="--ac:var(--cyan)"><div class="kpi-l">PNL Neto</div><div class="kpi-v" id="kNeto">$0</div></div>
   <div class="kpi" style="--ac:var(--cyan)"><div class="kpi-l">% Neto</div><div class="kpi-v" id="kPctNeto">—</div></div>
   <div class="kpi" style="--ac:var(--blue)"><div class="kpi-l">Días Operados</div><div class="kpi-v kb" id="kDias">0</div></div>
-  <div class="kpi" style="--ac:var(--green)"><div class="kpi-l">Win Days</div><div class="kpi-v kg" id="kWin">0</div></div>
-  <div class="kpi" style="--ac:var(--red)"><div class="kpi-l">Loss Days</div><div class="kpi-v kr" id="kLoss">0</div></div>
+  <div class="kpi" style="--ac:var(--green)"><div class="kpi-l">Win Days</div><div class="kpi-v kg" id="kWin">0</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--green);margin-top:3px;" id="kWinPct"></div></div>
+  <div class="kpi" style="--ac:var(--red)"><div class="kpi-l">Loss Days</div><div class="kpi-v kr" id="kLoss">0</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);margin-top:3px;" id="kLossPct"></div></div>
 </div>
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -433,9 +433,9 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="color:var(--text)">Start of Day</th>
           <th style="color:var(--red)">Max Loss</th>
           <th style="color:#ff8a8a">Risk Trade</th>
-          <th style="color:#6effa3">Target 1 (1%)</th>
-          <th style="color:#6effa3">Target 2 (3%)</th>
-          <th style="color:#6effa3">Target 3 (5%)</th>
+          <th style="color:#6effa3">TARGET 1%</th>
+          <th style="color:#6effa3">TARGET 3%</th>
+          <th style="color:#6effa3">TARGET 5%</th>
           <th style="text-align:center;color:var(--blue)">Setup DATA</th>
           <th style="text-align:center">Setup A</th>
           <th style="text-align:center">Setup B</th>
@@ -1028,22 +1028,25 @@ function renderYear() {
   });
   const pnlAcumulado=pnl-htbTotal;
   document.getElementById('kCap').textContent=firstCap?fd(firstCap):'—';
-  // PNL Bruto
-  const pnlBrutoEl=document.getElementById('kPNLBruto');
-  pnlBrutoEl.textContent=fd(pnl)||'$0'; pnlBrutoEl.className='kpi-v '+(pnl>=0?'kg':'kr');
+  const pe=document.getElementById('kPNL');
+  pe.textContent=fd(pnlAcumulado)||'$0'; pe.className='kpi-v '+(pnlAcumulado>=0?'kg':'kr');
   // HTB
   const htbEl=document.getElementById('kHTB');
   htbEl.textContent=htbTotal>0?fd(htbTotal):'$0';
   // PNL Neto
-  const pe=document.getElementById('kPNL');
-  pe.textContent=fd(pnlAcumulado)||'$0'; pe.className='kpi-v '+(pnlAcumulado>=0?'kg':'kr');
+  const kpiPnlNeto=pnlAcumulado-htbTotal;
+  const netoEl=document.getElementById('kNeto');
+  netoEl.textContent=fd(kpiPnlNeto)||'$0'; netoEl.className='kpi-v '+(kpiPnlNeto>=0?'kg':'kr');
   // % Neto
   const pctNetoEl=document.getElementById('kPctNeto');
-  if(firstCap&&firstCap>0){const pn=(pnlAcumulado/firstCap*100);pctNetoEl.textContent=(pn>=0?'+':'')+pn.toFixed(2)+'%';pctNetoEl.style.color=pn>=0?'var(--cyan)':'var(--red)';}
-  else{pctNetoEl.textContent='—';pctNetoEl.style.color='var(--cyan)';}
+  if(firstCap&&firstCap>0){const pct=(kpiPnlNeto/firstCap)*100;pctNetoEl.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';pctNetoEl.className='kpi-v '+(pct>=0?'kg':'kr');}else{pctNetoEl.textContent='—';}
   document.getElementById('kDias').textContent=dias;
   document.getElementById('kWin').textContent=wins;
   document.getElementById('kLoss').textContent=losses;
+  if(dias>0){
+    document.getElementById('kWinPct').textContent=(wins/dias*100).toFixed(1)+'%';
+    document.getElementById('kLossPct').textContent=(losses/dias*100).toFixed(1)+'%';
+  }
 
   // % Medio por día: promedio de los % Day individuales (pnlDay/startOfDay*100)
   let pctSum=0, pctCount=0;
@@ -1389,62 +1392,143 @@ function hidePNLAnual() {
   }
 }
 
-function renderPNLAnual() {
-  // Usa exactamente la misma lógica que renderMain():
-  // PNL mes = suma(pnlDay) · PNL neto = suma(pnlDay) - suma(htb)
-  // Una única fuente de verdad: los datos de D (capital tracker).
-
+async function renderPNLAnual() {
+  console.log('=== INICIANDO renderPNLAnual ===');
+  console.log('MONTHS:', MONTHS);
+  console.log('D (datos):', D);
+  
+  // Intentar obtener datos de profits_net desde Firebase
+  let profitsNetData = null;
+  try {
+    const docRef = firebase.firestore().collection('profits_net').doc('data_2026');
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+      profitsNetData = docSnap.data();
+      console.log('✅ Datos de profits_net cargados desde Firebase:', profitsNetData);
+    } else {
+      console.log('⚠️ No se encontró documento data_2026 en profits_net');
+    }
+  } catch (err) {
+    console.error('❌ Error al cargar profits_net:', err);
+  }
+  
+  // Función para calcular PNL mensual desde profits_net
+  function getPNLFromProfitsNet(mesNumero) {
+    if (!profitsNetData || !profitsNetData.rows) return null;
+    
+    // Agrupar por mes y sumar adjNet
+    let totalAdjNet = 0;
+    let encontrado = false;
+    
+    profitsNetData.rows.forEach(row => {
+      // Parsear fecha (formato: "1/2/2026" o "1/2/26")
+      const parts = row.date.split('/');
+      const mes = parseInt(parts[0]); // mes 1-12
+      const year = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+      
+      // Verificar que sea el año 2026 y el mes correcto
+      if (year === '2026' && mes === (mesNumero + 1)) { // mesNumero es 0-11
+        totalAdjNet += row.adjNet || 0;
+        encontrado = true;
+      }
+    });
+    
+    return encontrado ? totalAdjNet : null;
+  }
+  
+  // Función helper para formatear dinero
   const fm = v => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
-
-  // Capital inicial del año: primer SOD de enero
+  
+  // Obtener el capital inicial del año (primer SOD de enero)
   let capitalInicialAnual = null;
   for (let i = 0; i < MONTHS[0].days.length; i++) {
     const s = pd((D[dk(MONTHS[0].days[i])] || {}).startOfDay);
-    if (s) { capitalInicialAnual = s; break; }
+    if (s) {
+      capitalInicialAnual = s;
+      break;
+    }
   }
-  if (!capitalInicialAnual) capitalInicialAnual = 0;
-
-  // Calcular PNL de cada mes igual que renderMain
+  
+  console.log('Capital inicial anual:', capitalInicialAnual);
+  console.log('Primer día de enero:', MONTHS[0].days[0]);
+  console.log('Datos del 2 de enero:', D[dk('2026-01-02')]);
+  
+  // Si no hay capital inicial, usar 0
+  if (!capitalInicialAnual) {
+    capitalInicialAnual = 0;
+  }
+  
+  // Calcular PNL de cada mes
   const pnlMensual = [];
   let pnlAcumulado = 0;
   let totalPNL = 0;
   let mesesConDatos = 0;
   let mejorMes = { mes: '', pnl: -Infinity };
-  let peorMes  = { mes: '', pnl:  Infinity };
-
+  let peorMes = { mes: '', pnl: Infinity };
+  
   MONTHS.forEach((m, idx) => {
-    let pnlDayTotal = 0, htbTotal = 0, diasConDatos = 0, firstSOD = null;
-
-    m.days.forEach(d => {
-      const row = D[dk(d)] || {};
-      const pnl = pd(row.pnlDay);
-      const htb = pd(row.htb) || 0;
-      if (firstSOD === null) { const s = pd(row.startOfDay); if (s) firstSOD = s; }
-      if (pnl !== null) { pnlDayTotal += pnl; htbTotal += htb; diasConDatos++; }
-    });
-
-    // PNL bruto (igual que columna PNL en tabla principal)
-    const pnlMes  = pnlDayTotal;
-    const netoMes = pnlDayTotal - htbTotal;
-    const pctMes  = firstSOD ? (pnlMes / firstSOD) * 100 : null;
-    const pctNeto = firstSOD ? (netoMes / firstSOD) * 100 : null;
-
-    if (diasConDatos > 0) {
-      mesesConDatos++;
-      totalPNL     += pnlMes;
-      pnlAcumulado += pnlMes;
-      if (pnlMes > mejorMes.pnl) mejorMes = { mes: m.name, pnl: pnlMes };
-      if (pnlMes < peorMes.pnl)  peorMes  = { mes: m.name, pnl: pnlMes };
+    let pnlMes = 0;
+    let diasConDatos = 0;
+    let fuenteDatos = 'capital_tracker';
+    
+    // Primero intentar obtener de profits_net
+    const pnlProfitsNet = getPNLFromProfitsNet(idx);
+    
+    if (pnlProfitsNet !== null) {
+      pnlMes = pnlProfitsNet;
+      diasConDatos = 1; // Marcar que tiene datos
+      fuenteDatos = 'profits_net';
+      console.log(`📊 Mes ${m.name}: usando profits_net = $${pnlMes.toFixed(2)}`);
+    } else {
+      // Fallback: calcular desde capital_tracker
+      // PNL MES = suma(pnlDay) - suma(htb)
+      let pnlDayTotal = 0;
+      let htbTotal = 0;
+      
+      m.days.forEach(d => {
+        const row = D[dk(d)] || {};
+        const pnl = pd(row.pnlDay);
+        const htb = pd(row.htb) || 0;
+        
+        if (pnl !== null) {
+          pnlDayTotal += pnl;
+          htbTotal += htb;
+          diasConDatos++;
+        }
+      });
+      
+      pnlMes = pnlDayTotal - htbTotal;
+      
+      if (diasConDatos > 0) {
+        console.log(`📅 Mes ${m.name}: usando capital_tracker = $${pnlMes.toFixed(2)} (pnlDay: $${pnlDayTotal.toFixed(2)} - htb: $${htbTotal.toFixed(2)})`);
+      }
     }
-
+    
+    if (diasConDatos > 0 || pnlProfitsNet !== null) {
+      mesesConDatos++;
+      totalPNL += pnlMes;
+      pnlAcumulado += pnlMes;
+      
+      if (pnlMes > mejorMes.pnl) {
+        mejorMes = { mes: m.name, pnl: pnlMes };
+      }
+      if (pnlMes < peorMes.pnl) {
+        peorMes = { mes: m.name, pnl: pnlMes };
+      }
+    }
+    
     pnlMensual.push({
-      mes: m.name, mesNumero: idx,
-      pnl: pnlMes, neto: netoMes, htb: htbTotal,
-      pctMes, pctNeto, firstSOD,
+      mes: m.name,
+      pnl: pnlMes,
       acumulado: pnlAcumulado,
-      tieneDatos: diasConDatos > 0
+      tieneDatos: diasConDatos > 0 || pnlProfitsNet !== null,
+      mesNumero: idx,
+      fuente: fuenteDatos
     });
   });
+  
+  console.log('PNL Mensual calculado:', pnlMensual);
+  console.log('Total PNL:', totalPNL);
   
   // Actualizar KPIs
   document.getElementById('pnlAnualCapitalInicial').textContent = '$' + capitalInicialAnual.toFixed(2);
@@ -1712,49 +1796,52 @@ function generarGraficoPNLAnual(pnlMensual, capitalInicial) {
 
 function generarTablaPNLMensual(pnlMensual, capitalInicial) {
   const fm = v => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
-  const fp = v => v !== null ? (v >= 0 ? '+' : '') + v.toFixed(2) + '%' : '—';
-
+  
   let html = `
     <table style="width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:13px;">
       <thead>
         <tr style="border-bottom:2px solid var(--border);background:var(--bg2);">
           <th style="padding:12px;text-align:center;color:var(--muted2);font-weight:600;">Mes</th>
-          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">PNL Bruto</th>
-          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">HTB</th>
-          <th style="padding:12px;text-align:right;color:#ff6b9d;font-weight:600;">% HTB</th>
-          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">PNL Neto</th>
-          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">% Mes</th>
-          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">% Neto</th>
-          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">Capital Fin</th>
+          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">PNL Mensual</th>
+          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">PNL Acumulado</th>
+          <th style="padding:12px;text-align:right;color:var(--muted2);font-weight:600;">Capital Total</th>
         </tr>
       </thead>
       <tbody>
   `;
-
+  
+  let totalPNL = 0;
+  
   pnlMensual.forEach((m, idx) => {
-    const bg = idx % 2 === 0 ? 'var(--bg)' : 'var(--bg2)';
-    if (!m.tieneDatos) {
-      html += `<tr style="border-bottom:1px solid var(--border);background:${bg};">
-        <td style="padding:12px;text-align:center;font-weight:600;color:var(--muted);">${idx+1}. ${m.mes}</td>
-        <td colspan="7" style="padding:12px;text-align:center;color:var(--muted);">—</td>
-      </tr>`;
-      return;
-    }
-    const cPnl  = m.pnl  >= 0 ? 'var(--green)' : 'var(--red)';
-    const cNeto = m.neto >= 0 ? 'var(--green)' : 'var(--red)';
-    const capFin = (m.firstSOD || capitalInicial) + m.neto;
-    html += `<tr style="border-bottom:1px solid var(--border);background:${bg};">
-      <td style="padding:12px;text-align:center;font-weight:600;">${idx+1}. ${m.mes}</td>
-      <td style="padding:12px;text-align:right;color:${cPnl};font-weight:600;">${fm(m.pnl)}</td>
-      <td style="padding:12px;text-align:right;color:#ff6b9d;font-size:11px;">${m.htb > 0 ? '−$'+m.htb.toFixed(2) : '—'}</td>
-      <td style="padding:12px;text-align:right;font-size:11px;color:${m.htb>0&&m.pnl!==0?(m.htb/m.pnl<0?'var(--red)':'#ff6b9d'):'var(--muted)'};">${m.htb>0&&m.pnl!==0?((m.htb/m.pnl)*100).toFixed(1)+'%':'—'}</td>
-      <td style="padding:12px;text-align:right;color:${cNeto};font-weight:600;">${fm(m.neto)}</td>
-      <td style="padding:12px;text-align:right;color:${cPnl};">${fp(m.pctMes)}</td>
-      <td style="padding:12px;text-align:right;color:${cNeto};">${fp(m.pctNeto)}</td>
-      <td style="padding:12px;text-align:right;color:var(--text);font-weight:600;">$${capFin.toFixed(2)}</td>
-    </tr>`;
+    const capitalTotal = capitalInicial + m.acumulado;
+    const tieneDatos = m.tieneDatos;
+    
+    // Color para PNL mensual
+    const colorMensual = tieneDatos ? (m.pnl >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
+    
+    // Color para PNL acumulado
+    const colorAcumulado = tieneDatos ? (m.acumulado >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
+    
+    // Color para capital total
+    const colorCapital = tieneDatos ? (capitalTotal >= capitalInicial ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
+    
+    // Valores a mostrar
+    const pnlMensualStr = tieneDatos ? fm(m.pnl) : '—';
+    const pnlAcumuladoStr = tieneDatos ? fm(m.acumulado) : '—';
+    const capitalTotalStr = tieneDatos ? '$' + capitalTotal.toFixed(2) : '—';
+    
+    const bgColor = idx % 2 === 0 ? 'var(--bg)' : 'var(--bg2)';
+    
+    html += `
+      <tr style="border-bottom:1px solid var(--border);background:${bgColor};">
+        <td style="padding:12px;text-align:center;font-weight:600;">${idx + 1}. ${m.mes}</td>
+        <td style="padding:12px;text-align:right;color:${colorMensual};font-weight:600;font-size:14px;">${pnlMensualStr}</td>
+        <td style="padding:12px;text-align:right;color:${colorAcumulado};font-weight:600;">${pnlAcumuladoStr}</td>
+        <td style="padding:12px;text-align:right;color:${colorCapital};font-weight:600;font-size:14px;">${capitalTotalStr}</td>
+      </tr>
+    `;
   });
-
+  
   html += '</tbody></table>';
   document.getElementById('tablaPNLMensual').innerHTML = html;
 }
