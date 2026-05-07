@@ -1906,13 +1906,17 @@
           <div class="form-grid-3" style="margin-top: 16px;">
             <div class="form-group">
               <label class="form-label">Inst. Own</label>
-              <select class="form-select" id="inputInstOwn">
-                <option value="">Seleccionar...</option>
-                <option value="0%-30%">0%-30%</option>
-                <option value="30%-60%">30%-60%</option>
-                <option value=">60%">>60%</option>
-                <option value="NO DISPONIBLE">NO DISPONIBLE</option>
-              </select>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="position:relative;display:flex;align-items:center;">
+                  <input type="number" class="form-select" id="inputInstOwn" min="0" max="100" step="0.1" placeholder="0.0" style="padding-right:28px;-moz-appearance:textfield;">
+                  <span style="position:absolute;right:10px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);pointer-events:none;">%</span>
+                </div>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:1px;user-select:none;">
+                  <input type="checkbox" id="inputInstOwnND" onchange="toggleInstOwnND()"
+                    style="width:13px;height:13px;accent-color:var(--yellow);cursor:pointer;">
+                  DATOS NO DISPONIBLES
+                </label>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Overhead</label>
@@ -2915,16 +2919,18 @@ function renderDays() {
                   <td class="td-mono">${trade.ticker} ${notasBadge}</td>
                   <td class="td-mono" style="${trade.noticia === 'SI' ? 'color: var(--green); font-weight: 600;' : trade.noticia === 'NO' ? 'color: var(--red); font-weight: 600;' : trade.noticia === 'NOTICIA DE AYER' ? 'color: var(--yellow); font-weight: 600;' : ''}">${trade.noticia || '-'}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.marketCap || '-'}</td>
-                  <td class="td-mono" style="font-size: 10px; ${trade.float === 'Micro Low Float (<1M)' ? 'color: #ff1744; font-weight: 700;' : ''}">${trade.float || '-'}</td>
+                  <td class="td-mono" style="font-size: 10px; ${trade.float === 'Micro Low Float (<1M)' ? 'color: #ff1744; font-weight: 700;' : trade.float === 'Ultra Low Float (1M-5M)' ? 'color: var(--yellow); font-weight: 700;' : ''}">${trade.float || '-'}</td>
                   <td class="td-mono">${trade.pais || '-'}</td>
                   <td class="td-mono">${trade.setupEntrada || '-'}</td>
                   <td class="td-mono" style="font-size:10px;">${(trade.plays && trade.plays.length) ? trade.plays.map(p=>`<span style="display:inline-block;background:rgba(177,106,255,0.15);color:var(--purple);border-radius:4px;padding:1px 6px;font-size:9px;margin:1px;">${p}</span>`).join('') : '-'}</td>
                   <td class="td-mono" style="${trade.insiders === '>50%' ? 'color:var(--red);font-weight:700;' : trade.insiders === '25%-50%' ? 'color:#ffd600;font-weight:700;' : trade.insiders === 'NO DISPONIBLE' ? 'color:#ff7043;font-weight:700;' : ''}">${trade.insiders || '-'}</td>
                   <td class="td-mono">${(() => {
-                    const v = trade.instOwn; if (!v) return '-';
+                    const v = trade.instOwn; if (!v && v !== 0) return '-';
+                    if (v === 'N/D') return '<span style="color:var(--yellow);font-weight:700;font-size:10px;letter-spacing:0.5px;">N/D</span>';
                     const n = parseFloat(v);
-                    const color = n >= 60 ? '#ff3d57' : n >= 30 ? '#ffd600' : 'var(--muted2)';
-                    return `<span style="color:${color};font-weight:${n>=30?'700':'400'};">${v}</span>`;
+                    if (isNaN(n)) return `<span style="color:var(--muted2);">${v}</span>`;
+                    const color = n < 25 ? 'var(--red)' : 'var(--green)';
+                    return `<span style="color:${color};font-weight:700;">${n.toFixed(1)}%</span>`;
                   })()}</td>
                   <td class="td-mono" style="font-size: 10px;">${trade.overhead || '-'}</td>
                   <td class="td-mono" style="text-align:center;">${trade.locatesRegSho ? '<span style="color:#ff1744;font-weight:800;font-size:10px;letter-spacing:0.5px;">REG SHO</span>' : '<span style="color:var(--muted);font-size:11px;">-</span>'}</td>
@@ -3231,7 +3237,11 @@ function editTrade(globalIdx) {
   document.getElementById('inputMarketCap').value = trade.marketCap || '';
   document.getElementById('inputFloat').value = trade.float || '';
   document.getElementById('inputInsiders').value = trade.insiders || '';
-  document.getElementById('inputInstOwn').value = trade.instOwn || '';
+  const isND = trade.instOwn === 'N/D';
+  document.getElementById('inputInstOwnND').checked = isND;
+  document.getElementById('inputInstOwn').value = isND ? '' : (trade.instOwn || '');
+  document.getElementById('inputInstOwn').disabled = isND;
+  document.getElementById('inputInstOwn').style.opacity = isND ? '0.35' : '1';
   document.getElementById('inputOverhead').value = trade.overhead || '';
   document.getElementById('inputCashNeed').value = trade.cashNeed || '';
   
@@ -3441,7 +3451,7 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     marketCap: document.getElementById('inputMarketCap').value || '',
     float: document.getElementById('inputFloat').value || '',
     insiders: document.getElementById('inputInsiders').value || '',
-    instOwn: document.getElementById('inputInstOwn').value || '',
+    instOwn: document.getElementById('inputInstOwnND').checked ? 'N/D' : (document.getElementById('inputInstOwn').value || ''),
     overhead: document.getElementById('inputOverhead').value || '',
     cashNeed: document.getElementById('inputCashNeed').value || '',
     dilucion: dilucion,
@@ -3823,17 +3833,25 @@ function saveCountryToList(country) {
 
 
 // ── PLAYBOOK FUNCTIONS ───────────────────────────────────────────────────────
+function toggleInstOwnND() {
+  const cb  = document.getElementById('inputInstOwnND');
+  const inp = document.getElementById('inputInstOwn');
+  inp.disabled     = cb.checked;
+  inp.style.opacity = cb.checked ? '0.35' : '1';
+  if (cb.checked) inp.value = '';
+}
+
 const PLAYS_LIST = [
   // LONG
   'BREAKOUT', 'BREAKOUT PMH', 'GAP & GO', 'VWAP RECLAIM',
   // SHORT
-  'SIR vs PMH', 'SIR vs HOD', 'FAIL BREAKOUT',
+  'SIR vs PMH', 'SIR vs HOD', 'SIR vs AFTER', 'FAIL BREAKOUT', 'FAIL BREAKOUT AFTER',
   'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD',
   'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD'
 ];
 
 const PLAYS_LONG  = new Set(['BREAKOUT', 'BREAKOUT PMH', 'GAP & GO', 'VWAP RECLAIM']);
-const PLAYS_SHORT = new Set(['SIR vs PMH', 'SIR vs HOD', 'FAIL BREAKOUT', 'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD', 'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD']);
+const PLAYS_SHORT = new Set(['SIR vs PMH', 'SIR vs HOD', 'SIR vs AFTER', 'FAIL BREAKOUT', 'FAIL BREAKOUT AFTER', 'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD', 'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD']);
 
 function initPlaybookSelector() {
   const container = document.getElementById('playbook-selector');
@@ -5744,16 +5762,18 @@ function renderSectoresTable() {
       </td>
       <td>${noticiaPill(trade.noticia)}</td>
       <td class="td-mono" style="font-size:10px;">${trade.marketCap || '—'}</td>
-      <td class="td-mono" style="font-size:10px;${trade.float === 'Micro Low Float (<1M)' ? 'color:#ff1744;font-weight:700;' : ''}">${trade.float || '—'}</td>
+      <td class="td-mono" style="font-size:10px;${trade.float === 'Micro Low Float (<1M)' ? 'color:#ff1744;font-weight:700;' : trade.float === 'Ultra Low Float (1M-5M)' ? 'color:var(--yellow);font-weight:700;' : ''}">${trade.float || '—'}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text);">${trade.pais||'<span style="color:var(--muted)">—</span>'}</span></td>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);" title="${trade.setupEntrada||''}">${trade.setupEntrada ? (trade.setupEntrada.length>18 ? trade.setupEntrada.substring(0,18)+'…' : trade.setupEntrada) : '—'}</span></td>
       <td>${(trade.plays && trade.plays.length) ? trade.plays.map(p=>`<span style="display:inline-block;background:rgba(177,106,255,0.15);color:var(--purple);border-radius:3px;padding:1px 5px;font-size:9px;margin:1px;">${p}</span>`).join('') : '—'}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:12px;${insiderStyle(trade.insiders)}">${trade.insiders||'—'}</span></td>
       <td>${(() => {
-        const v = trade.instOwn; if (!v) return '<span style="color:var(--muted)">—</span>';
+        const v = trade.instOwn; if (!v && v !== 0) return '<span style="color:var(--muted)">—</span>';
+        if (v === 'N/D') return '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--yellow);font-weight:700;letter-spacing:0.5px;">N/D</span>';
         const n = parseFloat(v);
-        const color = n >= 60 ? '#ff3d57' : n >= 30 ? '#ffd600' : 'var(--muted2)';
-        return `<span style="font-family:'DM Mono',monospace;font-size:12px;color:${color};font-weight:${n>=30?'700':'400'};">${v}</span>`;
+        if (isNaN(n)) return `<span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);">${v}</span>`;
+        const color = n < 25 ? 'var(--red)' : 'var(--green)';
+        return `<span style="font-family:'DM Mono',monospace;font-size:12px;color:${color};font-weight:700;">${n.toFixed(1)}%</span>`;
       })()}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);" title="${trade.overhead||''}">${trade.overhead ? (trade.overhead.length>14 ? trade.overhead.substring(0,14)+'…' : trade.overhead) : '—'}</span></td>
       <td style="text-align:center;">${trade.locatesRegSho ? pill('REG SHO','#ff1744','rgba(255,23,68,0.15)') : '<span style="color:var(--muted)">—</span>'}</td>
