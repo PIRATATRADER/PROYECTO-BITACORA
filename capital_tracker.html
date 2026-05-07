@@ -6289,6 +6289,38 @@ document.getElementById('simulacionModal').addEventListener('click', function(e)
         onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">✕</button>
     </div>
 
+    <!-- Contador de coste API -->
+    <div id="apiCostBar" style="display:flex;align-items:center;gap:20px;padding:10px 24px;
+      background:var(--bg3);border-bottom:1px solid var(--border);flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:7px;">
+        <span style="font-size:14px;">💰</span>
+        <span style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);">Coste API este mes</span>
+        <span id="costMes" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#a855f7;">$0.0000</span>
+      </div>
+      <div style="width:1px;height:24px;background:var(--border);"></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);">Último análisis:</span>
+        <span id="costUltimo" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);">—</span>
+      </div>
+      <div style="width:1px;height:24px;background:var(--border);"></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);">Análisis este mes:</span>
+        <span id="costNAnalisis" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);">0</span>
+      </div>
+      <div style="width:1px;height:24px;background:var(--border);"></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);">Total acumulado:</span>
+        <span id="costTotal" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);">$0.0000</span>
+      </div>
+      <div style="margin-left:auto;">
+        <button onclick="resetAPICost()" style="font-family:'DM Mono',monospace;font-size:9px;
+          letter-spacing:1px;padding:3px 10px;border-radius:5px;border:1px solid var(--border);
+          background:transparent;color:var(--muted2);cursor:pointer;transition:all .15s;white-space:nowrap;"
+          onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+          onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">🗑 Reset contador</button>
+      </div>
+    </div>
+
     <!-- Upload zone -->
     <div style="padding:20px 24px 0;">
       <div id="pnlDropzone"
@@ -6387,6 +6419,7 @@ function openAnalizarPNLModal() {
   document.getElementById('analizarPNLModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
   renderPNLHistorial();
+  updateCostDisplay();
 }
 
 function closeAnalizarPNLModal() {
@@ -6454,11 +6487,11 @@ async function doAnalizarPNL() {
 
   const today = new Date().toLocaleDateString('es-ES', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-  const systemPrompt = `Eres un mentor de trading experto en small caps US, especializado en operativa en el lado corto (short selling) y también en longs. 
-Analizas el PNL diario de un trader llamado PIRATA que opera en DAS Trader Pro con small caps volátiles.
-Tu misión: dar feedback brutal, honesto y constructivo para que mejore como trader.
-Responde siempre en español. Usa formato estructurado con secciones claras.
-Se conciso pero profundo. Prioriza patrones de comportamiento sobre resultados.`;
+  const systemPrompt = `Eres un mentor de trading de élite especializado en small caps US, con profundo conocimiento del lado corto (short selling) y operativa long en acciones de baja capitalización y alta volatilidad.
+Analizas el PNL diario de PIRATA, un trader activo que usa DAS Trader Pro. Tu misión es dar el análisis más exhaustivo, honesto y accionable posible.
+Responde SIEMPRE en español. Sé brutal y directo — los resultados de hoy no importan tanto como los patrones de comportamiento.
+Usa el formato de secciones exacto que se te indica. Cada sección debe ser densa en información real extraída de la imagen.
+Para las tablas usa formato Markdown estándar con | separadores. Incluye TODOS los tickers visibles en la imagen.`;
 
   const userContent = [
     {
@@ -6468,43 +6501,90 @@ Se conciso pero profundo. Prioriza patrones de comportamiento sobre resultados.`
     {
       type: 'text',
       text: `Fecha: ${today}
-${contexto ? 'Contexto del trader: ' + contexto : ''}
+${contexto ? 'Contexto adicional del trader: ' + contexto : ''}
 
-Analiza en detalle este PNL del día. Dame un análisis completo con estas secciones:
+Analiza EXHAUSTIVAMENTE este PNL. Extrae TODOS los datos visibles. Sé específico con cifras reales de la imagen.
 
-## 📊 RESUMEN DEL DÍA
-Tipo de sesión (positiva/negativa/breakeven), PNL total, número de trades que puedas identificar, side dominante (short/long/mixto).
+## 📊 DESCRIPCIÓN GENERAL
+Resumen ejecutivo del día: resultado neto, tipo de sesión, número total de trades, side dominante. Diagnóstico en 3-4 frases del patrón general del día. Sé directo sobre si el resultado refleja habilidad o suerte.
 
-## 🎯 ANÁLISIS POR TRADE
-Para cada trade visible: ticker, side (short/long), resultado (ganador/perdedor), observación rápida.
+## 📈 ESTADÍSTICAS COMPLETAS DEL DÍA
+Extrae y calcula todas las métricas visibles:
+- PNL bruto total / PNL neto
+- Número total de trades (winners / losers / breakeven)
+- Win rate global y separado por side (SHORT / LONG)
+- Mejor trade (ticker + importe)
+- Peor trade (ticker + importe)
+- Promedio de ganancia en winners
+- Promedio de pérdida en losers
+- Ratio ganancia media / pérdida media (R:R real)
+- Total ganado en SHORTS vs LONGS
+- Número de trades SHORT vs LONG
 
-## 📈 ESTADÍSTICAS EXTRAÍDAS
-Win rate del día, mejor trade, peor trade, ratio ganancia/pérdida, distribución short vs long.
+## 🎯 ANÁLISIS TRADE A TRADE
+Para CADA ticker visible en la imagen, crea una tabla:
 
-## 🔍 PATRONES DETECTADOS
-Qué patrones de comportamiento ves (revenge trading, cutting winners early, letting losers run, buen sizing, setups repetidos, etc.)
+| Ticker | Side | Resultado | PNL | Observación |
+|--------|------|-----------|-----|-------------|
 
-## ⚡ PUNTOS FUERTES DEL DÍA
-Qué hizo bien el trader hoy. Sé específico.
+Incluye una observación específica por trade: timing, sizing, error o acierto concreto.
 
-## ⚠️ ÁREAS DE MEJORA
-Los 3 errores o hábitos más importantes a corregir. Directo al grano.
+## 📋 RECONOCIMIENTO DE SETUPS
+Identifica qué setups usó el trader hoy. Para cada setup detectado:
+
+| Setup | Veces usado | Win Rate | PNL promedio | Calificación |
+|-------|-------------|----------|--------------|--------------|
+
+Calificación: A (excelente), B (bueno), C (aceptable), D (revisar), F (eliminar).
+
+## 🏷️ CALIDAD DE SELECCIÓN DE SÍMBOLOS
+Para cada ticker operado, evalúa si fue una buena elección:
+
+| Ticker | ¿Adecuado? | Por qué | Perfil de riesgo | Veredicto |
+|--------|------------|---------|------------------|-----------|
+
+Calificación global de selección de símbolos al final (A+/A/B+/B/C+/C/D).
+
+## 🔍 PATRONES DE COMPORTAMIENTO DETECTADOS
+### DEJA DE HACERLO
+Para cada error crítico detectado:
+- **Nombre del error** (ej: Revenge trading, Holding losers, Overtrading...)
+  - Evidencia: qué trade(s) lo demuestran con cifras
+  - Coste: cuánto te costó hoy este error
+  - Corrección: regla concreta y aplicable
+
+### SIGUE HACIÉNDOLO
+Para cada patrón positivo detectado:
+- **Nombre del acierto**
+  - Evidencia con cifras
+  - Por qué funciona en tu operativa
+
+## ⚡ ANÁLISIS DE EJECUCIÓN
+**Mejor setup del día:** nombre, tickers donde funcionó, por qué funcionó, cómo mejorarlo.
+**Peor setup del día:** nombre, tickers donde falló, error de ejecución, corrección.
+Evalúa: ¿Las entradas fueron en el momento correcto? ¿Las salidas fueron prematuras o tardías?
 
 ## 🧠 RECOMENDACIÓN PRINCIPAL
-Una sola cosa, la más importante, en la que debe enfocarse mañana para mejorar.
+Una sola cosa. La más importante. La que si aplicas mañana cambia el resultado. Sin rodeos.
 
-## 💡 REGLAS A APLICAR MAÑANA
-2-3 reglas concretas y accionables para la próxima sesión basadas en lo que ves hoy.`
+## 💡 REGLAS PARA MAÑANA
+Exactamente 3 reglas concretas, medibles y accionables basadas en lo que ves hoy. Formato:
+**REGLA 1:** [condición] → [acción exacta]
+**REGLA 2:** [condición] → [acción exacta]  
+**REGLA 3:** [condición] → [acción exacta]`
     }
   ];
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-dangerous-direct-browser-ipc': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        max_tokens: 4000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }]
       })
@@ -6514,6 +6594,15 @@ Una sola cosa, la más importante, en la que debe enfocarse mañana para mejorar
     if (data.error) throw new Error(data.error.message);
 
     const rawText = data.content.map(b => b.text || '').join('');
+
+    // ── COSTE ─────────────────────────────────────────────────────────────────
+    if (data.usage) {
+      const inputTokens  = data.usage.input_tokens  || 0;
+      const outputTokens = data.usage.output_tokens || 0;
+      const costCall = (inputTokens / 1_000_000 * 3.00) + (outputTokens / 1_000_000 * 15.00);
+      trackAPICost(costCall, inputTokens, outputTokens);
+    }
+    updateCostDisplay();
 
     // Render markdown-ish to HTML
     const html = renderPNLMarkdown(rawText);
@@ -6541,22 +6630,89 @@ Una sola cosa, la más importante, en la que debe enfocarse mañana para mejorar
 }
 
 function renderPNLMarkdown(text) {
-  return text
-    .replace(/^## (.+)$/gm, (_, t) => {
-      const colors = {
-        '📊': 'var(--cyan)', '🎯': 'var(--gold)', '📈': '#00b0ff',
-        '🔍': '#a855f7', '⚡': 'var(--green)', '⚠️': 'var(--red)',
-        '🧠': '#a855f7', '💡': 'var(--yellow)'
-      };
-      const emoji  = t.trim().charAt(0);
-      const color  = colors[emoji] || 'var(--gold)';
-      return `<div style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;
-        color:${color};margin-top:18px;margin-bottom:8px;padding-bottom:5px;
-        border-bottom:1px solid ${color}40;">${t}</div>`;
-    })
-    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text)">$1</strong>')
-    .replace(/^- (.+)$/gm, '<div style="padding:4px 0 4px 14px;border-left:2px solid #a855f750;margin:3px 0;color:var(--muted2)">→ $1</div>')
-    .replace(/\n/g, '<br>');
+  // Process line by line for tables
+  const lines = text.split('\n');
+  let html = '';
+  let inTable = false;
+  let tableRows = [];
+
+  const flushTable = () => {
+    if (!tableRows.length) return;
+    let t = `<div style="overflow-x:auto;margin:10px 0;"><table style="width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:11px;">`;
+    tableRows.forEach((row, ri) => {
+      const cells = row.split('|').map(c => c.trim()).filter(c => c);
+      if (ri === 0) {
+        t += '<thead><tr>' + cells.map(c => `<th style="padding:7px 10px;background:#a855f715;border:1px solid #a855f730;color:#a855f7;text-align:left;letter-spacing:1px;font-size:10px;white-space:nowrap;">${c}</th>`).join('') + '</tr></thead><tbody>';
+      } else if (ri === 1 && row.replace(/[\|\-\s]/g,'') === '') {
+        // separator row — skip
+      } else {
+        t += '<tr>' + cells.map(c => {
+          const col = c.includes('+') ? 'var(--green)' : c.includes('-$') || c.includes('−') ? 'var(--red)' : c === 'SÍ' || c === 'SI' ? 'var(--green)' : c === 'NO' ? 'var(--red)' : c === 'MARGINAL' ? 'var(--yellow)' : 'var(--text)';
+          return `<td style="padding:6px 10px;border:1px solid var(--border);color:${col};vertical-align:top;">${c}</td>`;
+        }).join('') + '</tr>';
+      }
+    });
+    t += '</tbody></table></div>';
+    html += t;
+    tableRows = [];
+    inTable = false;
+  };
+
+  lines.forEach(line => {
+    if (line.startsWith('|')) {
+      inTable = true;
+      tableRows.push(line);
+      return;
+    }
+    if (inTable) flushTable();
+
+    // ## headers
+    if (/^## (.+)$/.test(line)) {
+      const t = line.replace(/^## /, '');
+      const colorMap = { '📊':'var(--cyan)', '📈':'#00b0ff', '🎯':'var(--gold)', '📋':'var(--gold)',
+        '🏷':'#00b0ff', '🔍':'#a855f7', '⚡':'var(--green)', '⚠':'var(--red)', '🧠':'#a855f7', '💡':'var(--yellow)' };
+      const emoji = [...t][0];
+      const color = colorMap[emoji] || 'var(--gold)';
+      html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:${color};
+        margin-top:22px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid ${color}40;">${t}</div>`;
+      return;
+    }
+    // ### subheaders
+    if (/^### (.+)$/.test(line)) {
+      const t = line.replace(/^### /, '');
+      html += `<div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+        color:var(--gold);margin-top:14px;margin-bottom:6px;">${t}</div>`;
+      return;
+    }
+    // **REGLA X:** style
+    if (/^\*\*REGLA \d/.test(line)) {
+      const processed = line.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#a855f7">$1</strong>');
+      html += `<div style="padding:8px 14px;background:#a855f710;border-left:3px solid #a855f7;border-radius:0 6px 6px 0;margin:5px 0;line-height:1.7;">${processed}</div>`;
+      return;
+    }
+    // bullet points
+    if (/^- /.test(line)) {
+      const content = line.replace(/^- /, '').replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text)">$1</strong>');
+      html += `<div style="padding:3px 0 3px 14px;border-left:2px solid #a855f750;margin:3px 0;color:var(--muted2);">→ ${content}</div>`;
+      return;
+    }
+    // indented lines (evidencia, coste, corrección)
+    if (/^  - /.test(line)) {
+      const content = line.replace(/^  - /, '').replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text)">$1</strong>');
+      html += `<div style="padding:2px 0 2px 28px;color:var(--muted2);font-size:11px;">• ${content}</div>`;
+      return;
+    }
+    // bold inline
+    const processed = line.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text)">$1</strong>');
+    if (line.trim() === '') {
+      html += '<div style="height:6px;"></div>';
+    } else {
+      html += `<div style="line-height:1.7;">${processed}</div>`;
+    }
+  });
+
+  if (inTable) flushTable();
+  return html;
 }
 
 // ── Historial local ──────────────────────────────────────────────────────────
@@ -6631,6 +6787,57 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('analizarPNLModal').addEventListener('click', function(e) {
   if (e.target === this) closeAnalizarPNLModal();
 });
+
+// ══ SISTEMA DE COSTE API ══════════════════════════════════════════════════════
+const COST_KEY = 'pirata_api_cost';
+
+function loadAPICost() {
+  try { return JSON.parse(localStorage.getItem(COST_KEY) || '{"registros":[]}'); }
+  catch(e) { return { registros: [] }; }
+}
+
+function saveAPICostData(data) {
+  localStorage.setItem(COST_KEY, JSON.stringify(data));
+}
+
+function trackAPICost(costUsd, inputTokens, outputTokens) {
+  const data = loadAPICost();
+  data.registros.push({
+    ts:     new Date().toISOString(),
+    cost:   costUsd,
+    input:  inputTokens,
+    output: outputTokens
+  });
+  saveAPICostData(data);
+}
+
+function resetAPICost() {
+  if (confirm('¿Resetear el contador de costes API?')) {
+    localStorage.removeItem(COST_KEY);
+    updateCostDisplay();
+  }
+}
+
+function updateCostDisplay() {
+  const data    = loadAPICost();
+  const ahora   = new Date();
+  const mesAct  = ahora.getFullYear() + '-' + String(ahora.getMonth() + 1).padStart(2, '0');
+
+  const delMes  = data.registros.filter(r => r.ts.startsWith(mesAct));
+  const costMes = delMes.reduce((s, r) => s + r.cost, 0);
+  const costTot = data.registros.reduce((s, r) => s + r.cost, 0);
+  const ultimo  = data.registros.length ? data.registros[data.registros.length - 1] : null;
+
+  const el = (id) => document.getElementById(id);
+  if (!el('costMes')) return;
+
+  el('costMes').textContent   = '$' + costMes.toFixed(4);
+  el('costMes').style.color   = costMes < 1 ? '#a855f7' : costMes < 5 ? 'var(--yellow)' : 'var(--red)';
+  el('costNAnalisis').textContent = delMes.length;
+  el('costTotal').textContent  = '$' + costTot.toFixed(4);
+  el('costUltimo').textContent = ultimo ? '$' + ultimo.cost.toFixed(4) + ' · ' +
+    new Date(ultimo.ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—';
+}
 
 </script>
 
