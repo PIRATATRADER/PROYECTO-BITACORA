@@ -115,6 +115,149 @@
     color: var(--purple);
   }
 
+  /* Alert Modals */
+  .alert-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .alert-modal-content {
+    background: var(--bg2);
+    border: 2px solid var(--yellow);
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    animation: slideDown 0.3s ease;
+    box-shadow: 0 8px 32px rgba(255, 214, 0, 0.3);
+  }
+
+  .alert-modal-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .alert-modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: var(--yellow);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  .alert-modal-message {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .alert-modal-btn {
+    background: var(--yellow);
+    color: #000;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s;
+  }
+
+  .alert-modal-btn:hover {
+    opacity: 0.85;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Tooltip */
+  .tooltip-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    font-size: 10px;
+    color: var(--muted2);
+    cursor: help;
+    transition: all 0.2s;
+  }
+
+  .tooltip-icon:hover {
+    background: var(--purple);
+    border-color: var(--purple);
+    color: #000;
+  }
+
+  .tooltip-text {
+    visibility: hidden;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg2);
+    border: 1px solid var(--purple);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    white-space: normal;
+    max-width: 280px;
+    width: max-content;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    box-shadow: 0 4px 12px rgba(177, 106, 255, 0.2);
+    line-height: 1.4;
+  }
+
+  .tooltip-text::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--purple);
+  }
+
+  .tooltip-icon:hover + .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+  }
+
   /* Add Trade Button */
   .add-trade-btn {
     background: var(--purple);
@@ -1791,7 +1934,13 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Pre Market High</label>
+              <label class="form-label">
+                <span class="tooltip-container">
+                  Pre Market High
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">COMPRUEBA SI SUPERA EL PMH, O SOLO LO RETESTEA</span>
+                </span>
+              </label>
               <select class="form-select" id="inputPreMarketHigh">
                 <option value="">Seleccionar...</option>
                 <option value="HA SUPERADO EL PMH">HA SUPERADO EL PMH</option>
@@ -1801,13 +1950,35 @@
             </div>
             <div class="form-group">
               <label class="form-label">
-                Runners Hoy
-                <span class="tooltip-icon" title="Una Runner es aquella acción que corre a partir del OPEN del mercado">ⓘ</span>
+                <span class="tooltip-container">
+                  Runners Hoy
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">UNA RUNNER ES AQUELLA ACCIÓN QUE CORRE A PARTIR DEL OPEN DEL MERCADO</span>
+                </span>
               </label>
               <select class="form-select" id="inputRunnersHoy">
                 <option value="">Seleccionar...</option>
                 <option value="SI">SÍ</option>
                 <option value="NO">NO</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- VWAP Field (shown only for GAP & GO play) -->
+          <div class="form-grid-3" style="margin-top: 16px; display: none;" id="vwapFieldContainer">
+            <div class="form-group">
+              <label class="form-label">
+                <span class="tooltip-container">
+                  VWAP
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Comprueba si la acción ha caído por debajo de la VWAP</span>
+                </span>
+              </label>
+              <select class="form-select" id="inputVWAP">
+                <option value="">Seleccionar...</option>
+                <option value="NO HA LLEGADO A VWAP">NO HA LLEGADO A VWAP</option>
+                <option value="LA HA RETESTEADO">LA HA RETESTEADO</option>
+                <option value="HA CAIDO POR DEBAJO DE LA VWAP">HA CAÍDO POR DEBAJO DE LA VWAP</option>
               </select>
             </div>
           </div>
@@ -3319,10 +3490,14 @@ function editTrade(globalIdx) {
   // Setup y contexto
   document.getElementById('inputNoticia').value = trade.noticia || '';
   document.getElementById('inputRunnersHoy').value = trade.runnersHoy || '';
+  document.getElementById('inputVWAP').value = trade.vwap || '';
   document.getElementById('inputPais').value = trade.pais || '';
   document.getElementById('inputSector').value = trade.sector || '';
   initPlaybookSelector();
   setSelectedPlays(trade.plays || []);
+  
+  // Mostrar/ocultar campo VWAP si tiene GAP & GO
+  toggleVWAPField();
   
   // JORDI PLAY - Cargar datos separados de 75% y 25%
   document.getElementById('inputJordiPlay75PNL').value = trade.jordiPlay75PNL != null ? trade.jordiPlay75PNL : '';
@@ -3542,6 +3717,7 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     // Setup y contexto
     noticia: document.getElementById('inputNoticia').value || '',
     runnersHoy: document.getElementById('inputRunnersHoy').value || '',
+    vwap: document.getElementById('inputVWAP').value || '',
     pais: document.getElementById('inputPais').value || '',
     locatesRegSho: document.getElementById('inputLocatesRegSho').checked,
     sector: document.getElementById('inputSector').value || '',
@@ -3982,6 +4158,7 @@ function initPlaybookSelector() {
   container.querySelectorAll('.play-chip').forEach(chip => {
     chip.addEventListener('click', function() {
       const cb = this.querySelector('.play-checkbox');
+      const playName = cb.value;
       cb.checked = !cb.checked;
       this.style.background = cb.checked ? 'rgba(177,106,255,0.25)' : 'var(--bg3)';
       this.style.borderColor = cb.checked ? 'var(--purple)' : 'var(--border)';
@@ -3989,6 +4166,14 @@ function initPlaybookSelector() {
       
       // Mostrar/ocultar sección JORDI PLAY
       toggleJordiPlaySection();
+      
+      // Mostrar/ocultar campo VWAP
+      toggleVWAPField();
+      
+      // Mostrar alerta si se selecciona GAP & GO
+      if (cb.checked && playName === 'GAP & GO') {
+        showVWAPAlert();
+      }
     });
   });
 }
@@ -6170,6 +6355,7 @@ async function quickAddTrade(estado) {
     inicio:      '',
     closed:      '',
     preMarketHigh: '',
+    vwap:        '',
     jordiPlayPNL: null,
     jordiPlayR: null,
     chartImage:  '',
@@ -6410,6 +6596,115 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' && document.getElementById('playDrillModal').classList.contains('open')) {
     document.getElementById('playDrillModal').classList.remove('open');
     document.body.style.overflow = '';
+  }
+});
+
+// ── ALERT MODALS ──────────────────────────────────────────────────────────────
+function showRunnersAlert() {
+  const overlay = document.createElement('div');
+  overlay.className = 'alert-modal-overlay';
+  overlay.innerHTML = `
+    <div class="alert-modal-content">
+      <div class="alert-modal-icon">⚠️</div>
+      <div class="alert-modal-title">ATENCIÓN: RUNNERS</div>
+      <div class="alert-modal-message">
+        ESTA INTENTA SOLO LONG EN LAS CAÍDAS<br>
+        SOLO SE PUEDE IR SHORT POR DEBAJO DE LA VWAP
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  
+  // Auto-cerrar después de 10 segundos
+  setTimeout(() => {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 300);
+  }, 10000);
+}
+
+function showPMHAlert() {
+  const overlay = document.createElement('div');
+  overlay.className = 'alert-modal-overlay';
+  overlay.id = 'pmhAlertOverlay';
+  overlay.innerHTML = `
+    <div class="alert-modal-content">
+      <div class="alert-modal-icon">🚨</div>
+      <div class="alert-modal-title">¡CIERRA EL SHORT!</div>
+      <div class="alert-modal-message">
+        CIERRA EL SHORT, AUNQUE PIERDAS 1R<br>
+        QUE PUEDE QUE PIERDAS 2R O MÁS
+      </div>
+      <button class="alert-modal-btn" onclick="closePMHAlert()">ENTENDIDO</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closePMHAlert() {
+  const overlay = document.getElementById('pmhAlertOverlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 300);
+  }
+}
+
+function showVWAPAlert() {
+  const overlay = document.createElement('div');
+  overlay.className = 'alert-modal-overlay';
+  overlay.id = 'vwapAlertOverlay';
+  overlay.innerHTML = `
+    <div class="alert-modal-content">
+      <div class="alert-modal-icon">📊</div>
+      <div class="alert-modal-title">ATENCIÓN: GAP & GO</div>
+      <div class="alert-modal-message">
+        COMPRUEBA SI LA ACCIÓN HA CAÍDO POR DEBAJO DE LA VWAP
+      </div>
+      <button class="alert-modal-btn" onclick="closeVWAPAlert()">ENTENDIDO</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeVWAPAlert() {
+  const overlay = document.getElementById('vwapAlertOverlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 300);
+  }
+}
+
+// Función para mostrar/ocultar el campo VWAP cuando se selecciona GAP & GO
+function toggleVWAPField() {
+  const selectedPlays = getSelectedPlays();
+  const vwapContainer = document.getElementById('vwapFieldContainer');
+  
+  if (selectedPlays.includes('GAP & GO')) {
+    vwapContainer.style.display = 'block';
+  } else {
+    vwapContainer.style.display = 'none';
+  }
+}
+
+// Añadir listeners a los campos
+document.addEventListener('DOMContentLoaded', function() {
+  // Listener para Runners
+  const runnersSelect = document.getElementById('inputRunnersHoy');
+  if (runnersSelect) {
+    runnersSelect.addEventListener('change', function() {
+      if (this.value === 'Sí') {
+        showRunnersAlert();
+      }
+    });
+  }
+  
+  // Listener para Pre Market High
+  const pmhSelect = document.getElementById('inputPreMarketHigh');
+  if (pmhSelect) {
+    pmhSelect.addEventListener('change', function() {
+      if (this.value === 'HA SUPERADO EL PMH') {
+        showPMHAlert();
+      }
+    });
   }
 });
 
