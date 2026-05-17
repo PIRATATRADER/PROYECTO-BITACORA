@@ -1766,6 +1766,15 @@
                 <option value="POST-MARKET">POST-MARKET</option>
               </select>
             </div>
+            <div class="form-group">
+              <label class="form-label">Pre Market High</label>
+              <select class="form-select" id="inputPreMarketHigh">
+                <option value="">Seleccionar...</option>
+                <option value="HA SUPERADO EL PMH">HA SUPERADO EL PMH</option>
+                <option value="FAIL PMH">FAIL PMH</option>
+                <option value="NO HA SUPERADO EL PMH">NO HA SUPERADO EL PMH</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1860,6 +1869,51 @@
           <div class="form-group">
             <label class="form-label" style="margin-bottom:10px;">Play <span style="color:var(--muted2);font-size:10px;font-weight:400;">(puedes seleccionar varios)</span></label>
             <div id="playbook-selector" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- JORDI PLAY - Solo visible cuando se selecciona -->
+        <div class="form-section" id="jordiPlaySection" style="display:none;background: linear-gradient(135deg, rgba(177,106,255,0.05) 0%, rgba(177,106,255,0.02) 100%); border: 1px solid rgba(177,106,255,0.2);">
+          <div class="form-section-title" style="color: var(--purple);">⚡ JORDI PLAY</div>
+          
+          <!-- 75% - Salida Inicial -->
+          <div style="background: rgba(177,106,255,0.08); border: 1px solid rgba(177,106,255,0.25); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <div style="font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: var(--purple); margin-bottom: 12px; font-weight: 600;">📊 SALIDA 75% (TAKE PROFIT INICIAL)</div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">PNL 75% ($)</label>
+                <input type="number" step="0.01" class="form-input" id="inputJordiPlay75PNL" placeholder="37.50">
+              </div>
+              <div class="form-group">
+                <label class="form-label">R 75%</label>
+                <input type="number" step="0.01" class="form-input" id="inputJordiPlay75R" placeholder="1.5">
+              </div>
+            </div>
+          </div>
+          
+          <!-- 25% - Runner -->
+          <div style="background: rgba(177,106,255,0.08); border: 1px solid rgba(177,106,255,0.25); border-radius: 8px; padding: 16px;">
+            <div style="font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: var(--purple); margin-bottom: 12px; font-weight: 600;">🚀 RUNNER 25% (POSICIÓN RESTANTE)</div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">PNL 25% ($)</label>
+                <input type="number" step="0.01" class="form-input" id="inputJordiPlay25PNL" placeholder="12.50">
+              </div>
+              <div class="form-group">
+                <label class="form-label">R 25%</label>
+                <input type="number" step="0.01" class="form-input" id="inputJordiPlay25R" placeholder="1.0">
+              </div>
+            </div>
+            <div style="margin-top: 12px;">
+              <label class="form-label">Estado del Runner</label>
+              <select class="form-select" id="inputJordiPlayRunnerStatus">
+                <option value="">Seleccionar...</option>
+                <option value="TP alcanzado">✅ TP alcanzado</option>
+                <option value="Break Even">⚖️ Break Even</option>
+                <option value="Stop Loss">❌ Stop Loss</option>
+                <option value="En posición">⏳ En posición</option>
+              </select>
             </div>
           </div>
         </div>
@@ -3217,6 +3271,7 @@ function editTrade(globalIdx) {
   document.getElementById('inputSetupEntrada').value = trade.setupEntrada || '';
   document.getElementById('inputInicio').value = trade.inicio || '';
   document.getElementById('inputClosed').value = trade.closed || '';
+  document.getElementById('inputPreMarketHigh').value = trade.preMarketHigh || '';
   
   // Datos de salida - SHORT y LONG
   document.getElementById('inputPNLShort').value = trade.pnlShort != null ? trade.pnlShort : '';
@@ -3232,6 +3287,13 @@ function editTrade(globalIdx) {
   document.getElementById('inputSector').value = trade.sector || '';
   initPlaybookSelector();
   setSelectedPlays(trade.plays || []);
+  
+  // JORDI PLAY - Cargar datos separados de 75% y 25%
+  document.getElementById('inputJordiPlay75PNL').value = trade.jordiPlay75PNL != null ? trade.jordiPlay75PNL : '';
+  document.getElementById('inputJordiPlay75R').value = trade.jordiPlay75R != null ? trade.jordiPlay75R : '';
+  document.getElementById('inputJordiPlay25PNL').value = trade.jordiPlay25PNL != null ? trade.jordiPlay25PNL : '';
+  document.getElementById('inputJordiPlay25R').value = trade.jordiPlay25R != null ? trade.jordiPlay25R : '';
+  document.getElementById('inputJordiPlayRunnerStatus').value = trade.jordiPlayRunnerStatus || '';
   
   // Fundamentales
   document.getElementById('inputMarketCap').value = trade.marketCap || '';
@@ -3427,6 +3489,7 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     setupEntrada: document.getElementById('inputSetupEntrada').value || '',
     inicio: document.getElementById('inputInicio').value || '',
     closed: document.getElementById('inputClosed').value || '',
+    preMarketHigh: document.getElementById('inputPreMarketHigh').value || '',
     
     // Datos de salida - SHORT y LONG separados
     pnlShort: parseFloat(document.getElementById('inputPNLShort').value) || null,
@@ -3446,6 +3509,24 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     locatesRegSho: document.getElementById('inputLocatesRegSho').checked,
     sector: document.getElementById('inputSector').value || '',
     plays: getSelectedPlays(),
+    
+    // JORDI PLAY - Guardar datos separados de 75% y 25%
+    jordiPlay75PNL: parseFloat(document.getElementById('inputJordiPlay75PNL').value) || null,
+    jordiPlay75R: parseFloat(document.getElementById('inputJordiPlay75R').value) || null,
+    jordiPlay25PNL: parseFloat(document.getElementById('inputJordiPlay25PNL').value) || null,
+    jordiPlay25R: parseFloat(document.getElementById('inputJordiPlay25R').value) || null,
+    jordiPlayRunnerStatus: document.getElementById('inputJordiPlayRunnerStatus').value || '',
+    // Calcular PNL y R total combinando 75% + 25%
+    jordiPlayPNL: (() => {
+      const pnl75 = parseFloat(document.getElementById('inputJordiPlay75PNL').value) || 0;
+      const pnl25 = parseFloat(document.getElementById('inputJordiPlay25PNL').value) || 0;
+      return (pnl75 + pnl25) || null;
+    })(),
+    jordiPlayR: (() => {
+      const r75 = parseFloat(document.getElementById('inputJordiPlay75R').value) || 0;
+      const r25 = parseFloat(document.getElementById('inputJordiPlay25R').value) || 0;
+      return (r75 + r25) || null;
+    })(),
     
     // Fundamentales
     marketCap: document.getElementById('inputMarketCap').value || '',
@@ -3847,11 +3928,11 @@ const PLAYS_LIST = [
   // SHORT
   'SIR vs PMH', 'SIR vs HOD', 'SIR vs AFTER', 'FAIL BREAKOUT', 'FAIL BREAKOUT AFTER',
   'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD',
-  'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD'
+  'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD', 'JORDI PLAY', 'PALMA LIQUIDATION'
 ];
 
 const PLAYS_LONG  = new Set(['BREAKOUT', 'BREAKOUT PMH', 'GAP & GO', 'VWAP RECLAIM']);
-const PLAYS_SHORT = new Set(['SIR vs PMH', 'SIR vs HOD', 'SIR vs AFTER', 'FAIL BREAKOUT', 'FAIL BREAKOUT AFTER', 'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD', 'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD']);
+const PLAYS_SHORT = new Set(['SIR vs PMH', 'SIR vs HOD', 'SIR vs AFTER', 'FAIL BREAKOUT', 'FAIL BREAKOUT AFTER', 'GAP & EXTENSION', 'GAP & CRAP', 'LOWER HIGH VWAP', 'LOWER HIGH HOD', 'LDF', 'FRD', 'VWAP REJECTION', 'PARABOLIC SHORT', 'OEGD', 'JORDI PLAY', 'PALMA LIQUIDATION']);
 
 function initPlaybookSelector() {
   const container = document.getElementById('playbook-selector');
@@ -3868,8 +3949,22 @@ function initPlaybookSelector() {
       this.style.background = cb.checked ? 'rgba(177,106,255,0.25)' : 'var(--bg3)';
       this.style.borderColor = cb.checked ? 'var(--purple)' : 'var(--border)';
       this.querySelector('span').style.color = cb.checked ? 'var(--purple)' : '';
+      
+      // Mostrar/ocultar sección JORDI PLAY
+      toggleJordiPlaySection();
     });
   });
+}
+
+function toggleJordiPlaySection() {
+  const jordiPlaySection = document.getElementById('jordiPlaySection');
+  const selectedPlays = getSelectedPlays();
+  
+  if (selectedPlays.includes('JORDI PLAY')) {
+    jordiPlaySection.style.display = 'block';
+  } else {
+    jordiPlaySection.style.display = 'none';
+  }
 }
 
 function getSelectedPlays() {
@@ -3889,6 +3984,9 @@ function setSelectedPlays(plays) {
     chip.style.borderColor = active ? 'var(--purple)' : 'var(--border)';
     chip.querySelector('span').style.color = active ? 'var(--purple)' : '';
   });
+  
+  // Mostrar/ocultar sección JORDI PLAY
+  toggleJordiPlaySection();
 }
 
 // ── SECTOR LIST FUNCTIONS ────────────────────────────────────────────────────
@@ -6026,6 +6124,9 @@ async function quickAddTrade(estado) {
     rrLong:      null,
     inicio:      '',
     closed:      '',
+    preMarketHigh: '',
+    jordiPlayPNL: null,
+    jordiPlayR: null,
     chartImage:  '',
     notas:       prev.notas       || '',
     ejecucionStartTime: estado === 'ejecucion' ? Date.now() : null,
