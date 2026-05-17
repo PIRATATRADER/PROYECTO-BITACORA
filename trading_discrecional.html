@@ -733,6 +733,30 @@
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--muted2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: help;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg3);
+    transition: all 0.2s;
+  }
+
+  .tooltip-icon:hover {
+    color: var(--purple);
+    border-color: var(--purple);
+    background: var(--bg2);
   }
 
   .form-input, .form-select, .form-textarea {
@@ -1773,6 +1797,17 @@
                 <option value="HA SUPERADO EL PMH">HA SUPERADO EL PMH</option>
                 <option value="FAIL PMH">FAIL PMH</option>
                 <option value="NO HA SUPERADO EL PMH">NO HA SUPERADO EL PMH</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">
+                Runners Hoy
+                <span class="tooltip-icon" title="Una Runner es aquella acción que corre a partir del OPEN del mercado">ⓘ</span>
+              </label>
+              <select class="form-select" id="inputRunnersHoy">
+                <option value="">Seleccionar...</option>
+                <option value="SI">SÍ</option>
+                <option value="NO">NO</option>
               </select>
             </div>
           </div>
@@ -3283,6 +3318,7 @@ function editTrade(globalIdx) {
   
   // Setup y contexto
   document.getElementById('inputNoticia').value = trade.noticia || '';
+  document.getElementById('inputRunnersHoy').value = trade.runnersHoy || '';
   document.getElementById('inputPais').value = trade.pais || '';
   document.getElementById('inputSector').value = trade.sector || '';
   initPlaybookSelector();
@@ -3505,6 +3541,7 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     
     // Setup y contexto
     noticia: document.getElementById('inputNoticia').value || '',
+    runnersHoy: document.getElementById('inputRunnersHoy').value || '',
     pais: document.getElementById('inputPais').value || '',
     locatesRegSho: document.getElementById('inputLocatesRegSho').checked,
     sector: document.getElementById('inputSector').value || '',
@@ -5796,6 +5833,12 @@ function renderSectoresTable() {
     return '<span style="color:var(--muted)">—</span>';
   };
 
+  const runnersPill = v => {
+    if (v==='SI') return pill('✓', '#00e676','rgba(0,230,118,0.12)');
+    if (v==='NO') return pill('✗', '#ff3d57','rgba(255,61,87,0.12)');
+    return '<span style="color:var(--muted)">—</span>';
+  };
+
   const dilPill = trade => {
     if (!trade.dilucion || !trade.dilucion.length) return '<span style="color:var(--muted)">—</span>';
     const chips = trade.dilucion.map(item => {
@@ -5859,6 +5902,7 @@ function renderSectoresTable() {
         </div>
       </td>
       <td>${noticiaPill(trade.noticia)}</td>
+      <td>${runnersPill(trade.runnersHoy)}</td>
       <td class="td-mono" style="font-size:10px;">${trade.marketCap || '—'}</td>
       <td class="td-mono" style="font-size:10px;${trade.float === 'Micro Low Float (<1M)' ? 'color:#ff1744;font-weight:700;' : trade.float === 'Ultra Low Float (1M-5M)' ? 'color:var(--yellow);font-weight:700;' : ''}">${trade.float || '—'}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text);">${trade.pais||'<span style="color:var(--muted)">—</span>'}</span></td>
@@ -5950,6 +5994,7 @@ function renderSectoresTable() {
             <th class="sortable" onclick="sortSectoresBy('estado')">Estado ${ar('estado')}</th>
             <th class="sortable" onclick="sortSectoresBy('ticker')">Ticker ${ar('ticker')}</th>
             <th>Noticia</th>
+            <th>Runners</th>
             <th class="sortable" onclick="sortSectoresBy('mcap')">M.Cap ${ar('mcap')}</th>
             <th class="sortable" onclick="sortSectoresBy('float')">Float ${ar('float')}</th>
             <th class="sortable" onclick="sortSectoresBy('pais')">País ${ar('pais')}</th>
@@ -5964,7 +6009,7 @@ function renderSectoresTable() {
             <th style="text-align:center;">OK</th>
           </tr>
         </thead>
-        <tbody>${rows || `<tr><td colspan="16" style="text-align:center;color:var(--muted2);padding:40px;font-size:14px;">No hay trades en este sector</td></tr>`}</tbody>
+        <tbody>${rows || `<tr><td colspan="17" style="text-align:center;color:var(--muted2);padding:40px;font-size:14px;">No hay trades en este sector</td></tr>`}</tbody>
       </table>
     </div>
   `;
