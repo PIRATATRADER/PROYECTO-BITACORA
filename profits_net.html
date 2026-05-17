@@ -1403,6 +1403,9 @@ function renderCapitalChart(rows) {
       },
       scales: {
         y: {
+          beginAtZero: true,
+          suggestedMin: 0,
+          suggestedMax: Math.max(...dataAdjNet.filter(v => v != null), ...mults.map((m,i) => prom * m * 12)) * 1.1,
           ticks: {
             color: '#7a8599',
             font: { family:'DM Mono', size:10 },

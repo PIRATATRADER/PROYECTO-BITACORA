@@ -222,6 +222,7 @@ body::before {
 .card-screener  { --card-accent: var(--purple); }
 .card-discrecional { --card-accent: #ff6b6b; } /* Rojo coral */
 .card-pirata-scan  { --card-accent: #ffa726; } /* Naranja */
+.card-pnl-diario   { --card-accent: var(--green); } /* Verde igual que profits */
 
 .card-icon {
   font-size: 32px;
@@ -388,19 +389,19 @@ body::before {
     </div>
 
     <!-- TARJETA: PNL DIARIO -->
-    <div class="mode-card" onclick="window.location.href='pnl_diario.html'" style="cursor:pointer;--card-accent:#00e676;">
+    <div class="mode-card card-pnl-diario" onclick="window.location.href='pnl_diario.html'" id="cardPnlDiario">
       <div class="card-icon">💹</div>
       <div>
         <div class="card-label">Módulo</div>
-        <div class="card-title" style="color:#00e676;">PNL DIARIO</div>
+        <div class="card-title">PNL DIARIO</div>
       </div>
       <div class="card-desc">Seguimiento diario simplificado. Un solo setup al 10% del Start of Day, targets, PNL y progreso mensual.</div>
       <div class="card-stats">
-        <div class="card-stat"><div class="card-stat-val" style="color:#00e676;">10%</div><div class="card-stat-label">Setup</div></div>
-        <div class="card-stat"><div class="card-stat-val" style="color:#00e676;">SOD</div><div class="card-stat-label">Base</div></div>
-        <div class="card-stat"><div class="card-stat-val" style="color:#00e676;">📈</div><div class="card-stat-label">Diario</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="pnlDiarioSesiones" style="color:var(--green)">—</div><div class="card-stat-label">Sesiones</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="pnlDiarioPNL" style="color:var(--green)">—</div><div class="card-stat-label">PNL Mes</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="pnlDiarioWR" style="color:var(--green)">—</div><div class="card-stat-label">Win Rate</div></div>
       </div>
-      <div class="card-arrow" style="color:#00e676;">Abrir PNL →</div>
+      <div class="card-arrow">Abrir PNL →</div>
     </div>
 
     <!-- TARJETA 5: TRADING DISCRECIONAL (Superior Derecha) -->
