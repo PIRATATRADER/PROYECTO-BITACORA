@@ -217,7 +217,7 @@ body::before {
 }
 
 .card-data      { --card-accent: var(--blue); }
-.card-bitacora  { --card-accent: var(--gold); }
+.card-bitacora  { --card-accent: var(--green); }
 .card-profits   { --card-accent: var(--green); }
 .card-screener  { --card-accent: var(--purple); }
 .card-discrecional { --card-accent: #ff6b6b; } /* Rojo coral */
@@ -374,16 +374,16 @@ body::before {
 
     <!-- TARJETA 2: CAPITAL TRACKER (Superior Derecha) -->
     <div class="mode-card card-bitacora" onclick="openDash('bitacora')" id="cardBitacora">
-      <div class="card-icon">📈</div>
+      <div class="card-icon">✅</div>
       <div>
         <div class="card-label">Módulo</div>
         <div class="card-title">CAPITAL TRACKER</div>
       </div>
       <div class="card-desc">Seguimiento diario de capital 2026. Targets, PNL por sesión y progreso hacia el objetivo anual.</div>
       <div class="card-stats">
-        <div class="card-stat"><div class="card-stat-val" id="bitacoraDias" style="color:var(--gold)">—</div><div class="card-stat-label">Sesiones</div></div>
-        <div class="card-stat"><div class="card-stat-val" id="bitacoraPNL" style="color:var(--gold)">—</div><div class="card-stat-label">PNL Año</div></div>
-        <div class="card-stat"><div class="card-stat-val" id="bitacoraWR" style="color:var(--gold)">—</div><div class="card-stat-label">Win Rate</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="bitacoraDias" style="color:var(--green)">—</div><div class="card-stat-label">Sesiones</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="bitacoraPNL" style="color:var(--green)">—</div><div class="card-stat-label">PNL Año</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="bitacoraWR" style="color:var(--green)">—</div><div class="card-stat-label">Win Rate</div></div>
       </div>
       <div class="card-arrow">Abrir tracker →</div>
     </div>
@@ -395,10 +395,10 @@ body::before {
         <div class="card-label">Módulo</div>
         <div class="card-title">PNL DIARIO</div>
       </div>
-      <div class="card-desc">Seguimiento diario simplificado. Un solo setup al 10% del Start of Day, targets, PNL y progreso mensual.</div>
+      <div class="card-desc">Seguimiento diario de capital 2026. Targets, PNL por sesión y progreso hacia el objetivo anual.</div>
       <div class="card-stats">
         <div class="card-stat"><div class="card-stat-val" id="pnlDiarioSesiones" style="color:var(--green)">—</div><div class="card-stat-label">Sesiones</div></div>
-        <div class="card-stat"><div class="card-stat-val" id="pnlDiarioPNL" style="color:var(--green)">—</div><div class="card-stat-label">PNL Mes</div></div>
+        <div class="card-stat"><div class="card-stat-val" id="pnlDiarioPNL" style="color:var(--green)">—</div><div class="card-stat-label">PNL Año</div></div>
         <div class="card-stat"><div class="card-stat-val" id="pnlDiarioWR" style="color:var(--green)">—</div><div class="card-stat-label">Win Rate</div></div>
       </div>
       <div class="card-arrow">Abrir PNL →</div>
@@ -580,7 +580,9 @@ async function loadAllStats() {
   try {
     const ctDoc = await db.collection('capital_tracker').doc('main_data').get();
     if (ctDoc.exists && ctDoc.data().data) {
-      renderCapitalStats(JSON.parse(ctDoc.data().data));
+      const parsedData = JSON.parse(ctDoc.data().data);
+      renderCapitalStats(parsedData);
+      renderPnlDiarioStats(parsedData); // ← AGREGADO: cargar también PNL Diario
     }
   } catch(e) { console.error('Error loading capital tracker stats:', e); }
 
@@ -613,6 +615,9 @@ async function loadAllStats() {
 
 // ── Helpers de renderizado para Capital Tracker ─────────────────────────────
 function renderCapitalStats(D) {
+  console.log('🟢 CAPITAL TRACKER - renderCapitalStats llamada');
+  console.log('🟢 CAPITAL TRACKER - Datos recibidos:', D);
+  
   let dias = 0, pnl = 0, htbTotal = 0, wins = 0;
   Object.values(D).forEach(row => {
     const p = parseFloat(String(row.pnlDay || '').replace(/[$,\s]/g,''));
@@ -621,12 +626,69 @@ function renderCapitalStats(D) {
       dias++; pnl += p; htbTotal += h; if ((p - h) > 0) wins++;
     }
   });
+  
+  console.log('🟢 CAPITAL TRACKER - Resultados:');
+  console.log('  Días:', dias);
+  console.log('  Total PNL:', pnl);
+  console.log('  Total HTB:', htbTotal);
+  console.log('  Wins:', wins);
+  
   const pnlNet = pnl - htbTotal;
   const wr = dias > 0 ? Math.round((wins / dias) * 100) + '%' : '—';
   const pnlFmt = pnlNet === 0 && dias === 0 ? '—' : (pnlNet >= 0 ? '+' : '') + '$' + Math.abs(pnlNet).toFixed(0);
+  
+  console.log('🟢 CAPITAL TRACKER - Valores finales:', pnlFmt, wr);
+  
   document.getElementById('bitacoraDias').textContent = dias || '—';
   document.getElementById('bitacoraPNL').textContent = dias > 0 ? pnlFmt : '—';
   document.getElementById('bitacoraWR').textContent = wr;
+  
+  console.log('✅ CAPITAL TRACKER - DOM actualizado');
+}
+
+// ── Renderizar stats de PNL DIARIO (reemplazo de Capital Tracker - cuenta TODO) ───
+function renderPnlDiarioStats(D) {
+  console.log('🔵 PNL DIARIO - renderPnlDiarioStats llamada');
+  console.log('🔵 PNL DIARIO - Datos recibidos:', D);
+  
+  if (!D) {
+    console.log('❌ PNL DIARIO - No hay datos (D es null/undefined)');
+    return;
+  }
+  
+  let sesiones = 0, totalPnl = 0, totalHtb = 0, wins = 0;
+  
+  Object.values(D).forEach(row => {
+    const p = parseFloat(String(row.pnlDay || '').replace(/[$,\s]/g,''));
+    const h = parseFloat(String(row.htb || '').replace(/[$,\s]/g,'')) || 0;
+    
+    if (!isNaN(p) && row.pnlDay !== '' && row.pnlDay != null) {
+      sesiones++;
+      totalPnl += p;
+      totalHtb += h;
+      if ((p - h) > 0) wins++;
+    }
+  });
+  
+  console.log('🔵 PNL DIARIO - Resultados calculados:');
+  console.log('  Sesiones:', sesiones);
+  console.log('  Total PNL:', totalPnl);
+  console.log('  Total HTB:', totalHtb);
+  console.log('  Wins:', wins);
+  
+  const pnlNet = totalPnl - totalHtb;
+  const wr = sesiones > 0 ? Math.round((wins / sesiones) * 100) + '%' : '—';
+  const pnlFmt = pnlNet === 0 && sesiones === 0 ? '—' : (pnlNet >= 0 ? '+' : '') + '$' + Math.abs(pnlNet).toFixed(0);
+  
+  console.log('🔵 PNL DIARIO - Valores finales:');
+  console.log('  PNL Neto:', pnlNet, '→', pnlFmt);
+  console.log('  Win Rate:', wr);
+  
+  document.getElementById('pnlDiarioSesiones').textContent = sesiones || '—';
+  document.getElementById('pnlDiarioPNL').textContent = sesiones > 0 ? pnlFmt : '—';
+  document.getElementById('pnlDiarioWR').textContent = wr;
+  
+  console.log('✅ PNL DIARIO - DOM actualizado');
 }
 
 // ── Helpers de renderizado para Profits Net ─────────────────────────────────
@@ -694,10 +756,14 @@ db.collection('proyecto_data').doc('trades_data').onSnapshot((snap) => {
   }
 }, (err) => console.warn('onSnapshot proyecto_data:', err));
 
-// 2) Listener para Capital Tracker → actualiza tarjeta CAPITAL TRACKER
+// 2) Listener para Capital Tracker → actualiza tarjeta CAPITAL TRACKER y PNL DIARIO
 db.collection('capital_tracker').doc('main_data').onSnapshot((snap) => {
   if (snap.exists && snap.data().data) {
-    try { renderCapitalStats(JSON.parse(snap.data().data)); } catch(e) {}
+    try { 
+      const parsedData = JSON.parse(snap.data().data);
+      renderCapitalStats(parsedData);
+      renderPnlDiarioStats(parsedData);
+    } catch(e) {}
   }
 }, (err) => console.warn('onSnapshot capital_tracker:', err));
 
