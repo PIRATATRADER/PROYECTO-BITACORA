@@ -1,6 +1,0 @@
-requests
-pywin32
-python-dotenv
-tradingview-screener
-deep-translator
-Pillow
