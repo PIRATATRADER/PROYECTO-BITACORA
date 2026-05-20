@@ -2069,6 +2069,128 @@
           </div>
         </div>
 
+        <!-- ESTUDIO DEL TRADE -->
+        <div class="form-section" style="background: linear-gradient(135deg, rgba(68,138,255,0.05) 0%, rgba(68,138,255,0.02) 100%); border: 1px solid rgba(68,138,255,0.2);">
+          <div class="form-section-title" style="color: var(--blue);">🔬 Estudio del Trade</div>
+
+          <div class="form-grid-2">
+            <!-- ENTRADA VWAP -->
+            <div class="form-group">
+              <label class="form-label">Entrada respecto VWAP</label>
+              <select class="form-select" id="inputEstudioEntradaVWAP">
+                <option value="">— Seleccionar —</option>
+                <option value="ENTRADA ENCIMA VWAP">📈 ENTRADA ENCIMA VWAP</option>
+                <option value="ENTRADA POR DEBAJO VWAP">📉 ENTRADA POR DEBAJO VWAP</option>
+              </select>
+            </div>
+            <!-- ENTRADA OPEN -->
+            <div class="form-group">
+              <label class="form-label">Entrada respecto OPEN</label>
+              <select class="form-select" id="inputEstudioEntradaOPEN">
+                <option value="">— Seleccionar —</option>
+                <option value="ENTRADA POR ENCIMA OPEN">📈 ENTRADA POR ENCIMA OPEN</option>
+                <option value="ENTRADA POR DEBAJO OPEN">📉 ENTRADA POR DEBAJO OPEN</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-3" style="margin-top: 16px;">
+            <!-- PRECIO ENTRADA -->
+            <div class="form-group">
+              <label class="form-label">💲 Precio Entrada ($)</label>
+              <div style="position:relative;display:flex;align-items:center;">
+                <span style="position:absolute;left:10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--blue);pointer-events:none;">$</span>
+                <input type="number" step="0.001" class="form-input" id="inputEstudioPrecioEntrada" placeholder="0.000" style="padding-left:26px;">
+              </div>
+            </div>
+            <!-- PRECIO SALIDA -->
+            <div class="form-group">
+              <label class="form-label">💲 Precio Salida ($)</label>
+              <div style="position:relative;display:flex;align-items:center;">
+                <span style="position:absolute;left:10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--blue);pointer-events:none;">$</span>
+                <input type="number" step="0.001" class="form-input" id="inputEstudioPrecioSalida" placeholder="0.000" style="padding-left:26px;">
+              </div>
+            </div>
+            <!-- MOVIMIENTO % (calculado auto) -->
+            <div class="form-group">
+              <label class="form-label" style="color:var(--muted2);">📊 Movimiento (%)</label>
+              <div id="estudioMovimientoPct" style="
+                display:flex; align-items:center; height:42px;
+                background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+                padding:0 14px; font-family:'DM Mono',monospace; font-size:14px;
+                font-weight:600; color:var(--muted); letter-spacing:1px;">
+                —
+              </div>
+            </div>
+          </div>
+
+          <!-- MÍNIMO POST-SALIDA -->
+          <div style="margin-top:16px; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label class="form-label" style="color:var(--yellow);">
+                <span class="tooltip-container">
+                  📉 Mínimo tras salida ($)
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-text">Precio mínimo que tocó el stock DESPUÉS de tu salida. Cuánto dejaste sobre la mesa.</span>
+                </span>
+              </label>
+              <div style="position:relative;display:flex;align-items:center;">
+                <span style="position:absolute;left:10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--yellow);pointer-events:none;">$</span>
+                <input type="number" step="0.001" class="form-input" id="inputEstudioMinPostSalida"
+                  placeholder="0.000" style="padding-left:26px;border-color:rgba(255,214,0,0.3);"
+                  oninput="updateDejoEnMesa()">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color:var(--muted2);">📊 ¿Siguió bajando?</label>
+              <div id="estudioSiguioBajando" style="
+                display:flex; align-items:center; height:42px;
+                background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+                padding:0 14px; font-family:'DM Mono',monospace; font-size:13px;
+                font-weight:600; color:var(--muted); letter-spacing:0.5px;">
+                —
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color:var(--muted2);">💸 Dejé en la mesa (%)</label>
+              <div id="estudioDejoEnMesa" style="
+                display:flex; align-items:center; height:42px;
+                background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+                padding:0 14px; font-family:'DM Mono',monospace; font-size:13px;
+                font-weight:600; color:var(--muted); letter-spacing:0.5px;">
+                —
+              </div>
+            </div>
+          </div>
+
+          <!-- AÑADIR SHARES + STOP LOSS -->
+          <div style="margin-top:16px; display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;">
+            <!-- Añadido shares -->
+            <div class="form-group" style="flex:1; min-width:160px;">
+              <label class="form-label">Añadí Shares</label>
+              <select class="form-select" id="inputEstudioAnadirShares">
+                <option value="">— Seleccionar —</option>
+                <option value="SÍ">✅ SÍ</option>
+                <option value="NO">❌ NO</option>
+              </select>
+            </div>
+            <!-- Stop Loss puesto -->
+            <div class="form-group" style="display:flex; flex-direction:column; justify-content:flex-end; padding-bottom:2px;">
+              <label class="form-label" style="margin-bottom:10px;">Stop Loss puesto</label>
+              <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding: 10px 14px;
+                background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+                transition: border-color 0.2s; user-select:none;"
+                id="stopLossCheckLabel">
+                <input type="checkbox" id="inputEstudioStopLoss"
+                  style="width:18px;height:18px;cursor:pointer;accent-color:var(--red);"
+                  onchange="toggleStopLossLabel()">
+                <span id="stopLossLabelText" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;color:var(--muted2);">SIN STOP LOSS</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
         <!-- PLAYBOOK -->
         <div class="form-section">
           <div class="form-section-title">🎯 Playbook</div>
@@ -3262,12 +3384,100 @@ function openAddModal() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  // Reset Estudio del Trade
+  document.getElementById('inputEstudioEntradaVWAP').value  = '';
+  document.getElementById('inputEstudioEntradaOPEN').value  = '';
+  document.getElementById('inputEstudioPrecioEntrada').value = '';
+  document.getElementById('inputEstudioPrecioSalida').value  = '';
+  document.getElementById('inputEstudioAnadirShares').value  = '';
+  document.getElementById('inputEstudioStopLoss').checked    = false;
+  document.getElementById('inputEstudioMinPostSalida').value = '';
+  toggleStopLossLabel();
+  updateMovimientoPct();
+  updateDejoEnMesa();
   document.getElementById('btnDelete').style.display = 'none';
   removeChart();
   setDefaultDate();
   initPlaybookSelector();
   setSelectedPlays([]);
   document.getElementById('tradeModal').classList.add('open');
+}
+
+// ── ESTUDIO DEL TRADE: helpers ────────────────────────────────────────────────
+function toggleStopLossLabel() {
+  const checked = document.getElementById('inputEstudioStopLoss').checked;
+  const label   = document.getElementById('stopLossCheckLabel');
+  const text    = document.getElementById('stopLossLabelText');
+  if (checked) {
+    text.textContent = '✅ STOP LOSS PUESTO';
+    text.style.color = 'var(--green)';
+    label.style.borderColor = 'var(--green)';
+    label.style.background  = 'rgba(0,230,118,0.07)';
+  } else {
+    text.textContent = 'SIN STOP LOSS';
+    text.style.color = 'var(--muted2)';
+    label.style.borderColor = 'var(--border)';
+    label.style.background  = 'var(--bg3)';
+  }
+}
+
+function updateMovimientoPct() {
+  const entrada = parseFloat(document.getElementById('inputEstudioPrecioEntrada').value);
+  const salida  = parseFloat(document.getElementById('inputEstudioPrecioSalida').value);
+  const el      = document.getElementById('estudioMovimientoPct');
+  if (!el) return;
+  if (!isNaN(entrada) && entrada > 0 && !isNaN(salida) && salida > 0) {
+    const pct = ((salida - entrada) / entrada) * 100;
+    const sign = pct >= 0 ? '+' : '';
+    el.textContent = sign + pct.toFixed(2) + '%';
+    el.style.color = pct >= 0 ? 'var(--green)' : 'var(--red)';
+  } else {
+    el.textContent = '—';
+    el.style.color = 'var(--muted)';
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function updateDejoEnMesa() {
+  const salida = parseFloat(document.getElementById('inputEstudioPrecioSalida').value);
+  const minPost = parseFloat(document.getElementById('inputEstudioMinPostSalida').value);
+  const elSiguio = document.getElementById('estudioSiguioBajando');
+  const elDejo   = document.getElementById('estudioDejoEnMesa');
+  if (!elSiguio || !elDejo) return;
+
+  if (!isNaN(salida) && salida > 0 && !isNaN(minPost) && minPost > 0) {
+    if (minPost < salida) {
+      // Sí siguió bajando
+      const pct = ((salida - minPost) / salida) * 100;
+      elSiguio.innerHTML = '<span style="color:var(--red);">🔴 SÍ BAJÓ MÁS</span>';
+      elSiguio.style.borderColor = 'rgba(255,61,87,0.4)';
+      elDejo.textContent = '-' + pct.toFixed(2) + '%';
+      elDejo.style.color = 'var(--red)';
+      elDejo.style.borderColor = 'rgba(255,61,87,0.4)';
+    } else if (minPost > salida) {
+      // No, subió tras la salida
+      const pct = ((minPost - salida) / salida) * 100;
+      elSiguio.innerHTML = '<span style="color:var(--green);">🟢 NO, SUBIÓ</span>';
+      elSiguio.style.borderColor = 'rgba(0,230,118,0.35)';
+      elDejo.textContent = '+' + pct.toFixed(2) + '%';
+      elDejo.style.color = 'var(--green)';
+      elDejo.style.borderColor = 'rgba(0,230,118,0.35)';
+    } else {
+      // Exactamente igual
+      elSiguio.innerHTML = '<span style="color:var(--muted2);">⚪ IGUAL</span>';
+      elSiguio.style.borderColor = 'var(--border)';
+      elDejo.textContent = '0.00%';
+      elDejo.style.color = 'var(--muted2)';
+      elDejo.style.borderColor = 'var(--border)';
+    }
+  } else {
+    elSiguio.innerHTML = '—';
+    elSiguio.style.borderColor = 'var(--border)';
+    elSiguio.style.color = 'var(--muted)';
+    elDejo.textContent = '—';
+    elDejo.style.color = 'var(--muted)';
+    elDejo.style.borderColor = 'var(--border)';
+  }
 }
 
 // ── AUTOCOMPLETADO POR TICKER ──────────────────────────────────────────────────
@@ -3495,6 +3705,18 @@ function editTrade(globalIdx) {
   document.getElementById('inputSector').value = trade.sector || '';
   initPlaybookSelector();
   setSelectedPlays(trade.plays || []);
+
+  // Estudio del Trade
+  document.getElementById('inputEstudioEntradaVWAP').value  = trade.estudioEntradaVWAP  || '';
+  document.getElementById('inputEstudioEntradaOPEN').value  = trade.estudioEntradaOPEN  || '';
+  document.getElementById('inputEstudioPrecioEntrada').value = trade.estudioPrecioEntrada != null ? trade.estudioPrecioEntrada : '';
+  document.getElementById('inputEstudioPrecioSalida').value  = trade.estudioPrecioSalida  != null ? trade.estudioPrecioSalida  : '';
+  document.getElementById('inputEstudioAnadirShares').value  = trade.estudioAnadirShares  || '';
+  document.getElementById('inputEstudioStopLoss').checked    = trade.estudioStopLoss      || false;
+  document.getElementById('inputEstudioMinPostSalida').value = trade.estudioMinPostSalida != null ? trade.estudioMinPostSalida : '';
+  toggleStopLossLabel();
+  updateMovimientoPct();
+  updateDejoEnMesa();
   
   // Mostrar/ocultar campo VWAP si tiene GAP & GO
   toggleVWAPField();
@@ -3750,6 +3972,15 @@ document.getElementById('tradeForm').addEventListener('submit', async (e) => {
     cashNeed: document.getElementById('inputCashNeed').value || '',
     dilucion: dilucion,
     
+    // Estudio del Trade
+    estudioEntradaVWAP:    document.getElementById('inputEstudioEntradaVWAP').value || '',
+    estudioEntradaOPEN:    document.getElementById('inputEstudioEntradaOPEN').value || '',
+    estudioPrecioEntrada:  parseFloat(document.getElementById('inputEstudioPrecioEntrada').value) || null,
+    estudioPrecioSalida:   parseFloat(document.getElementById('inputEstudioPrecioSalida').value) || null,
+    estudioAnadirShares:   document.getElementById('inputEstudioAnadirShares').value || '',
+    estudioStopLoss:       document.getElementById('inputEstudioStopLoss').checked,
+    estudioMinPostSalida:  parseFloat(document.getElementById('inputEstudioMinPostSalida').value) || null,
+
     // Notas
     notas: document.getElementById('inputNotas').value || '',
     
@@ -6687,6 +6918,15 @@ function toggleVWAPField() {
 
 // Añadir listeners a los campos
 document.addEventListener('DOMContentLoaded', function() {
+  // Listeners Estudio del Trade: cálculo automático del movimiento %
+  const epE = document.getElementById('inputEstudioPrecioEntrada');
+  const epS = document.getElementById('inputEstudioPrecioSalida');
+  if (epE) epE.addEventListener('input', updateMovimientoPct);
+  if (epS) {
+    epS.addEventListener('input', updateMovimientoPct);
+    epS.addEventListener('input', updateDejoEnMesa);
+  }
+
   // Listener para Runners
   const runnersSelect = document.getElementById('inputRunnersHoy');
   if (runnersSelect) {
