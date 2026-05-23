@@ -6053,8 +6053,9 @@ function setSimPct(pct, source) {
 function renderSimulacion() {
   const hoy = new Date();
   const mesActual = hoy.getMonth();
+  const anoActual = hoy.getFullYear();
 
-  // Media real de meses cerrados
+  // Media real de meses cerrados desde enero 2026
   const mesesCerrados = [];
   MONTHS.forEach((m, mi) => {
     if (mi >= mesActual) return;
@@ -6085,76 +6086,202 @@ function renderSimulacion() {
   const avgPct = mesesCerrados.length
     ? mesesCerrados.reduce((s,m)=>s+m.pct,0)/mesesCerrados.length : 0;
   const pctUsado = (_simPctOverride!==null) ? _simPctOverride : avgPct;
-  const N = 12;
-  const capitalFinal  = capitalActual * Math.pow(1+pctUsado/100, N);
-  const gananciaTotal = capitalFinal - capitalActual;
 
-  // KPIs
+  // KPIs principales
   document.getElementById('simKpis').innerHTML = `
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--cyan);"></div>
       <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">Capital Actual</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--cyan);">${fd(capitalActual)}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">Punto de partida</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">Punto de partida (HOY)</div>
     </div>
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">% Mensual Aplicado</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">% Mensual Promedio</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);">${pctUsado.toFixed(2)}%</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">${_simPctOverride!==null?'Manual':'Media real ('+mesesCerrados.length+' meses)'}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">${_simPctOverride!==null?'Manual':'Desde Enero 2026 ('+mesesCerrados.length+' meses)'}</div>
     </div>
-    <div style="background:var(--bg3);border:1px solid ${gananciaTotal>=0?'#00e67640':'#ff3d5740'};border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${gananciaTotal>=0?'var(--green)':'var(--red)'};"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">Capital en 12 Meses</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${gananciaTotal>=0?'var(--green)':'var(--red)'};">${fd(capitalFinal)}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">${gananciaTotal>=0?'+':''}${fd(gananciaTotal)} en 12 meses</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:#a855f7;"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">Meses Analizados</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#a855f7;">${mesesCerrados.length}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">Desde ENE 2026</div>
     </div>`;
 
-  // Nombres de meses en español
+  // PARTE 1: HASTA DICIEMBRE 2026
+  renderSimulacion2026(capitalActual, pctUsado, mesActual);
+  
+  // PARTE 2: PRÓXIMOS 12 MESES
+  renderSimulacion12Meses(capitalActual, pctUsado, mesActual);
+}
+
+function renderSimulacion2026(capitalInicial, pctUsado, mesActual) {
   const MONTH_NAMES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-
-  // Tabla — siempre 12 meses desde el mes siguiente al actual
-  let html = `<div style="display:grid;grid-template-columns:140px 1fr 1fr 1fr 1fr;gap:8px;
-    padding:6px 12px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;
-    text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);margin-bottom:6px;">
-    <span>Mes</span>
-    <span style="text-align:right">Capital Inicio</span>
-    <span style="text-align:right">Ganancia Est.</span>
-    <span style="text-align:right">Capital Fin</span>
-    <span style="text-align:right">Acum. vs Hoy</span>
-  </div>`;
-
-  let cap = capitalActual;
-  const startMonth = mesActual + 1; // próximo mes (0-based)
-  const startYear  = hoy.getFullYear();
-
-  for (let i = 0; i < N; i++) {
-    const absMonth = startMonth + i;
-    const mn   = MONTH_NAMES[absMonth % 12];
-    const yr   = startYear + Math.floor(absMonth / 12);
-    const label = mn + ' ' + yr;
-    const ganancia = cap * pctUsado / 100;
-    const capFin   = cap + ganancia;
-    const acum     = capFin - capitalActual;
-    const isLast   = i === N - 1;
-    const barPct   = capitalActual > 0 ? Math.min(100, (acum / capitalActual) * 100) : 0;
-
-    html += `<div style="display:grid;grid-template-columns:140px 1fr 1fr 1fr 1fr;gap:8px;
-      align-items:center;padding:10px 12px;
-      background:${isLast?'#f5a62308':'var(--bg3)'};
-      border:1px solid ${isLast?'#f5a62340':'var(--border)'};
-      border-radius:8px;margin-bottom:6px;font-family:'DM Mono',monospace;font-size:11px;
-      position:relative;overflow:hidden;">
-      <div style="position:absolute;bottom:0;left:0;height:2px;width:${barPct}%;background:${gananciaTotal>=0?'#00e67630':'#ff3d5730'};"></div>
-      <span style="color:${isLast?'var(--gold)':'var(--text)'};font-weight:600;letter-spacing:1px;position:relative;">${isLast?'🏁 ':''}${label}</span>
-      <span style="text-align:right;color:var(--muted2);position:relative;">${fd(cap)}</span>
-      <span style="text-align:right;color:var(--green);font-weight:600;position:relative;">+${fd(ganancia)} <span style="font-size:9px;color:var(--muted);font-weight:400;">(${pctUsado.toFixed(1)}%)</span></span>
-      <span style="text-align:right;color:var(--text);font-weight:600;position:relative;">${fd(capFin)}</span>
-      <span style="text-align:right;color:${acum>=0?'var(--gold)':'var(--red)'};position:relative;">+${fd(acum)}</span>
-    </div>`;
-    cap = capFin;
+  const mesesRestantes = 12 - (mesActual + 1); // meses desde el próximo hasta diciembre
+  
+  if (mesesRestantes <= 0) {
+    document.getElementById('sim2026').innerHTML = `
+      <div style="text-align:center;padding:30px;color:var(--muted2);font-family:'DM Mono',monospace;font-size:11px;">
+        ✓ Ya estamos en diciembre 2026 o más allá
+      </div>`;
+    return;
   }
-  document.getElementById('simTabla').innerHTML = html;
+
+  let cap = capitalInicial;
+  const data2026 = [];
+  const labels2026 = [];
+  
+  for (let i = 0; i < mesesRestantes; i++) {
+    const mi = mesActual + 1 + i;
+    const mn = MONTH_NAMES[mi];
+    labels2026.push(mn);
+    const ganancia = cap * pctUsado / 100;
+    cap = cap + ganancia;
+    data2026.push(cap);
+  }
+  
+  const capitalFinal2026 = cap;
+  const ganancia2026 = capitalFinal2026 - capitalInicial;
+
+  // Gráfico SVG
+  const chartHtml = generarGraficoSVG(labels2026, data2026, capitalInicial, '#00e676');
+
+  document.getElementById('sim2026').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid #00e67640;border-radius:10px;padding:16px;margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:4px;">CAPITAL INICIAL</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--cyan);">${fd(capitalInicial)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:4px;">GANANCIA ESTIMADA</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green);">+${fd(ganancia2026)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:4px;">CAPITAL A DIC 2026</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green);">${fd(capitalFinal2026)}</div>
+        </div>
+      </div>
+      ${chartHtml}
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-align:center;margin-top:8px;">
+      📊 Evolución aplicando ${pctUsado.toFixed(2)}% mensual compuesto · ${mesesRestantes} meses restantes
+    </div>
+  `;
+}
+
+function renderSimulacion12Meses(capitalInicial, pctUsado, mesActual) {
+  const MONTH_NAMES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  const anoActual = 2026;
+  
+  let cap = capitalInicial;
+  const data12m = [];
+  const labels12m = [];
+  
+  for (let i = 0; i < 12; i++) {
+    const absMonth = mesActual + 1 + i;
+    const mn = MONTH_NAMES[absMonth % 12];
+    const yr = anoActual + Math.floor(absMonth / 12);
+    labels12m.push(mn + (yr > 2026 ? `'${String(yr).slice(-2)}` : ''));
+    const ganancia = cap * pctUsado / 100;
+    cap = cap + ganancia;
+    data12m.push(cap);
+  }
+  
+  const capitalFinal12m = cap;
+  const ganancia12m = capitalFinal12m - capitalInicial;
+
+  // Gráfico SVG
+  const chartHtml = generarGraficoSVG(labels12m, data12m, capitalInicial, '#f5a623');
+
+  document.getElementById('sim12meses').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid #f5a62340;border-radius:10px;padding:16px;margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:4px;">CAPITAL INICIAL</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--cyan);">${fd(capitalInicial)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:4px;">GANANCIA ESTIMADA</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);">+${fd(ganancia12m)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:4px;">CAPITAL EN 12 MESES</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);">${fd(capitalFinal12m)}</div>
+        </div>
+      </div>
+      ${chartHtml}
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-align:center;margin-top:8px;">
+      📊 Proyección 12 meses aplicando ${pctUsado.toFixed(2)}% mensual compuesto
+    </div>
+  `;
+}
+
+function generarGraficoSVG(labels, data, minVal, color) {
+  const w = 680;
+  const h = 220;
+  const padding = { top: 20, right: 20, bottom: 40, left: 60 };
+  const chartW = w - padding.left - padding.right;
+  const chartH = h - padding.top - padding.bottom;
+  
+  const maxVal = Math.max(...data);
+  const range = maxVal - minVal;
+  const step = chartW / (data.length - 1);
+  
+  // Puntos del path
+  let pathD = '';
+  data.forEach((val, i) => {
+    const x = padding.left + i * step;
+    const y = padding.top + chartH - ((val - minVal) / range) * chartH;
+    pathD += (i === 0 ? 'M' : 'L') + x + ',' + y + ' ';
+  });
+  
+  // Área bajo la curva
+  const areaD = pathD + `L${padding.left + chartW},${padding.top + chartH} L${padding.left},${padding.top + chartH} Z`;
+  
+  // Grid lines (4 horizontales)
+  let gridLines = '';
+  for (let i = 0; i <= 4; i++) {
+    const y = padding.top + (chartH / 4) * i;
+    gridLines += `<line x1="${padding.left}" y1="${y}" x2="${padding.left + chartW}" y2="${y}" stroke="#1e2530" stroke-width="1" opacity="0.5"/>`;
+  }
+  
+  // Labels
+  let labelsHtml = '';
+  labels.forEach((label, i) => {
+    const x = padding.left + i * step;
+    labelsHtml += `<text x="${x}" y="${h - 10}" text-anchor="middle" fill="#7a8599" font-family="DM Mono,monospace" font-size="9">${label}</text>`;
+  });
+  
+  // Y-axis valores
+  let yLabels = '';
+  for (let i = 0; i <= 4; i++) {
+    const val = minVal + (range / 4) * (4 - i);
+    const y = padding.top + (chartH / 4) * i;
+    yLabels += `<text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" fill="#7a8599" font-family="DM Mono,monospace" font-size="9">${(val/1000).toFixed(1)}k</text>`;
+  }
+  
+  // Puntos interactivos
+  let points = '';
+  data.forEach((val, i) => {
+    const x = padding.left + i * step;
+    const y = padding.top + chartH - ((val - minVal) / range) * chartH;
+    points += `<circle cx="${x}" cy="${y}" r="4" fill="${color}" stroke="var(--bg2)" stroke-width="2">
+      <title>${labels[i]}: ${fd(val)}</title>
+    </circle>`;
+  });
+  
+  return `
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;margin-top:10px;" xmlns="http://www.w3.org/2000/svg">
+      ${gridLines}
+      <path d="${areaD}" fill="${color}" opacity="0.15"/>
+      <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2.5"/>
+      ${points}
+      ${labelsHtml}
+      ${yLabels}
+    </svg>
+  `;
 }
 
 document.addEventListener('keydown', function(e) {
@@ -6180,11 +6307,11 @@ document.getElementById('simulacionModal').addEventListener('click', function(e)
       background:var(--bg2);z-index:2;border-radius:16px 16px 0 0;">
       <div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:var(--gold);">
-          🔮 SIMULACIÓN 12 MESES · CAPITAL COMPUESTO
+          🔮 SIMULACIÓN DE CAPITAL · DOBLE PROYECCIÓN
         </div>
         <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;
           color:var(--muted2);text-transform:uppercase;margin-top:3px;">
-          Proyección 12 meses vista basada en tu media mensual real · Capital compuesto
+          Parte 1: Hasta Diciembre 2026 · Parte 2: Próximos 12 meses · Basado en tu promedio desde Enero 2026
         </div>
       </div>
       <button onclick="closeSimulacionModal()" style="width:32px;height:32px;border-radius:8px;
@@ -6242,20 +6369,33 @@ document.getElementById('simulacionModal').addEventListener('click', function(e)
 
     <!-- Tabla proyección -->
     <div style="padding:16px 24px 0;">
-      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;
-        color:var(--muted2);margin-bottom:10px;display:flex;align-items:center;gap:10px;">
-        PROYECCIÓN MES A MES
-        <div style="flex:1;height:1px;background:var(--border);"></div>
+      <!-- PARTE 1: HASTA DICIEMBRE 2026 -->
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;
+          color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          📊 PARTE 1: HASTA DICIEMBRE 2026
+          <div style="flex:1;height:1px;background:var(--border);"></div>
+        </div>
+        <div id="sim2026"></div>
       </div>
-      <div id="simTabla"></div>
+
+      <!-- PARTE 2: PRÓXIMOS 12 MESES -->
+      <div style="margin-bottom:16px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;
+          color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          🚀 PARTE 2: PRÓXIMOS 12 MESES
+          <div style="flex:1;height:1px;background:var(--border);"></div>
+        </div>
+        <div id="sim12meses"></div>
+      </div>
     </div>
 
     <!-- Footer nota -->
     <div style="padding:16px 24px 22px;">
       <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);line-height:1.7;
         border-top:1px solid var(--border);padding-top:12px;">
-        ⚠ Simulación orientativa basada en rendimiento histórico. Los resultados pasados no garantizan rendimientos futuros.
-        El capital compuesto aplica el % sobre el capital resultante de cada mes anterior.
+        ⚠ Simulación orientativa basada en tu rendimiento histórico desde Enero 2026. Los resultados pasados no garantizan rendimientos futuros.
+        El capital compuesto aplica el % sobre el capital resultante de cada mes anterior. Las dos proyecciones usan el mismo % promedio calculado.
       </div>
     </div>
   </div>
