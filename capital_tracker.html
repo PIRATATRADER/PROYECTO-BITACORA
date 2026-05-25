@@ -1038,20 +1038,23 @@ function renderYear() {
     const p=pd(row.pnlDay); if(p!==null){pnl+=p;dias++;p>0?wins++:losses++;}
     const h=pd(row.htb)||0; htbTotal+=h;
   });
-  const pnlAcumulado=pnl-htbTotal;
+  // PNL Bruto = suma total de pnlDay
+  const pnlBruto=pnl;
+  // PNL Neto = PNL Bruto - HTB
+  const pnlNeto=pnl-htbTotal;
   document.getElementById('kCap').textContent=firstCap?fd(firstCap):'—';
+  // Mostrar PNL Bruto
   const pe=document.getElementById('kPNL');
-  pe.textContent=fd(pnlAcumulado)||'$0'; pe.className='kpi-v '+(pnlAcumulado>=0?'kg':'kr');
+  pe.textContent=fd(pnlBruto)||'$0'; pe.className='kpi-v '+(pnlBruto>=0?'kg':'kr');
   // HTB
   const htbEl=document.getElementById('kHTB');
   htbEl.textContent=htbTotal>0?fd(htbTotal):'$0';
   // PNL Neto
-  const kpiPnlNeto=pnlAcumulado-htbTotal;
   const netoEl=document.getElementById('kNeto');
-  netoEl.textContent=fd(kpiPnlNeto)||'$0'; netoEl.className='kpi-v '+(kpiPnlNeto>=0?'kg':'kr');
+  netoEl.textContent=fd(pnlNeto)||'$0'; netoEl.className='kpi-v '+(pnlNeto>=0?'kg':'kr');
   // % Neto
   const pctNetoEl=document.getElementById('kPctNeto');
-  if(firstCap&&firstCap>0){const pct=(kpiPnlNeto/firstCap)*100;pctNetoEl.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';pctNetoEl.className='kpi-v '+(pct>=0?'kg':'kr');}else{pctNetoEl.textContent='—';}
+  if(firstCap&&firstCap>0){const pct=(pnlNeto/firstCap)*100;pctNetoEl.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';pctNetoEl.className='kpi-v '+(pct>=0?'kg':'kr');}else{pctNetoEl.textContent='—';}
   document.getElementById('kDias').textContent=dias;
   document.getElementById('kWin').textContent=wins;
   document.getElementById('kLoss').textContent=losses;
@@ -1084,7 +1087,6 @@ function renderYear() {
   const goal20=firstCap?firstCap*0.20:null;
   const goal40=firstCap?firstCap*0.40:null;
   const goal60=firstCap?firstCap*0.60:null;
-  const pnlNeto=pnl-htbTotal;
   const pnlNetoPos=pnlNeto>0?pnlNeto:0;
   const pct20=goal20?Math.min((pnlNetoPos/goal20)*100,100).toFixed(1):0;
   const pct40=goal40?Math.min((pnlNetoPos/goal40)*100,100).toFixed(1):0;
