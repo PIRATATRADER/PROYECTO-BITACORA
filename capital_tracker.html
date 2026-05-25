@@ -369,7 +369,11 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
   <div class="kpi" style="--ac:var(--green)"><div class="kpi-l">PNL Bruto</div><div class="kpi-v" id="kPNL">$0</div></div>
   <div class="kpi" style="--ac:#ff6b9d"><div class="kpi-l">HTB</div><div class="kpi-v" id="kHTB" style="color:#ff6b9d">$0</div></div>
   <div class="kpi" style="--ac:var(--cyan)"><div class="kpi-l">PNL Neto</div><div class="kpi-v" id="kNeto">$0</div></div>
-  <div class="kpi" style="--ac:var(--cyan)"><div class="kpi-l">% Neto</div><div class="kpi-v" id="kPctNeto">—</div><div id="kPctNetoSub" style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px;"></div></div>
+  <div class="kpi" style="--ac:var(--cyan);position:relative;">
+    <div class="kpi-l">% Neto</div>
+    <div class="kpi-v" id="kPctNeto">—</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:3px;" id="kPctNetoSub"></div>
+  </div>
   <div class="kpi" style="--ac:#a855f7;position:relative;">
     <div class="kpi-l">Cuenta vs Enero</div>
     <div class="kpi-v" id="kCuentaVsEnero" style="color:#a855f7">—</div>
@@ -422,7 +426,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     padding:6px 16px;border-radius:7px;border:1px solid #a855f7;background:#a855f715;
     color:#a855f7;cursor:pointer;transition:all .15s;margin-left:10px;flex-shrink:0;
     display:inline-flex;align-items:center;gap:6px;">
-    🧠 Analizar PNL
+    🧠 Analizar IA
   </button>
 </div>
 
@@ -553,6 +557,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 // ── FIREBASE — Configuración y conexión ──────────────────────────────────────
 // Proyecto Bitácora: Capital Tracker 2026
@@ -1030,6 +1035,7 @@ function renderObj() {
 
 // ── YEAR KPIs ─────────────────────────────────────────────────────────────────
 function renderYear() {
+  try {
   let pnl=0,htbTotal=0,firstCap=null,dias=0,wins=0,losses=0;
   const m=MONTHS[month];
   m.days.forEach(d=>{
@@ -1038,12 +1044,12 @@ function renderYear() {
     const p=pd(row.pnlDay); if(p!==null){pnl+=p;dias++;p>0?wins++:losses++;}
     const h=pd(row.htb)||0; htbTotal+=h;
   });
-  // PNL Bruto = suma total de pnlDay
-  const pnlBruto=pnl;
-  // PNL Neto = PNL Bruto - HTB
-  const pnlNeto=pnl-htbTotal;
+  // PNL Bruto = total del PNL del mes (sin restar HTB)
+  const pnlBruto = pnl;
+  // PNL Neto = Bruto - HTB
+  const pnlNeto = pnl - htbTotal;
+  
   document.getElementById('kCap').textContent=firstCap?fd(firstCap):'—';
-  // Mostrar PNL Bruto
   const pe=document.getElementById('kPNL');
   pe.textContent=fd(pnlBruto)||'$0'; pe.className='kpi-v '+(pnlBruto>=0?'kg':'kr');
   // HTB
@@ -1052,29 +1058,52 @@ function renderYear() {
   // PNL Neto
   const netoEl=document.getElementById('kNeto');
   netoEl.textContent=fd(pnlNeto)||'$0'; netoEl.className='kpi-v '+(pnlNeto>=0?'kg':'kr');
-  // % Neto
+  // % Neto + media de meses anteriores
   const pctNetoEl=document.getElementById('kPctNeto');
-  let pctNetoVal=null;
-  if(firstCap&&firstCap>0){const pct=(pnlNeto/firstCap)*100;pctNetoVal=pct;pctNetoEl.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';pctNetoEl.className='kpi-v '+(pct>=0?'kg':'kr');}else{pctNetoEl.textContent='—';}
-  // Media % neto de meses cerrados desde enero
-  const hoyForKpi=new Date(); const mesActualForKpi=hoyForKpi.getMonth();
-  const mesesCerradosKpi=[];
-  MONTHS.forEach((mm,mi)=>{
-    if(mi>=mesActualForKpi)return;
-    let pnlT=0,htbT=0,hasD=false,sodI=null;
-    mm.days.forEach(d=>{const row=D[dk(d)]||{};const p=pd(row.pnlDay),h=pd(row.htb)||0;if(p!==null){pnlT+=p;htbT+=h;hasD=true;}if(sodI===null){const s=pd(row.startOfDay);if(s)sodI=s;}});
-    if(!hasD||!sodI)return;
-    mesesCerradosKpi.push((pnlT-htbT)/sodI*100);
-  });
-  const avgMonthlyPct=mesesCerradosKpi.length?mesesCerradosKpi.reduce((a,b)=>a+b,0)/mesesCerradosKpi.length:null;
-  const kPctNetoSub=document.getElementById('kPctNetoSub');
-  if(kPctNetoSub){
-    if(avgMonthlyPct!==null){
-      const diff=pctNetoVal!==null?pctNetoVal-avgMonthlyPct:null;
-      const diffColor=diff===null?'var(--muted2)':diff>=0?'var(--green)':'var(--red)';
-      const diffStr=diff!==null?(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(2)+'%':'';
-      kPctNetoSub.innerHTML=`<span style="color:var(--muted2)">(media: ${avgMonthlyPct>=0?'+':''}${avgMonthlyPct.toFixed(2)}%)</span>${diffStr?` <span style="color:${diffColor};font-size:9px;">${diffStr}</span>`:''}`;
-    } else { kPctNetoSub.textContent=''; }
+  const pctNetoSubEl=document.getElementById('kPctNetoSub');
+  if(firstCap&&firstCap>0){
+    const pct=(pnlNeto/firstCap)*100;
+    pctNetoEl.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';
+    pctNetoEl.className='kpi-v '+(pct>=0?'kg':'kr');
+    
+    // Calcular media de % Neto desde enero 2026 hasta el mes pasado
+    try {
+      let pctsPrevios=[];
+      if(month>0 && MONTHS && MONTHS.length > 0) {
+        for(let mi=0; mi<month; mi++) {
+          const mesAnterior=MONTHS[mi];
+          if(!mesAnterior || !mesAnterior.days) continue;
+          
+          let pnlMesAnt=0, htbMesAnt=0, sodMesAnt=null;
+          
+          mesAnterior.days.forEach(d=>{
+            const row=D[dk(d)]||{};
+            const sod=pd(row.startOfDay); if(sod&&!sodMesAnt) sodMesAnt=sod;
+            const p=pd(row.pnlDay); if(p!==null) pnlMesAnt+=p;
+            const h=pd(row.htb)||0; htbMesAnt+=h;
+          });
+          
+          const pnlNetoMesAnt=pnlMesAnt-htbMesAnt;
+          if(sodMesAnt&&sodMesAnt>0) {
+            const pctMesAnt=(pnlNetoMesAnt/sodMesAnt)*100;
+            pctsPrevios.push(pctMesAnt);
+          }
+        }
+      }
+      
+      if(pctsPrevios.length>0) {
+        const mediaPcts=pctsPrevios.reduce((a,b)=>a+b,0)/pctsPrevios.length;
+        pctNetoSubEl.textContent=`promedio anterior: ${(mediaPcts>=0?'+':'')+mediaPcts.toFixed(2)}%`;
+      } else {
+        pctNetoSubEl.textContent='';
+      }
+    } catch(e) {
+      console.warn('Error calculando media de meses:', e);
+      pctNetoSubEl.textContent='';
+    }
+  } else {
+    pctNetoEl.textContent='—';
+    pctNetoSubEl.textContent='';
   }
   document.getElementById('kDias').textContent=dias;
   document.getElementById('kWin').textContent=wins;
@@ -1204,6 +1233,9 @@ function renderYear() {
     kVsEl.textContent  = '—';
     kVsEl.style.color  = '#a855f7';
     kVsSub.innerHTML   = '';
+  }
+  } catch(e) {
+    console.error('Error en renderYear:', e);
   }
 }
 
@@ -1464,6 +1496,241 @@ function showStats() {
 function hideStats() {
   document.getElementById('statsScreen').style.display = 'none';
   document.body.style.overflow = '';
+}
+
+async function analizarEstadisticasIA() {
+  try {
+    const statusEl = document.getElementById('statsScreen');
+    const originalOverflow = document.body.style.overflow;
+    
+    // Mostrar estado
+    const msg = document.createElement('div');
+    msg.style.position = 'fixed';
+    msg.style.bottom = '20px';
+    msg.style.right = '20px';
+    msg.style.background = 'var(--bg3)';
+    msg.style.border = '1px solid var(--cyan)';
+    msg.style.color = 'var(--cyan)';
+    msg.style.padding = '12px 16px';
+    msg.style.borderRadius = '8px';
+    msg.style.fontFamily = "'DM Mono', monospace";
+    msg.style.fontSize = '11px';
+    msg.style.zIndex = '10000';
+    msg.textContent = '📸 Capturando estadísticas...';
+    document.body.appendChild(msg);
+    
+    // Capturar el grid de estadísticas
+    const statsGrid = document.querySelector('.stats-grid');
+    if (!statsGrid) {
+      msg.textContent = '⚠ No se encontró el grid de estadísticas';
+      setTimeout(() => msg.remove(), 3000);
+      return;
+    }
+    
+    // Crear canvas de la captura
+    const canvas = await html2canvas(statsGrid, {
+      backgroundColor: '#0a0c0f',
+      scale: 1.2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true
+    });
+    
+    // Convertir a base64
+    const imageBase64 = canvas.toDataURL('image/png').split(',')[1];
+    const imageMime = 'image/png';
+    
+    msg.textContent = '📡 Enviando a Claude...';
+    
+    // Obtener datos actuales del mes para contexto
+    const m = MONTHS[month];
+    const mesNombre = m.name;
+    
+    // Calcular estadísticas clave para el prompt
+    let pnl = 0, htbTotal = 0, dias = 0, wins = 0, losses = 0, firstCap = null;
+    m.days.forEach(d => {
+      const row = D[dk(d)] || {};
+      const sod = pd(row.startOfDay);
+      if (sod && !firstCap) firstCap = sod;
+      const p = pd(row.pnlDay);
+      if (p !== null) { pnl += p; dias++; if (p > 0) wins++; else losses++; }
+      const h = pd(row.htb) || 0;
+      htbTotal += h;
+    });
+    const pnlNeto = pnl - htbTotal;
+    const pctNeto = firstCap && firstCap > 0 ? (pnlNeto / firstCap) * 100 : 0;
+    
+    // Calcular promedio histórico para contexto
+    let pctsPrevios = [];
+    for (let mi = 0; mi < month; mi++) {
+      const mesAnt = MONTHS[mi];
+      let pnlMesAnt = 0, htbMesAnt = 0, sodMesAnt = null;
+      mesAnt.days.forEach(d => {
+        const row = D[dk(d)] || {};
+        const sod = pd(row.startOfDay);
+        if (sod && !sodMesAnt) sodMesAnt = sod;
+        const p = pd(row.pnlDay);
+        if (p !== null) pnlMesAnt += p;
+        const h = pd(row.htb) || 0;
+        htbMesAnt += h;
+      });
+      const pnlNetoMesAnt = pnlMesAnt - htbMesAnt;
+      if (sodMesAnt && sodMesAnt > 0) {
+        const pctMesAnt = (pnlNetoMesAnt / sodMesAnt) * 100;
+        pctsPrevios.push(pctMesAnt);
+      }
+    }
+    const promedioHistorico = pctsPrevios.length > 0 ? pctsPrevios.reduce((a, b) => a + b, 0) / pctsPrevios.length : 0;
+    
+    const userContent = [
+      {
+        type: 'image',
+        source: { type: 'base64', media_type: imageMime, data: imageBase64 }
+      },
+      {
+        type: 'text',
+        text: `ANÁLISIS DE ESTADÍSTICAS MENSUALES - ${mesNombre} 2026
+
+CONTEXTO DEL MES:
+- Mes: ${mesNombre}
+- PNL Bruto: $${pnl.toFixed(2)}
+- PNL Neto: $${pnlNeto.toFixed(2)}
+- % Neto: ${pctNeto.toFixed(2)}%
+- Días operados: ${dias}
+- Win Rate: ${dias > 0 ? ((wins / dias) * 100).toFixed(1) : 0}%
+- Capital inicial: $${firstCap ? firstCap.toFixed(2) : 'N/A'}
+- Promedio histórico (%): ${promedioHistorico.toFixed(2)}%
+
+ANÁLISIS CRÍTICO:
+Analiza EXHAUSTIVAMENTE las estadísticas mostradas en la imagen. 
+
+## 📊 DIAGNÓSTICO DEL MES
+- ¿Cómo va comparado con tu promedio histórico (${promedioHistorico.toFixed(2)}%)?
+- ¿Vas a llegar a los objetivos mensuales (20%, 40%, 60%)?
+- ¿Qué metricas están peor que el promedio?
+
+## 🎯 ESTADÍSTICAS PROBLEMÁTICAS (TOP 3)
+Identifica las 3 estadísticas PEOR que tu histórico:
+1. [Métrica]: Tu valor actual vs promedio histórico
+   - Por qué está mal
+   - Cómo mejorarla
+2. [Métrica]: [análisis]
+3. [Métrica]: [análisis]
+
+## 📅 ANÁLISIS CALENDARIO DEL MES
+- Patrones visibles en días buenos/malos
+- ¿Hay ciertos días de la semana donde fallas?
+- ¿Tendencias de mejora o empeoramiento a lo largo del mes?
+
+## 💡 PLAN DE SALVAMENTO DEL MES
+Basado en los días restantes del mes, ¿puedes:
+- ✓ Alcanzar ${promedioHistorico > 0 ? 'al menos' : ''} ${promedioHistorico.toFixed(2)}% (tu promedio)?
+- ✓ Alcanzar 20% (objetivo bajo)?
+- ✓ Alcanzar 40% (objetivo medio)?
+
+Para cada objetivo alcanzable:
+**[OBJETIVO]**: [Ganancia diaria requerida] en los [N días restantes]
+- Estrategia concreta
+- Setup principal a usar
+- Riesgo máximo por día
+
+## 🔥 CAMBIOS INMEDIATOS (para esta semana)
+Exactamente 3 ajustes que DEBES hacer YA para mejorar las métricas malas:
+1. [Cambio 1]: [Métrica afectada] · [Cómo medir éxito]
+2. [Cambio 2]: [Métrica afectada] · [Cómo medir éxito]
+3. [Cambio 3]: [Métrica afectada] · [Cómo medir éxito]`
+      }
+    ];
+    
+    const systemPrompt = `Eres un mentor de trading y analista de datos especializado en small caps US. 
+Tu rol es analizar estadísticas mensuales de PIRATA y decirle:
+1. QUÉ ESTÁ MAL (métricas bajo su promedio)
+2. CÓMO MEJORARLO (acciones concretas)
+3. SI PUEDE SALVAR EL MES (según días y ganancia requerida)
+
+Sé BRUTAL y DIRECTO. Prioriza lo que realmente importa: las métricas que lo alejan de sus objetivos.
+Responde siempre en español.`;
+    
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-dangerous-direct-browser-ipc': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3500,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userContent }]
+      })
+    });
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    
+    const rawText = data.content.map(b => b.text || '').join('');
+    
+    // Registrar coste
+    if (data.usage) {
+      const inputTokens = data.usage.input_tokens || 0;
+      const outputTokens = data.usage.output_tokens || 0;
+      const costCall = (inputTokens / 1_000_000 * 3.00) + (outputTokens / 1_000_000 * 15.00);
+      trackAPICost(costCall, inputTokens, outputTokens);
+    }
+    updateCostDisplay();
+    
+    // Renderizar resultado
+    const html = renderPNLMarkdown(rawText);
+    
+    // Mostrar modal con resultado
+    const modalBg = document.createElement('div');
+    modalBg.style.position = 'fixed';
+    modalBg.style.inset = '0';
+    modalBg.style.background = '#000000dd';
+    modalBg.style.zIndex = '10001';
+    modalBg.onclick = () => {
+      document.body.removeChild(modalBg);
+      document.body.removeChild(modalContent);
+    };
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.position = 'fixed';
+    modalContent.style.top = '50%';
+    modalContent.style.left = '50%';
+    modalContent.style.transform = 'translate(-50%, -50%)';
+    modalContent.style.background = 'var(--bg2)';
+    modalContent.style.border = '1px solid var(--cyan)';
+    modalContent.style.borderRadius = '16px';
+    modalContent.style.width = 'min(1000px, 95vw)';
+    modalContent.style.maxHeight = '85vh';
+    modalContent.style.zIndex = '10002';
+    modalContent.style.overflowY = 'auto';
+    modalContent.style.boxShadow = '0 0 60px rgba(0,176,255,0.3)';
+    
+    modalContent.innerHTML = `
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:var(--cyan);">
+          🧠 ANÁLISIS IA — ESTADÍSTICAS
+        </div>
+        <button onclick="this.parentElement.parentElement.parentElement.removeChild(this.parentElement.parentElement);this.parentElement.parentElement.parentElement.removeChild(this.parentElement.parentElement.parentElement)" style="
+          width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;
+          color:var(--muted2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
+          transition:all .15s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" 
+          onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted2)'">✕</button>
+      </div>
+      <div style="padding:20px 24px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:1.8;">
+        ${html}
+      </div>
+    `;
+    
+    document.body.appendChild(modalBg);
+    document.body.appendChild(modalContent);
+    
+    msg.remove();
+  } catch (e) {
+    console.error('Error analizando estadísticas:', e);
+    alert('Error: ' + e.message);
+  }
 }
 
 // ── PNL ANUAL FUNCTIONS ────────────────────────────────────────────────────────
@@ -5260,6 +5527,15 @@ function renderLongSide(monthIdx) {
       <button class="stats-back" onclick="hideStats()">← Volver</button>
       <div class="stats-title">ESTADÍSTICAS <span>DEL MES</span></div>
       <div id="statsTabs" style="display:flex;gap:5px;flex-wrap:wrap;flex:1;"></div>
+      <button onclick="analizarEstadisticasIA()" style="
+        font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+        padding:6px 16px;border-radius:7px;border:1px solid var(--cyan);background:transparent;
+        color:var(--cyan);cursor:pointer;transition:all .15s;margin-left:auto;flex-shrink:0;
+        display:inline-flex;align-items:center;gap:6px;"
+        onmouseover="this.style.background='var(--cyan)';this.style.color='var(--bg)'"
+        onmouseout="this.style.background='transparent';this.style.color='var(--cyan)'">
+        🧠 Analizar Estadísticas
+      </button>
     </div>
     <div class="stats-grid">
       <!-- Tarjeta 1: Estadísticas del mes -->
@@ -6140,8 +6416,8 @@ function renderSimulacion() {
 
 function renderSimulacion2026(capitalInicial, pctUsado, mesActual) {
   const MONTH_NAMES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-  const mesesRestantes = 12 - (mesActual + 1);
-
+  const mesesRestantes = 12 - (mesActual + 1); // meses desde el próximo hasta diciembre
+  
   if (mesesRestantes <= 0) {
     document.getElementById('sim2026').innerHTML = `
       <div style="text-align:center;padding:30px;color:var(--muted2);font-family:'DM Mono',monospace;font-size:11px;">
@@ -6153,64 +6429,67 @@ function renderSimulacion2026(capitalInicial, pctUsado, mesActual) {
   let cap = capitalInicial;
   const data2026 = [];
   const labels2026 = [];
-  const rows2026 = [];
-
+  const tableRows = [];
+  
   for (let i = 0; i < mesesRestantes; i++) {
     const mi = mesActual + 1 + i;
     const mn = MONTH_NAMES[mi];
     labels2026.push(mn);
-    const capAntes = cap;
     const ganancia = cap * pctUsado / 100;
     cap = cap + ganancia;
     data2026.push(cap);
-    const pctAcum = ((cap - capitalInicial) / capitalInicial) * 100;
-    rows2026.push({ mes: mn + ' 2026', capAntes, ganancia, capDespues: cap, pctAcum });
+    tableRows.push({ mes: mn, capital: cap, ganancia: ganancia });
   }
-
+  
   const capitalFinal2026 = cap;
   const ganancia2026 = capitalFinal2026 - capitalInicial;
+
+  // Gráfico SVG
   const chartHtml = generarGraficoSVG(labels2026, data2026, capitalInicial, '#00e676');
 
-  // Tabla por mes
-  const tablaRows = rows2026.map(r => `
-    <tr>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);border-bottom:1px solid #0c1015;">${r.mes}</td>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text);text-align:right;border-bottom:1px solid #0c1015;">${fd(r.capAntes)}</td>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--green);text-align:right;border-bottom:1px solid #0c1015;">+${fd(r.ganancia)}</td>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--green);text-align:right;border-bottom:1px solid #0c1015;font-weight:600;">${fd(r.capDespues)}</td>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--cyan);text-align:right;border-bottom:1px solid #0c1015;">+${r.pctAcum.toFixed(1)}%</td>
-    </tr>`).join('');
+  // Tabla con datos
+  const tableHtml = `
+    <table style="width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:10px;margin-top:12px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);background:var(--bg2);">
+          <th style="padding:8px 4px;text-align:left;color:var(--muted2);font-weight:normal;">MES</th>
+          <th style="padding:8px 4px;text-align:right;color:var(--muted2);font-weight:normal;">CAPITAL</th>
+          <th style="padding:8px 4px;text-align:right;color:var(--muted2);font-weight:normal;">GANANCIA</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRows.map(row => `
+          <tr style="border-bottom:1px solid #0c1015;">
+            <td style="padding:6px 4px;color:var(--text);">${row.mes}</td>
+            <td style="padding:6px 4px;text-align:right;color:var(--green);">${fd(row.capital)}</td>
+            <td style="padding:6px 4px;text-align:right;color:var(--cyan);">+${fd(row.ganancia)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 
   document.getElementById('sim2026').innerHTML = `
-    <div style="background:var(--bg3);border:1px solid #00e67630;border-radius:10px;padding:12px;margin-bottom:10px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+    <div style="background:var(--bg3);border:1px solid #00e67640;border-radius:10px;padding:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
         <div style="text-align:center;">
-          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:3px;letter-spacing:1px;">GANANCIA ESTIMADA</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green);">+${fd(ganancia2026)}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">INICIAL</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--cyan);">${fd(capitalInicial)}</div>
         </div>
         <div style="text-align:center;">
-          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:3px;letter-spacing:1px;">CAPITAL DIC 2026</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green);">${fd(capitalFinal2026)}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">GANANCIA</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--green);">+${fd(ganancia2026)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">FINAL</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--green);">${fd(capitalFinal2026)}</div>
         </div>
       </div>
       ${chartHtml}
-    </div>
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:1px solid var(--border);">
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:left;background:var(--bg2);">MES</th>
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:right;background:var(--bg2);">CAPITAL INI</th>
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:right;background:var(--bg2);">GANANCIA</th>
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:right;background:var(--bg2);">CAPITAL FIN</th>
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:right;background:var(--bg2);">% ACUM</th>
-          </tr>
-        </thead>
-        <tbody>${tablaRows}</tbody>
-      </table>
-    </div>
-    <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);text-align:center;margin-top:8px;">
-      ${pctUsado.toFixed(2)}% mensual compuesto · ${mesesRestantes} meses hasta DIC 2026
+      ${tableHtml}
+      <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);text-align:center;margin-top:8px;">
+        ${pctUsado.toFixed(2)}% compuesto · ${mesesRestantes} meses
+      </div>
     </div>
   `;
 }
@@ -6218,77 +6497,80 @@ function renderSimulacion2026(capitalInicial, pctUsado, mesActual) {
 function renderSimulacion12Meses(capitalInicial, pctUsado, mesActual) {
   const MONTH_NAMES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
   const anoActual = 2026;
-
+  
   let cap = capitalInicial;
   const data12m = [];
   const labels12m = [];
-  const rows12m = [];
-
+  const tableRows = [];
+  
   for (let i = 0; i < 12; i++) {
     const absMonth = mesActual + 1 + i;
     const mn = MONTH_NAMES[absMonth % 12];
     const yr = anoActual + Math.floor(absMonth / 12);
-    const labelCorto = mn + (yr > 2026 ? `'${String(yr).slice(-2)}` : '');
-    labels12m.push(labelCorto);
-    const capAntes = cap;
+    labels12m.push(mn + (yr > 2026 ? `'${String(yr).slice(-2)}` : ''));
     const ganancia = cap * pctUsado / 100;
     cap = cap + ganancia;
     data12m.push(cap);
-    const pctAcum = ((cap - capitalInicial) / capitalInicial) * 100;
-    rows12m.push({ mes: mn + ' ' + yr, capAntes, ganancia, capDespues: cap, pctAcum });
+    tableRows.push({ mes: mn + (yr > 2026 ? ` '${String(yr).slice(-2)}` : ''), capital: cap, ganancia: ganancia });
   }
-
+  
   const capitalFinal12m = cap;
   const ganancia12m = capitalFinal12m - capitalInicial;
+
+  // Gráfico SVG
   const chartHtml = generarGraficoSVG(labels12m, data12m, capitalInicial, '#f5a623');
 
-  const tablaRows = rows12m.map(r => `
-    <tr>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);border-bottom:1px solid #0c1015;">${r.mes}</td>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text);text-align:right;border-bottom:1px solid #0c1015;">${fd(r.capAntes)}</td>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);text-align:right;border-bottom:1px solid #0c1015;">+${fd(r.ganancia)}</td>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);text-align:right;border-bottom:1px solid #0c1015;font-weight:600;">${fd(r.capDespues)}</td>
-      <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--cyan);text-align:right;border-bottom:1px solid #0c1015;">+${r.pctAcum.toFixed(1)}%</td>
-    </tr>`).join('');
+  // Tabla con datos
+  const tableHtml = `
+    <table style="width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:10px;margin-top:12px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);background:var(--bg2);">
+          <th style="padding:8px 4px;text-align:left;color:var(--muted2);font-weight:normal;">MES</th>
+          <th style="padding:8px 4px;text-align:right;color:var(--muted2);font-weight:normal;">CAPITAL</th>
+          <th style="padding:8px 4px;text-align:right;color:var(--muted2);font-weight:normal;">GANANCIA</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRows.map(row => `
+          <tr style="border-bottom:1px solid #0c1015;">
+            <td style="padding:6px 4px;color:var(--text);">${row.mes}</td>
+            <td style="padding:6px 4px;text-align:right;color:var(--gold);">${fd(row.capital)}</td>
+            <td style="padding:6px 4px;text-align:right;color:var(--yellow);">+${fd(row.ganancia)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 
   document.getElementById('sim12meses').innerHTML = `
-    <div style="background:var(--bg3);border:1px solid #f5a62330;border-radius:10px;padding:12px;margin-bottom:10px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+    <div style="background:var(--bg3);border:1px solid #f5a62340;border-radius:10px;padding:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
         <div style="text-align:center;">
-          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:3px;letter-spacing:1px;">GANANCIA ESTIMADA</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);">+${fd(ganancia12m)}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">INICIAL</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--cyan);">${fd(capitalInicial)}</div>
         </div>
         <div style="text-align:center;">
-          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:3px;letter-spacing:1px;">CAPITAL EN 12M</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);">${fd(capitalFinal12m)}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">GANANCIA</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold);">+${fd(ganancia12m)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">FINAL</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold);">${fd(capitalFinal12m)}</div>
         </div>
       </div>
       ${chartHtml}
-    </div>
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:1px solid var(--border);">
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:left;background:var(--bg2);">MES</th>
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:right;background:var(--bg2);">CAPITAL INI</th>
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:right;background:var(--bg2);">GANANCIA</th>
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:right;background:var(--bg2);">CAPITAL FIN</th>
-            <th style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:right;background:var(--bg2);">% ACUM</th>
-          </tr>
-        </thead>
-        <tbody>${tablaRows}</tbody>
-      </table>
-    </div>
-    <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);text-align:center;margin-top:8px;">
-      ${pctUsado.toFixed(2)}% mensual compuesto · Media desde ENE 2026 · 12 meses
+      ${tableHtml}
+      <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);text-align:center;margin-top:8px;">
+        ${pctUsado.toFixed(2)}% compuesto · 12 meses
+      </div>
     </div>
   `;
 }
 
 function generarGraficoSVG(labels, data, minVal, color) {
-  const w = 500;
+  const w = 380;
   const h = 180;
-  const padding = { top: 18, right: 16, bottom: 36, left: 56 };
+  const padding = { top: 15, right: 15, bottom: 35, left: 50 };
   const chartW = w - padding.left - padding.right;
   const chartH = h - padding.top - padding.bottom;
   
@@ -6366,7 +6648,7 @@ document.getElementById('simulacionModal').addEventListener('click', function(e)
 <div id="simulacionModal" style="display:none;position:fixed;inset:0;background:#000000cc;
   z-index:1000;align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;
-    width:min(1300px,96vw);max-height:92vh;overflow-y:auto;position:relative;">
+    width:min(1400px,100%);max-height:90vh;overflow-y:auto;position:relative;">
 
     <!-- Top bar -->
     <div style="display:flex;align-items:center;justify-content:space-between;
@@ -6434,24 +6716,22 @@ document.getElementById('simulacionModal').addEventListener('click', function(e)
       </div>
     </div>
 
-    <!-- Tabla proyección — DOS COLUMNAS -->
+    <!-- Tabla proyección: 2 columnas lado a lado -->
     <div style="padding:16px 24px 0;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-      <!-- COLUMNA IZQUIERDA: HASTA DICIEMBRE 2026 -->
+      <!-- PARTE 1: HASTA DICIEMBRE 2026 (IZQUIERDA) -->
       <div style="min-width:0;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;
-          color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-          📊 HASTA DICIEMBRE 2026
-          <div style="flex:1;height:1px;background:var(--border);"></div>
+          color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          📊 DICIEMBRE 2026
         </div>
         <div id="sim2026"></div>
       </div>
 
-      <!-- COLUMNA DERECHA: PRÓXIMOS 12 MESES -->
+      <!-- PARTE 2: PRÓXIMOS 12 MESES (DERECHA) -->
       <div style="min-width:0;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;
-          color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
           🚀 PRÓXIMOS 12 MESES
-          <div style="flex:1;height:1px;background:var(--border);"></div>
         </div>
         <div id="sim12meses"></div>
       </div>
@@ -6481,11 +6761,11 @@ document.getElementById('simulacionModal').addEventListener('click', function(e)
       background:var(--bg2);z-index:2;border-radius:16px 16px 0 0;">
       <div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:#a855f7;">
-          🧠 ANALIZAR PNL DEL DÍA
+          🧠 ANALIZAR IA DEL MES
         </div>
         <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;
           color:var(--muted2);text-transform:uppercase;margin-top:3px;">
-          Sube screenshot de tu PNL · Claude analiza tus trades y te da feedback para crecer como trader
+          Claude analiza tu operativa del mes actual · Te da feedback para mejorar como trader
         </div>
       </div>
       <button onclick="closeAnalizarPNLModal()" style="width:32px;height:32px;border-radius:8px;
@@ -6538,12 +6818,12 @@ document.getElementById('simulacionModal').addEventListener('click', function(e)
         ondragleave="this.style.borderColor='#a855f750';this.style.background='#a855f708'"
         ondrop="handlePNLDrop(event)">
         <div id="pnlDropzoneContent">
-          <div style="font-size:36px;margin-bottom:10px;">📸</div>
+          <div style="font-size:36px;margin-bottom:10px;">📊</div>
           <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#a855f7;">
-            SUBE TU SCREENSHOT DE PNL
+            CAPTURA AUTOMÁTICA EN PROGRESO
           </div>
           <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:8px;letter-spacing:1px;">
-            PNG · JPG · Arrastra aquí o haz clic para seleccionar
+            Se capturará automáticamente tu tabla del mes actual · Puedes reemplazarla haciendo clic aquí
           </div>
         </div>
         <div id="pnlPreviewWrap" style="display:none;">
@@ -6557,7 +6837,7 @@ document.getElementById('simulacionModal').addEventListener('click', function(e)
       <div style="margin-top:14px;">
         <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;
           color:var(--muted2);margin-bottom:6px;">Contexto adicional (opcional)</div>
-        <textarea id="pnlContexto" placeholder="Ej: Hoy opé WOLF short parabólico, entré tarde y me comí el spike... también hice 2 longs en SOUN que fallaron. Sesión difícil."
+        <textarea id="pnlContexto" placeholder="Ej: Este mes he estado focused en parabolic shorts en small caps... con algunas longs puntuales en setup de breakout. Las primeras 2 semanas fueron más conservadoras."
           style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;
           color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:12px 14px;
           resize:vertical;min-height:70px;outline:none;transition:border-color .15s;line-height:1.6;"
@@ -6627,6 +6907,55 @@ function openAnalizarPNLModal() {
   document.body.style.overflow = 'hidden';
   renderPNLHistorial();
   updateCostDisplay();
+  
+  // Capturar screenshot automáticamente
+  setTimeout(async () => {
+    await captureScreenshot();
+  }, 500);
+}
+
+async function captureScreenshot() {
+  try {
+    const statusMsg = document.getElementById('pnlStatusMsg');
+    statusMsg.textContent = '📸 Capturando pantalla...';
+    
+    // Capturar la tabla principal (main table) con los datos del mes
+    const mainTable = document.getElementById('mt'); // main table element
+    if (!mainTable) {
+      statusMsg.textContent = '⚠ No se encontró la tabla de datos';
+      return;
+    }
+    
+    // Crear canvas de la pantalla
+    const canvas = await html2canvas(mainTable, {
+      backgroundColor: '#0a0c0f',
+      scale: 1.5,
+      logging: false,
+      useCORS: true,
+      allowTaint: true
+    });
+    
+    // Convertir a base64
+    _pnlImageBase64 = canvas.toDataURL('image/png').split(',')[1];
+    _pnlImageMime = 'image/png';
+    
+    // Mostrar preview
+    const previewWrap = document.getElementById('pnlPreviewWrap');
+    const previewImg = document.getElementById('pnlPreviewImg');
+    const previewName = document.getElementById('pnlPreviewName');
+    
+    if (previewWrap) {
+      previewImg.src = canvas.toDataURL('image/png');
+      previewName.textContent = 'Captura automática del mes actual';
+      previewWrap.style.display = 'block';
+      document.getElementById('pnlDropzoneContent').style.display = 'none';
+    }
+    
+    statusMsg.textContent = '✓ Screenshot capturado. Listo para analizar.';
+  } catch (e) {
+    console.error('Error capturando screenshot:', e);
+    document.getElementById('pnlStatusMsg').textContent = '⚠ Error capturando pantalla: ' + e.message;
+  }
 }
 
 function closeAnalizarPNLModal() {
@@ -6695,10 +7024,9 @@ async function doAnalizarPNL() {
   const today = new Date().toLocaleDateString('es-ES', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
   const systemPrompt = `Eres un mentor de trading de élite especializado en small caps US, con profundo conocimiento del lado corto (short selling) y operativa long en acciones de baja capitalización y alta volatilidad.
-Analizas el PNL diario de PIRATA, un trader activo que usa DAS Trader Pro. Tu misión es dar el análisis más exhaustivo, honesto y accionable posible.
-Responde SIEMPRE en español. Sé brutal y directo — los resultados de hoy no importan tanto como los patrones de comportamiento.
-Usa el formato de secciones exacto que se te indica. Cada sección debe ser densa en información real extraída de la imagen.
-Para las tablas usa formato Markdown estándar con | separadores. Incluye TODOS los tickers visibles en la imagen.`;
+Analizas el PNL MENSUAL de PIRATA, un trader activo que usa DAS Trader Pro. Tu misión es dar el análisis más exhaustivo, honesto y accionable posible.
+Responde SIEMPRE en español. Sé brutal y directo — el patrón del mes es lo que importa, no un día aislado.
+Identifica los MAYORES ERRORES cometidos en el mes y cómo evitarlos el próximo mes.`;
 
   const userContent = [
     {
@@ -6707,78 +7035,49 @@ Para las tablas usa formato Markdown estándar con | separadores. Incluye TODOS 
     },
     {
       type: 'text',
-      text: `Fecha: ${today}
-${contexto ? 'Contexto adicional del trader: ' + contexto : ''}
+      text: `ANÁLISIS MENSUAL DE OPERATIVA
+${contexto ? 'Contexto del trader: ' + contexto : 'Sin contexto adicional'}
 
-Analiza EXHAUSTIVAMENTE este PNL. Extrae TODOS los datos visibles. Sé específico con cifras reales de la imagen.
+Analiza EXHAUSTIVAMENTE este PNL mensual. Sé específico con cifras reales visibles en la imagen.
 
-## 📊 DESCRIPCIÓN GENERAL
-Resumen ejecutivo del día: resultado neto, tipo de sesión, número total de trades, side dominante. Diagnóstico en 3-4 frases del patrón general del día. Sé directo sobre si el resultado refleja habilidad o suerte.
+## 📊 RESUMEN MENSUAL EJECUTIVO
+- PNL total del mes
+- Número de días operados / no operados
+- Win rate global
+- Mejor día del mes (fecha + monto)
+- Peor día del mes (fecha + monto)
+- Capital inicial vs final del mes
+- Diagnóstico en 3 frases del patrón general del mes
 
-## 📈 ESTADÍSTICAS COMPLETAS DEL DÍA
-Extrae y calcula todas las métricas visibles:
-- PNL bruto total / PNL neto
-- Número total de trades (winners / losers / breakeven)
-- Win rate global y separado por side (SHORT / LONG)
-- Mejor trade (ticker + importe)
-- Peor trade (ticker + importe)
-- Promedio de ganancia en winners
-- Promedio de pérdida en losers
-- Ratio ganancia media / pérdida media (R:R real)
-- Total ganado en SHORTS vs LONGS
-- Número de trades SHORT vs LONG
+## 🎯 ERRORES CRÍTICOS DEL MES (LO MÁS IMPORTANTE)
+Para CADA error detectado en el flujo mensual:
+**Nombre del error** (ej: Revenge trading, Overtrading después de pérdidas, Sizing inconsistente, etc.)
+- Evidencia: en qué días se ve claramente
+- Coste: cuánto te costó este mes
+- Corrección: regla específica para evitarlo el próximo mes
 
-## 🎯 ANÁLISIS TRADE A TRADE
-Para CADA ticker visible en la imagen, crea una tabla:
+## ✅ ACIERTOS DEL MES (QUÉ MANTENER)
+Patrones positivos observados:
+- Nombre del acierto
+- Por qué funcionó este mes
+- Cómo reforzarlo
 
-| Ticker | Side | Resultado | PNL | Observación |
-|--------|------|-----------|-----|-------------|
+## 📈 ANÁLISIS POR SEMANAS
+| Semana | Días operados | PNL | Win Rate | Observación |
+|--------|---------------|-----|----------|-------------|
 
-Incluye una observación específica por trade: timing, sizing, error o acierto concreto.
+Detecta si hay una semana mejor/peor y qué cambió.
 
-## 📋 RECONOCIMIENTO DE SETUPS
-Identifica qué setups usó el trader hoy. Para cada setup detectado:
+## 🏆 ANÁLISIS DE SIDE DOMINANTE
+- Total en SHORTS: [monto + %, win rate]
+- Total en LONGS: [monto + %, win rate]
+- ¿Cuál de los dos debe ser tu focus el próximo mes?
 
-| Setup | Veces usado | Win Rate | PNL promedio | Calificación |
-|-------|-------------|----------|--------------|--------------|
-
-Calificación: A (excelente), B (bueno), C (aceptable), D (revisar), F (eliminar).
-
-## 🏷️ CALIDAD DE SELECCIÓN DE SÍMBOLOS
-Para cada ticker operado, evalúa si fue una buena elección:
-
-| Ticker | ¿Adecuado? | Por qué | Perfil de riesgo | Veredicto |
-|--------|------------|---------|------------------|-----------|
-
-Calificación global de selección de símbolos al final (A+/A/B+/B/C+/C/D).
-
-## 🔍 PATRONES DE COMPORTAMIENTO DETECTADOS
-### DEJA DE HACERLO
-Para cada error crítico detectado:
-- **Nombre del error** (ej: Revenge trading, Holding losers, Overtrading...)
-  - Evidencia: qué trade(s) lo demuestran con cifras
-  - Coste: cuánto te costó hoy este error
-  - Corrección: regla concreta y aplicable
-
-### SIGUE HACIÉNDOLO
-Para cada patrón positivo detectado:
-- **Nombre del acierto**
-  - Evidencia con cifras
-  - Por qué funciona en tu operativa
-
-## ⚡ ANÁLISIS DE EJECUCIÓN
-**Mejor setup del día:** nombre, tickers donde funcionó, por qué funcionó, cómo mejorarlo.
-**Peor setup del día:** nombre, tickers donde falló, error de ejecución, corrección.
-Evalúa: ¿Las entradas fueron en el momento correcto? ¿Las salidas fueron prematuras o tardías?
-
-## 🧠 RECOMENDACIÓN PRINCIPAL
-Una sola cosa. La más importante. La que si aplicas mañana cambia el resultado. Sin rodeos.
-
-## 💡 REGLAS PARA MAÑANA
-Exactamente 3 reglas concretas, medibles y accionables basadas en lo que ves hoy. Formato:
-**REGLA 1:** [condición] → [acción exacta]
-**REGLA 2:** [condición] → [acción exacta]  
-**REGLA 3:** [condición] → [acción exacta]`
+## 💡 TOP 3 CAMBIOS PARA EL PRÓXIMO MES
+Exactamente 3 acciones concretas, medibles y accionables:
+1. [Cambio 1]: [Métrica actual] → [Objetivo] · [Acción exacta]
+2. [Cambio 2]: [Métrica actual] → [Objetivo] · [Acción exacta]
+3. [Cambio 3]: [Métrica actual] → [Objetivo] · [Acción exacta]`
     }
   ];
 
