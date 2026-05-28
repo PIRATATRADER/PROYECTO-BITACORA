@@ -70,9 +70,9 @@ thead th{
   color:var(--muted);padding:9px 10px;text-align:center;border-bottom:1px solid var(--border);
   background:var(--bg2);white-space:nowrap;}
 thead th:first-child{text-align:left;padding-left:16px;}
-tbody tr{border-bottom:1px solid #0c1015;transition:background .1s;}
+tbody tr{transition:background .1s;}
 tbody tr:hover{background:#131820;}
-tbody td{padding:8px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);text-align:center;white-space:nowrap;}
+tbody td{padding:4px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);text-align:center;white-space:nowrap;}
 tbody td:first-child{text-align:left;padding-left:16px;color:var(--muted2);}
 .tr-total{background:var(--bg3)!important;border-top:2px solid var(--border);}
 .tr-total td:first-child{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;color:var(--gold);}
@@ -349,10 +349,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
   }
 
   /* ── DOUBLE LINE SEPARATOR ── */
-  .tr-separator {
-    border-bottom: 3px double var(--text) !important;
-  }
-
+  
 </style>
 </head>
 <body>
@@ -430,12 +427,12 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     display:inline-flex;align-items:center;gap:6px;">
     🔮 Simulación Próximos Meses
   </button>
-  <button id="btnAnalizarPNL" onclick="openAnalizarPNLModal()" style="
+  <button id="btnSim3Pct" onclick="simulacion3PctMayo()" style="
     font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
-    padding:6px 16px;border-radius:7px;border:1px solid #a855f7;background:#a855f715;
-    color:#a855f7;cursor:pointer;transition:all .15s;margin-left:10px;flex-shrink:0;
+    padding:6px 16px;border-radius:7px;border:1px solid #00e676;background:#00e67615;
+    color:#00e676;cursor:pointer;transition:all .15s;margin-left:10px;flex-shrink:0;
     display:inline-flex;align-items:center;gap:6px;">
-    🧠 Analizar IA
+    💹 Si 3% Diario
   </button>
 </div>
 
@@ -460,11 +457,10 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="color:#ff8a8a">Risk Trade</th>
           <th style="color:#6effa3">TARGET 1%</th>
           <th style="color:#6effa3">TARGET 3%</th>
-          <th style="color:#6effa3">TARGET 5%</th>
-          <th style="text-align:center;color:var(--blue)">Setup DATA</th>
-          <th style="text-align:center">Setup A</th>
-          <th style="text-align:center">Setup B</th>
-          <th style="text-align:center">Setup C</th>
+          <th style="text-align:center;color:var(--gold)">Setup</th>
+          <th style="text-align:center;color:#ffc107">P</th>
+          <th style="text-align:center;color:#00e676">MKT</th>
+          <th style="text-align:center;color:#00b0ff">A</th>
           <th>Shares</th>
           <th style="color:#ff6b9d">HTB</th>
           <th>PNL Day</th>
@@ -536,7 +532,27 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     </div>
   </div>
 
-  </div><!-- end right column -->
+  <!-- Tarjeta de Estadísticas de Días -->
+  <div class="card" style="width:100%;padding:20px 22px;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);"></div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:16px;">Días por Objetivo</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+      <div style="text-align:center;padding:10px;background:rgba(110,255,163,0.1);border-radius:4px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:#6effa3;line-height:1;" id="days1pct">—</div>
+        <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Días +1%</div>
+      </div>
+      <div style="text-align:center;padding:10px;background:rgba(110,255,163,0.15);border-radius:4px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:#00e676;line-height:1;" id="days3pct">—</div>
+        <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Días +3%</div>
+      </div>
+      <div style="text-align:center;padding:10px;background:rgba(255,82,82,0.1);border-radius:4px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;color:#ff5252;line-height:1;" id="daysRed">—</div>
+        <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Días Rojos</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end right column -->
 </div>
 
 <div class="bot">
@@ -650,46 +666,60 @@ function save() {
 // Intenta Firebase primero → si falla, usa localStorage como respaldo
 async function loadD() {
   try {
+    console.log('📦 Intentando cargar desde Firebase...');
     const snap = await DOC_REF.get();
     if (snap.exists && snap.data().data) {
       D = JSON.parse(snap.data().data);
+      console.log('✅ Datos cargados desde Firebase');
       // Sincronizar respaldo local con datos de Firebase
       try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
       return;
+    } else {
+      console.warn('⚠ Documento Firebase vacío, usando localStorage');
     }
   } catch(e) {
-    console.warn('Firebase load falló, usando localStorage:', e);
+    console.error('❌ Firebase load error:', e.message, e.code);
   }
   // Fallback: cargar desde localStorage
   try {
     const r = localStorage.getItem(SK);
-    if (r) D = JSON.parse(r);
-  } catch(e) { D = {}; }
+    if (r) {
+      D = JSON.parse(r);
+      console.log('💾 Datos cargados desde localStorage (respaldo offline)');
+    }
+  } catch(e) { 
+    console.error('❌ localStorage read error:', e);
+    D = {}; 
+  }
 }
 
 // ── SINCRONIZACIÓN EN TIEMPO REAL (onSnapshot) ──────────────────────────────
 // Escucha cambios en Firebase desde OTROS dispositivos y actualiza la UI
 // Cuando editas en el móvil, el PC se actualiza automáticamente y viceversa
 function startRealtimeSync() {
-  DOC_REF.onSnapshot((snap) => {
-    // Si el cambio lo hicimos nosotros, ignorar (evita bucle)
-    if (skipNextSnapshot) { skipNextSnapshot = false; return; }
-    if (snap.exists && snap.data().data) {
-      try {
-        const newData = JSON.parse(snap.data().data);
-        if (JSON.stringify(newData) !== JSON.stringify(D)) {
-          D = newData;
-          try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
-          renderAll();
-          showToast('🔄 Sincronizado desde otro dispositivo');
-          document.getElementById('saved').textContent = '☁ Sync OK · ' + new Date().toLocaleTimeString('es-ES');
+  console.log('🔄 Iniciando sincronización en tiempo real...');
+  DOC_REF.onSnapshot(
+    (snap) => {
+      // Si el cambio lo hicimos nosotros, ignorar (evita bucle)
+      if (skipNextSnapshot) { skipNextSnapshot = false; return; }
+      if (snap.exists && snap.data().data) {
+        try {
+          const newData = JSON.parse(snap.data().data);
+          if (JSON.stringify(newData) !== JSON.stringify(D)) {
+            D = newData;
+            console.log('🔄 Datos actualizados desde Firebase');
+            renderAll();
+          }
+        } catch(e) {
+          console.error('❌ Error al parsear datos de Firebase:', e);
         }
-      } catch(e) { console.error('Error parsing snapshot:', e); }
+      }
+    },
+    (error) => {
+      console.error('❌ Firebase realtime sync error:', error.message, error.code);
+      document.getElementById('saved').textContent = '⚠ Sync offline · datos locales OK';
     }
-  }, (error) => {
-    console.warn('onSnapshot error:', error);
-    document.getElementById('saved').textContent = '⚠ Sync desconectado · datos locales OK';
-  });
+  );
 }
 
 function $$(s) { return document.querySelector(s); }
@@ -845,22 +875,21 @@ function renderMain() {
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
 
+    // JUNIO (mes 6): Sin coloreado especial
+    let rowClass = '';
+    let rowStyle = '';
     
-    // Add separator class for 20/03/2026 to mark where changes will start
-    const separatorClass = d === '20/03/2026' ? ' tr-separator' : '';
-
-    rows+=`<tr${separatorClass ? ` class="${separatorClass.trim()}"` : ''}>
+    rows+=`<tr${rowClass ? ` class="${rowClass}"` : ''}${rowStyle ? ` style="${rowStyle}"` : ''}>
       <td>${d}</td>
       <td class="ed" data-k="${k}" data-f="startOfDay">${sod?fd(sod):''}</td>
       <td class="cr">${c.ml?fd(c.ml):''}</td>
       <td class="crs">${c.rt?fd(c.rt):''}</td>
       <td class="${c.t1?'cgl':''}">${c.t1?fd(c.t1):''}</td>
       <td class="${c.t3?'cgl':''}">${c.t3?fd(c.t3):''}</td>
-      <td class="${c.t5?'cgl':''}">${c.t5?fd(c.t5):''}</td>
-      <td class="cblue" style="text-align:center">${c.sd?fd(c.sd):''}</td>
-      <td style="text-align:center">${c.sa?fd(c.sa):''}</td>
-      <td style="text-align:center">${c.sb?fd(c.sb):''}</td>
-      <td style="text-align:center">${c.sc?fd(c.sc):''}</td>
+      <td class="cgo" style="text-align:center">${c.sb?fd(c.sb):''}</td>
+      <td style="text-align:center;cursor:pointer;color:#ff9500;font-weight:bold;" class="setup-checkbox" data-k="${k}" data-type="p" title="P">${row.chk_p ? '☑' : '☐'}</td>
+      <td style="text-align:center;cursor:pointer;color:#00e676;font-weight:bold;" class="setup-checkbox" data-k="${k}" data-type="mkt" title="MKT">${row.chk_mkt ? '☑' : '☐'}</td>
+      <td style="text-align:center;cursor:pointer;color:#00b0ff;font-weight:bold;" class="setup-checkbox" data-k="${k}" data-type="a" title="A">${row.chk_a ? '☑' : '☐'}</td>
       <td class="ed" data-k="${k}" data-f="shares">${row.shares||''}</td>
       <td class="ed cpink" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
@@ -876,6 +905,15 @@ function renderMain() {
   });
 
   // Total row — promedios de Setup DATA, A, B, C basados en SOD promedio
+  // Contar checkboxes P, MKT, A
+  let countP = 0, countMKT = 0, countA = 0;
+  m.days.forEach(d => {
+    const row = D[dk(d)] || {};
+    if (row.chk_p) countP++;
+    if (row.chk_mkt) countMKT++;
+    if (row.chk_a) countA++;
+  });
+  
   const tc=pnlTotal>0?'pp':pnlTotal<0?'pn':'';
   const tpct=firstSOD&&pnlTotal!==0?((pnlTotal/firstSOD)*100).toFixed(2)+'%':'';
   const avgSOD = sodCount>0 ? sodSum/sodCount : null;
@@ -890,11 +928,10 @@ function renderMain() {
     <td class="crs">${avgC.rt?fd(avgC.rt):''}</td>
     <td class="cgl">${avgC.t1?fd(avgC.t1):''}</td>
     <td class="cgl">${avgC.t3?fd(avgC.t3):''}</td>
-    <td class="cgl">${avgC.t5?fd(avgC.t5):''}</td>
-    <td class="cblue" style="text-align:center" title="Promedio Setup DATA">${avgC.sd?fd(avgC.sd):''}</td>
-    <td class="cgo" style="text-align:center" title="Promedio Setup A">${avgC.sa?fd(avgC.sa):''}</td>
-    <td class="cgo" style="text-align:center" title="Promedio Setup B">${avgC.sb?fd(avgC.sb):''}</td>
-    <td class="cgo" style="text-align:center" title="Promedio Setup C">${avgC.sc?fd(avgC.sc):''}</td>
+    <td class="cgo" style="text-align:center" title="Promedio Setup">${avgC.sb?fd(avgC.sb):''}</td>
+    <td style="text-align:center;color:#ff9500;font-weight:bold;">${countP}</td>
+    <td style="text-align:center;color:#00e676;font-weight:bold;">${countMKT}</td>
+    <td style="text-align:center;color:#00b0ff;font-weight:bold;">${countA}</td>
     <td>${shTotal>0?shTotal.toLocaleString('en-US'):''}</td>
     <td class="cpink">${htbTotal>0?fd(htbTotal):''}</td>
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
@@ -939,6 +976,7 @@ function renderMain() {
     : '<span class="cm" style="font-size:12px">Sin datos</span>';
 
   attachEd();
+  attachSetupCheckboxes();
 }
 
 // ── OBJECTIVES TABLE ──────────────────────────────────────────────────────────
@@ -1166,6 +1204,37 @@ function renderYear() {
     if(avgPctSub) avgPctSub.innerHTML='Sin datos aún';
   }
 
+  // Calcular días por objetivo (1%, 3%, rojos)
+  let days1pct=0, days3pct=0, daysRed=0, daysTotal=0, redLossSum=0;
+  m.days.forEach(d=>{
+    const row=D[dk(d)]||{};
+    const sod=pd(row.startOfDay);
+    const p=pd(row.pnlDay);
+    if(sod&&sod>0&&p!==null){
+      daysTotal++; // Contar total de días operados
+      const pctDay=(p/sod)*100;
+      if(pctDay>0){
+        if(pctDay>=3) days3pct++;
+        else if(pctDay>=1) days1pct++;
+      } else if(pctDay<0){
+        daysRed++;
+        redLossSum+=pctDay; // Sumar las pérdidas
+      }
+    }
+  });
+  
+  // Calcular porcentaje de días rojos y promedio de pérdida
+  const redPctage = daysTotal>0 ? ((daysRed/daysTotal)*100).toFixed(1) : 0;
+  const avgRedLoss = daysRed>0 ? (redLossSum/daysRed).toFixed(2) : 0;
+  
+  // Actualizar tarjeta de días
+  const days1pctEl=document.getElementById('days1pct');
+  const days3pctEl=document.getElementById('days3pct');
+  const daysRedEl=document.getElementById('daysRed');
+  if(days1pctEl) days1pctEl.textContent=days1pct;
+  if(days3pctEl) days3pctEl.textContent=days3pct;
+  if(daysRedEl) daysRedEl.innerHTML=`<div>${daysRed}</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;">Avg: ${avgRedLoss}%</div>`;
+
   const goal20=firstCap?firstCap*0.20:null;
   const goal40=firstCap?firstCap*0.40:null;
   const goal60=firstCap?firstCap*0.60:null;
@@ -1302,6 +1371,28 @@ function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+// ── CHECKBOXES DE SETUP ───────────────────────────────────────────────────────────────────
+function attachSetupCheckboxes() {
+  document.querySelectorAll('td.setup-checkbox').forEach(td => {
+    td.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const k = this.dataset.k;
+      const type = this.dataset.type; // 'p', 'mkt', 'a'
+      const fieldName = 'chk_' + type;
+      
+      if (!D[k]) D[k] = {};
+      D[k][fieldName] = !D[k][fieldName];
+      
+      // Actualizar visualmente
+      this.textContent = D[k][fieldName] ? '☑' : '☐';
+      
+      save();
+      renderAll(); // Actualizar tabla para recalcular TOTAL MES
+      showToast('✓ ' + type.toUpperCase() + ' marcado');
+    });
+  });
 }
 
 // ── SINCRONIZACIÓN TABLA → ANÁLISIS IA ───────────────────────────────────────
@@ -7276,6 +7367,216 @@ function generarInformeBasico(datos) {
 function closeAnalizarPNLModal() {
   document.getElementById('analizarPNLModal').style.display = 'none';
   document.body.style.overflow = '';
+}
+
+function simulacion3PctMayo() {
+  try {
+    // Obtener datos de mayo (mes 4)
+    const m = MONTHS[4];
+    
+    if (!m || !m.days || m.days.length === 0) {
+      alert('No hay datos para mayo');
+      return;
+    }
+    
+    // Calcular capital inicial
+    let capitalInicial = null;
+    for (let d of m.days) {
+      const row = D[dk(d)] || {};
+      const sod = pd(row.startOfDay);
+      if (sod && sod > 0) {
+        capitalInicial = sod;
+        break;
+      }
+    }
+    
+    if (!capitalInicial) {
+      alert('No se encontró capital inicial para mayo');
+      return;
+    }
+    
+    // Calcular estadísticas desde ENERO de todos los meses
+    let diasCon1Pct = 0;
+    let diasCon3Pct = 0;
+    let diasCon5Pct = 0;
+    let totalDiasConDatos = 0;
+    
+    for (let monthIdx = 0; monthIdx <= month; monthIdx++) {
+      const mes = MONTHS[monthIdx];
+      if (!mes || !mes.days) continue;
+      
+      for (let d of mes.days) {
+        const row = D[dk(d)] || {};
+        const sod = pd(row.startOfDay);
+        const p = pd(row.pnlDay);
+        const h = pd(row.htb) || 0;
+        
+        if (sod && sod > 0 && p !== null) {
+          totalDiasConDatos++;
+          const pctNetoDia = ((p - h) / sod) * 100;
+          
+          if (pctNetoDia >= 1) diasCon1Pct++;
+          if (pctNetoDia >= 3) diasCon3Pct++;
+          if (pctNetoDia >= 5) diasCon5Pct++;
+        }
+      }
+    }
+    
+    // Resto del código de simulación
+    let simulatedCap = capitalInicial;
+    const resultados = [];
+    const pctDiario = 0.03;
+    
+    for (let d of m.days) {
+      const sod = simulatedCap;
+      const ml = sod * 0.05;
+      const rt = sod * 0.01;
+      const t3 = sod * 0.03;
+      const sb = sod * 0.10;
+      const pnlSim = sod * pctDiario;
+      simulatedCap = sod + pnlSim;
+      
+      resultados.push({
+        fecha: d,
+        sod: sod,
+        ml: ml,
+        rt: rt,
+        t3: t3,
+        sb: sb,
+        pnl: pnlSim,
+        pct: pctDiario * 100,
+        r: pnlSim / rt
+      });
+    }
+    
+    const capitalFinal = simulatedCap;
+    const ganancia = capitalFinal - capitalInicial;
+    const pctGanancia = (ganancia / capitalInicial) * 100;
+    
+    // Calcular totales/promedios
+    const sodProm = resultados.reduce((a, r) => a + r.sod, 0) / resultados.length;
+    const mlProm = resultados.reduce((a, r) => a + r.ml, 0) / resultados.length;
+    const rtProm = resultados.reduce((a, r) => a + r.rt, 0) / resultados.length;
+    const t3Prom = resultados.reduce((a, r) => a + r.t3, 0) / resultados.length;
+    const sbProm = resultados.reduce((a, r) => a + r.sb, 0) / resultados.length;
+    const pnlSum = ganancia;
+    const pctSum = pctGanancia;
+    const rSum = resultados.reduce((a, r) => a + r.r, 0);
+    
+    // Generar tabla tipo principal
+    let tableHTML = '<table style="width:100%;font-family:\'DM Mono\',monospace;font-size:9px;border-collapse:collapse;">';
+    tableHTML += '<thead>';
+    tableHTML += '<tr style="background:var(--bg3);border-bottom:2px solid var(--border);">';
+    tableHTML += '<th style="padding:8px;text-align:left;color:var(--text);">FECHA</th>';
+    tableHTML += '<th style="padding:8px;text-align:right;color:var(--cyan);">Start of Day</th>';
+    tableHTML += '<th style="padding:8px;text-align:right;color:var(--red);">Max Loss</th>';
+    tableHTML += '<th style="padding:8px;text-align:right;color:#ff8a8a;">Risk Trade</th>';
+    tableHTML += '<th style="padding:8px;text-align:right;color:var(--yellow);">Target 3%</th>';
+    tableHTML += '<th style="padding:8px;text-align:right;color:var(--gold);">Setup</th>';
+    tableHTML += '<th style="padding:8px;text-align:center;color:#a855f7;">P</th>';
+    tableHTML += '<th style="padding:8px;text-align:center;color:#a855f7;">MKT</th>';
+    tableHTML += '<th style="padding:8px;text-align:center;color:#a855f7;">A</th>';
+    tableHTML += '<th style="padding:8px;text-align:right;color:var(--green);">PNL</th>';
+    tableHTML += '<th style="padding:8px;text-align:right;color:var(--green);">%</th>';
+    tableHTML += '<th style="padding:8px;text-align:right;color:var(--blue);">R</th>';
+    tableHTML += '</tr>';
+    tableHTML += '</thead>';
+    tableHTML += '<tbody>';
+    
+    // Filas de datos
+    resultados.forEach((r, idx) => {
+      const bgColor = idx % 2 === 0 ? '#0a0c0f' : '#0d0f14';
+      tableHTML += `<tr style="background:${bgColor};border-bottom:1px solid #0c1015;">`;
+      tableHTML += `<td style="padding:6px 8px;color:var(--text);">${r.fecha}</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--cyan);">${fd(r.sod)}</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--red);">-${fd(r.ml)}</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:right;color:#ff8a8a;">${fd(r.rt)}</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--yellow);">${fd(r.t3)}</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--gold);">${fd(r.sb)}</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:center;">☐</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:center;">☐</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:center;">☐</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--green);">+${fd(r.pnl)}</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--green);">+${r.pct.toFixed(2)}%</td>`;
+      tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--blue);">+${r.r.toFixed(2)}R</td>`;
+      tableHTML += '</tr>';
+    });
+    
+    // Fila TOTAL MES
+    tableHTML += `<tr class="tr-total">`;
+    tableHTML += `<td style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;color:var(--gold);padding:8px;">TOTAL MES</td>`;
+    tableHTML += `<td style="padding:8px;text-align:right;color:var(--cyan);">${fd(sodProm)}</td>`;
+    tableHTML += `<td style="padding:8px;text-align:right;color:var(--red);">-${fd(mlProm)}</td>`;
+    tableHTML += `<td style="padding:8px;text-align:right;color:#ff8a8a;">${fd(rtProm)}</td>`;
+    tableHTML += `<td style="padding:8px;text-align:right;color:var(--yellow);">${fd(t3Prom)}</td>`;
+    tableHTML += `<td style="padding:8px;text-align:right;color:var(--gold);">${fd(sbProm)}</td>`;
+    tableHTML += `<td style="padding:8px;text-align:center;">—</td>`;
+    tableHTML += `<td style="padding:8px;text-align:center;">—</td>`;
+    tableHTML += `<td style="padding:8px;text-align:center;">—</td>`;
+    tableHTML += `<td style="padding:8px;text-align:right;color:var(--green);">+${fd(pnlSum)}</td>`;
+    tableHTML += `<td style="padding:8px;text-align:right;color:var(--green);">+${pctSum.toFixed(2)}%</td>`;
+    tableHTML += `<td style="padding:8px;text-align:right;color:var(--blue);">+${rSum.toFixed(2)}R</td>`;
+    tableHTML += '</tr>';
+    
+    tableHTML += '</tbody>';
+    tableHTML += '</table>';
+    
+    // HTML completo
+    const html = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="background:var(--bg3);border:1px solid #00e676;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:6px;">CAPITAL INICIAL</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--cyan);">${fd(capitalInicial)}</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid #00e676;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:6px;">GANANCIA</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--green);">+${fd(ganancia)}</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid #00e676;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:6px;">CAPITAL FINAL</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--green);">${fd(capitalFinal)}</div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg3);border:1px solid #00e676;border-radius:8px;padding:12px;margin-bottom:16px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#00e676;margin-bottom:10px;">
+          📊 ESTADÍSTICAS DESDE ENERO
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          <div style="background:var(--bg2);border:1px solid #51cf66;border-radius:6px;padding:12px;text-align:center;">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:6px;">DÍAS CON +1%</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#51cf66;">${diasCon1Pct}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-top:4px;">de ${totalDiasConDatos} días</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid #ffd700;border-radius:6px;padding:12px;text-align:center;">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:6px;">DÍAS CON +3%</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#ffd700;">${diasCon3Pct}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-top:4px;">de ${totalDiasConDatos} días</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid #ff6b6b;border-radius:6px;padding:12px;text-align:center;">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-bottom:6px;">DÍAS CON +5%</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#ff6b6b;">${diasCon5Pct}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-top:4px;">de ${totalDiasConDatos} días</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg3);border:1px solid #00e676;border-radius:8px;padding:12px;margin-bottom:16px;overflow-x:auto;">
+        ${tableHTML}
+      </div>
+
+      <div style="background:#1a3a5f;border:1px solid #00b0ff;border-radius:8px;padding:12px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text);line-height:1.6;">
+        <strong style="color:#00b0ff;">💡 CONCLUSIÓN:</strong> Con +3% compuesto ${resultados.length} días en mayo = <strong style="color:var(--green);">+${pctGanancia.toFixed(2)}%</strong> de ganancias. 
+        <br><strong style="color:#f5a623;">Realidad:</strong> Desde enero solo alcanzaste +3% en ${diasCon3Pct} de ${totalDiasConDatos} días operados. Esa es la brecha a cerrar.
+      </div>
+    `;
+    
+    showInformeIA(html);
+    
+  } catch (e) {
+    console.error('Error en simulación 3%:', e);
+    alert('Error: ' + e.message);
+  }
 }
 
 function handlePNLDrop(e) {
