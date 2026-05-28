@@ -116,6 +116,15 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .stats-back:hover{color:var(--text);border-color:var(--muted2);background:var(--bg3);}
 .stats-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;}
 .stats-title span{color:var(--gold);}
+
+/* Informe IA Screen */
+#informeIAScreen{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;width:100%;height:100%;left:0;top:0;}
+.informe-wrap{max-width:1200px;margin:0 auto;padding:24px 16px;}
+.informe-header{display:flex;align-items:center;gap:14px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+.informe-back{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;transition:all .15s;}
+.informe-back:hover{color:var(--text);border-color:var(--muted2);background:var(--bg3);}
+.informe-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:#a855f7;}
+.informe-content{font-family:'DM Mono',monospace;font-size:11px;color:var(--text);line-height:1.8;}
 .stats-month-sel{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 13px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);color:var(--muted2);cursor:pointer;}
 .stats-month-sel.on{background:#f5a62315;border-color:var(--gold);color:var(--gold);}
 .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;}
@@ -584,6 +593,7 @@ const HOLIDAYS = {
   "19/01/2026": { name: "MARTIN LUTHER KING JR.", desc: "MLK Day · No hay mercado" },
   "16/02/2026": { name: "DÍA DE LOS PRESIDENTES", desc: "Presidents Day · No hay mercado" },
   "03/04/2026": { name: "GOOD FRIDAY",             desc: "Viernes Santo · NYSE cerrado" },
+  "25/05/2026": { name: "MEMORIAL DAY",            desc: "Memorial Day · No hay mercado" },
   "03/07/2026": { name: "INDEPENDENCE DAY",        desc: "4 de Julio observado · No hay mercado" },
   "07/09/2026": { name: "LABOR DAY",               desc: "Día del Trabajo · No hay mercado" },
   "26/11/2026": { name: "THANKSGIVING",            desc: "Acción de Gracias · No hay mercado" },
@@ -1114,19 +1124,41 @@ function renderYear() {
   }
 
   // % Medio por día: promedio de los % Day individuales (pnlDay/startOfDay*100)
-  let pctSum=0, pctCount=0;
+  let pctBrutoSum=0, pctHTBSum=0, pctNetoSum=0, pctCount=0;
   m.days.forEach(d=>{
     const row=D[dk(d)]||{};
     const sod=pd(row.startOfDay);
     const p=pd(row.pnlDay);
-    if(sod&&sod>0&&p!==null){ pctSum+=(p/sod)*100; pctCount++; }
+    const h=pd(row.htb)||0;
+    if(sod&&sod>0&&p!==null){ 
+      pctBrutoSum+=(p/sod)*100;
+      pctHTBSum+=(h/sod)*100;
+      pctNetoSum+=((p-h)/sod)*100;
+      pctCount++; 
+    }
   });
   const avgPctEl=document.getElementById('kAvgPct');
   const avgPctSub=document.getElementById('kAvgPctSub');
   if(pctCount>0){
-    const avgPct=pctSum/pctCount;
-    avgPctEl.textContent=(avgPct>=0?'+':'')+avgPct.toFixed(2)+'%';
-    avgPctEl.style.color=avgPct>=0?'var(--green)':'var(--red)';
+    const avgPctBruto=pctBrutoSum/pctCount;
+    const avgPctHTB=pctHTBSum/pctCount;
+    const avgPctNeto=pctNetoSum/pctCount;
+    avgPctEl.innerHTML=`
+      <div style="display:flex;gap:16px;align-items:center;">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">BRUTO</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${avgPctBruto>=0?'var(--green)':'var(--red)'};">${avgPctBruto>=0?'+':''}${avgPctBruto.toFixed(2)}%</div>
+        </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">HTB</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);">-${avgPctHTB.toFixed(2)}%</div>
+        </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">NETO</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${avgPctNeto>=0?'var(--green)':'var(--red)'};">${avgPctNeto>=0?'+':''}${avgPctNeto.toFixed(2)}%</div>
+        </div>
+      </div>
+    `;
     if(avgPctSub) avgPctSub.innerHTML=`sobre <span style="color:var(--text)">${pctCount}</span> día${pctCount!==1?'s':''} operado${pctCount!==1?'s':''}`;
   } else {
     avgPctEl.textContent='—';
@@ -1434,6 +1466,9 @@ function renderCalendar() {
     const sod  = pd(row.startOfDay);
     const pnlNeto = pnl !== null ? pnl - htb : null;
     
+    // Verificar si es un día festivo
+    const hol = HOLIDAYS[dateStr];
+    
     const color = pnlNeto === null ? 'var(--muted)' : pnlNeto >= 0 ? 'var(--green)' : 'var(--red)';
     const pnlText = pnlNeto !== null ? fd(pnlNeto) : '';
     
@@ -1449,13 +1484,24 @@ function renderCalendar() {
       tradesText = '1 trade';
     }
     
-    grid += `
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;gap:8px;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--muted2);">${day}</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${color};">${pnlText}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:9px;color:${rColor};margin-top:auto;">${tradesText}</div>
-      </div>
-    `;
+    // Si es día festivo, mostrar cartel especial
+    if (hol) {
+      grid += `
+        <div style="background:#a855f715;border:2px solid #a855f7;border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;text-align:center;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#a855f7;letter-spacing:2px;">🎉</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;color:#a855f7;margin-top:4px;">${hol.name}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px;">${hol.desc}</div>
+        </div>
+      `;
+    } else {
+      grid += `
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;gap:8px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--muted2);">${day}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${color};">${pnlText}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:${rColor};margin-top:auto;">${tradesText}</div>
+        </div>
+      `;
+    }
     
     dayIndex++;
     
@@ -1750,6 +1796,34 @@ function hidePNLAnual() {
     pnlAnualChart.destroy();
     pnlAnualChart = null;
   }
+}
+
+function showInformeIA(content) {
+  console.log('showInformeIA called with content length:', content.length);
+  const screen = document.getElementById('informeIAScreen');
+  const contentDiv = document.getElementById('informeContent');
+  
+  if (!screen) {
+    console.error('informeIAScreen element not found!');
+    alert('Error: No se encontró el elemento de pantalla');
+    return;
+  }
+  
+  if (!contentDiv) {
+    console.error('informeContent element not found!');
+    alert('Error: No se encontró el contenedor de contenido');
+    return;
+  }
+  
+  contentDiv.innerHTML = content;
+  screen.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  console.log('informeIAScreen should now be visible');
+}
+
+function hideInformeIA() {
+  document.getElementById('informeIAScreen').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 async function renderPNLAnual() {
@@ -5790,6 +5864,19 @@ function renderLongSide(monthIdx) {
   </div>
 </div>
 
+<!-- ═══════ INFORME IA SCREEN ═══════ -->
+<div id="informeIAScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;">
+  <div class="informe-wrap">
+    <div class="informe-header">
+      <button class="informe-back" onclick="hideInformeIA()">← Volver</button>
+      <div class="informe-title">🧠 ANÁLISIS IA DEL MES</div>
+    </div>
+    <div class="informe-content" id="informeContent">
+      <!-- El contenido se inserta aquí dinámicamente -->
+    </div>
+  </div>
+</div>
+
 
 <script>
 // ── MODAL TRADES R ───────────────────────────────────────────────────────────
@@ -6303,9 +6390,12 @@ document.addEventListener('keydown', function(e) {
   }
 });
 // Cerrar al hacer clic fuera
-document.getElementById('retirosModal').addEventListener('click', function(e) {
-  if (e.target === this) closeRetirosModal();
-});
+const retirosModalEl = document.getElementById('retirosModal');
+if (retirosModalEl) {
+  retirosModalEl.addEventListener('click', function(e) {
+    if (e.target === this) closeRetirosModal();
+  });
+}
 
 // ══════════════════════════════════════════════════ SIMULACIÓN CAPITAL COMPUESTO
 let _simPctOverride = null;
@@ -6637,9 +6727,13 @@ document.addEventListener('keydown', function(e) {
   if (e.key==='Escape' && document.getElementById('simulacionModal').style.display==='flex')
     closeSimulacionModal();
 });
-document.getElementById('simulacionModal').addEventListener('click', function(e) {
-  if (e.target===this) closeSimulacionModal();
-});
+
+const simulacionModalEl = document.getElementById('simulacionModal');
+if (simulacionModalEl) {
+  simulacionModalEl.addEventListener('click', function(e) {
+    if (e.target===this) closeSimulacionModal();
+  });
+}
 
 </script>
 
@@ -6908,26 +7002,29 @@ function openAnalizarPNLModal() {
   renderPNLHistorial();
   updateCostDisplay();
   
-  // Capturar screenshot automáticamente
+  // Flujo completo: capturar tabla + ir a estadísticas + capturar y analizar
   setTimeout(async () => {
-    await captureScreenshot();
+    await ejecutarAnalisisCompletoIA();
   }, 500);
 }
 
-async function captureScreenshot() {
+async function ejecutarAnalisisCompletoIA() {
   try {
-    const statusMsg = document.getElementById('pnlStatusMsg');
-    statusMsg.textContent = '📸 Capturando pantalla...';
-    
-    // Capturar la tabla principal (main table) con los datos del mes
-    const mainTable = document.getElementById('mt'); // main table element
-    if (!mainTable) {
-      statusMsg.textContent = '⚠ No se encontró la tabla de datos';
+    const statusEl = document.getElementById('pnlStatusMsg');
+    if (!statusEl) {
+      console.error('No se encontró pnlStatusMsg');
       return;
     }
     
-    // Crear canvas de la pantalla
-    const canvas = await html2canvas(mainTable, {
+    statusEl.textContent = '📊 Capturando tabla del mes...';
+    
+    const mainTable = document.getElementById('mt');
+    if (!mainTable) {
+      statusEl.textContent = '⚠ No se encontró la tabla de datos';
+      return;
+    }
+    
+    const canvasTabla = await html2canvas(mainTable, {
       backgroundColor: '#0a0c0f',
       scale: 1.5,
       logging: false,
@@ -6935,28 +7032,246 @@ async function captureScreenshot() {
       allowTaint: true
     });
     
-    // Convertir a base64
-    _pnlImageBase64 = canvas.toDataURL('image/png').split(',')[1];
-    _pnlImageMime = 'image/png';
+    const tablaBase64 = canvasTabla.toDataURL('image/png').split(',')[1];
     
-    // Mostrar preview
-    const previewWrap = document.getElementById('pnlPreviewWrap');
-    const previewImg = document.getElementById('pnlPreviewImg');
-    const previewName = document.getElementById('pnlPreviewName');
+    // PASO 2: Abrir estadísticas
+    statusEl.textContent = '📈 Cargando estadísticas...';
+    document.getElementById('analizarPNLModal').style.display = 'none';
+    showStats();
     
-    if (previewWrap) {
-      previewImg.src = canvas.toDataURL('image/png');
-      previewName.textContent = 'Captura automática del mes actual';
-      previewWrap.style.display = 'block';
-      document.getElementById('pnlDropzoneContent').style.display = 'none';
+    // PASO 3: Esperar a que se carguen las estadísticas y capturar
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    statusEl.textContent = '📸 Capturando estadísticas...';
+    const statsGrid = document.querySelector('.stats-grid');
+    
+    if (!statsGrid) {
+      alert('⚠ No se encontró el grid de estadísticas');
+      hideStats();
+      document.getElementById('analizarPNLModal').style.display = 'flex';
+      return;
     }
     
-    statusMsg.textContent = '✓ Screenshot capturado. Listo para analizar.';
+    const canvasStats = await html2canvas(statsGrid, {
+      backgroundColor: '#0a0c0f',
+      scale: 1,
+      logging: false,
+      useCORS: true,
+      allowTaint: true
+    });
+    
+    const statsBase64 = canvasStats.toDataURL('image/png').split(',')[1];
+    
+    // PASO 4: Cerrar estadísticas y preparar análisis
+    statusEl.textContent = '📡 Generando informe...';
+    hideStats();
+    
+    // Obtener contexto del mes
+    const m = MONTHS[month];
+    const mesNombre = m.name;
+    
+    let pnl = 0, htbTotal = 0, dias = 0, wins = 0, losses = 0, firstCap = null;
+    m.days.forEach(d => {
+      const row = D[dk(d)] || {};
+      const sod = pd(row.startOfDay);
+      if (sod && !firstCap) firstCap = sod;
+      const p = pd(row.pnlDay);
+      if (p !== null) { pnl += p; dias++; if (p > 0) wins++; else losses++; }
+      const h = pd(row.htb) || 0;
+      htbTotal += h;
+    });
+    
+    const pnlNeto = pnl - htbTotal;
+    const pctNeto = firstCap && firstCap > 0 ? (pnlNeto / firstCap) * 100 : 0;
+    const winRate = dias > 0 ? (wins / dias) * 100 : 0;
+    
+    // Calcular promedio histórico
+    let pctsPrevios = [];
+    for (let mi = 0; mi < month; mi++) {
+      const mesAnt = MONTHS[mi];
+      let pnlMesAnt = 0, htbMesAnt = 0, sodMesAnt = null;
+      mesAnt.days.forEach(d => {
+        const row = D[dk(d)] || {};
+        const sod = pd(row.startOfDay);
+        if (sod && !sodMesAnt) sodMesAnt = sod;
+        const p = pd(row.pnlDay);
+        if (p !== null) pnlMesAnt += p;
+        const h = pd(row.htb) || 0;
+        htbMesAnt += h;
+      });
+      const pnlNetoMesAnt = pnlMesAnt - htbMesAnt;
+      if (sodMesAnt && sodMesAnt > 0) {
+        const pctMesAnt = (pnlNetoMesAnt / sodMesAnt) * 100;
+        pctsPrevios.push(pctMesAnt);
+      }
+    }
+    const promedioHistorico = pctsPrevios.length > 0 ? pctsPrevios.reduce((a, b) => a + b, 0) / pctsPrevios.length : 0;
+    
+    // Crear informe básico sin depender de API (para evitar CORS)
+    const html = generarInformeBasico({
+      mesNombre,
+      pnl,
+      pnlNeto,
+      pctNeto,
+      dias,
+      wins,
+      losses,
+      winRate,
+      firstCap,
+      promedioHistorico,
+      htbTotal
+    });
+    
+    // Mostrar informe en pantalla completa
+    console.log('Mostrando informe IA...');
+    document.getElementById('analizarPNLModal').style.display = 'none';
+    document.body.style.overflow = '';
+    
+    // Esperar un tick para asegurar que el modal se cerró
+    setTimeout(() => {
+      console.log('Llamando a showInformeIA...');
+      showInformeIA(html);
+    }, 100);
+    
   } catch (e) {
-    console.error('Error capturando screenshot:', e);
-    document.getElementById('pnlStatusMsg').textContent = '⚠ Error capturando pantalla: ' + e.message;
+    console.error('Error en análisis completo:', e);
+    const statusEl = document.getElementById('pnlStatusMsg');
+    if (statusEl) {
+      statusEl.textContent = '⚠ Error: ' + e.message;
+    }
+    setTimeout(() => {
+      hideStats();
+      const modal = document.getElementById('analizarPNLModal');
+      if (modal) modal.style.display = 'flex';
+    }, 2000);
   }
 }
+
+function generarInformeBasico(datos) {
+  const { mesNombre, pnl, pnlNeto, pctNeto, dias, wins, losses, winRate, firstCap, promedioHistorico, htbTotal } = datos;
+  
+  const estaArribaPromedio = pctNeto >= promedioHistorico;
+  const diasRestantes = 30 - dias; // aproximado
+  const gananciaReqPara20 = (firstCap * 0.20) - pnlNeto;
+  const gananciaReqPara40 = (firstCap * 0.40) - pnlNeto;
+  const gananciaReqParaPromedio = (firstCap * (promedioHistorico / 100)) - pnlNeto;
+  
+  return `
+    <div style="background:var(--bg3);border:1px solid #a855f7;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">PNL NETO</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${pnlNeto >= 0 ? 'var(--green)' : 'var(--red)'};">${fd(pnlNeto)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">% NETO</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${pctNeto >= 0 ? 'var(--green)' : 'var(--red)'};">${pctNeto.toFixed(2)}%</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">WIN RATE</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${winRate >= 50 ? 'var(--green)' : 'var(--yellow)'};">${winRate.toFixed(1)}%</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted2);margin-bottom:4px;">DÍAS</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--cyan);">${dias}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--bg3);border:1px solid #00b0ff;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:#00b0ff;margin-bottom:10px;">
+        📊 CÓMO VAS EN EL MES
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;color:var(--text);">
+        <div style="margin-bottom:8px;">
+          <strong>Promedio histórico:</strong> <span style="color:var(--gold);">${promedioHistorico.toFixed(2)}%</span>
+        </div>
+        <div style="margin-bottom:8px;">
+          <strong>Tu % actual:</strong> <span style="color:${estaArribaPromedio ? 'var(--green)' : 'var(--red)'};">${pctNeto.toFixed(2)}%</span>
+        </div>
+        <div style="margin-bottom:8px;">
+          <strong>Diferencia:</strong> <span style="color:${estaArribaPromedio ? 'var(--green)' : 'var(--red)'};">${estaArribaPromedio ? '+' : ''}${(pctNeto - promedioHistorico).toFixed(2)}%</span>
+        </div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);color:var(--muted2);">
+          ${estaArribaPromedio 
+            ? `✅ Estás <strong style="color:var(--green)">por encima</strong> de tu promedio. ¡Continúa así!` 
+            : `⚠ Estás <strong style="color:var(--red)">por debajo</strong> de tu promedio. Necesitas mejorar ${Math.abs(promedioHistorico - pctNeto).toFixed(2)}% más.`}
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--bg3);border:1px solid #f5a623;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:#f5a623;margin-bottom:10px;">
+        🎯 PLAN PARA SALVAR EL MES
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;color:var(--text);">
+        <div style="background:var(--bg2);padding:10px;border-radius:6px;margin-bottom:10px;border-left:3px solid #00e676;">
+          <div style="color:var(--gold);margin-bottom:4px;"><strong>Para llegar a 20%:</strong></div>
+          <div style="color:var(--text);">Ganancia requerida: <span style="color:var(--green);">${fd(gananciaReqPara20)}</span></div>
+          <div style="color:var(--muted2);font-size:10px;margin-top:4px;">
+            ${diasRestantes > 0 ? `Diarios: ${fd(gananciaReqPara20 / diasRestantes)} en ${diasRestantes} días` : 'Sin días restantes'}
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);padding:10px;border-radius:6px;margin-bottom:10px;border-left:3px solid #00b0ff;">
+          <div style="color:#00b0ff;margin-bottom:4px;"><strong>Para llegar a 40%:</strong></div>
+          <div style="color:var(--text);">Ganancia requerida: <span style="color:var(--cyan);">${fd(gananciaReqPara40)}</span></div>
+          <div style="color:var(--muted2);font-size:10px;margin-top:4px;">
+            ${diasRestantes > 0 ? `Diarios: ${fd(gananciaReqPara40 / diasRestantes)} en ${diasRestantes} días` : 'Sin días restantes'}
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);padding:10px;border-radius:6px;border-left:3px solid #a855f7;">
+          <div style="color:#a855f7;margin-bottom:4px;"><strong>Para llegar a tu promedio (${promedioHistorico.toFixed(2)}%):</strong></div>
+          <div style="color:var(--text);">Ganancia requerida: <span style="color:var(--cyan);">${fd(gananciaReqParaPromedio)}</span></div>
+          <div style="color:var(--muted2);font-size:10px;margin-top:4px;">
+            ${diasRestantes > 0 ? `Diarios: ${fd(gananciaReqParaPromedio / diasRestantes)} en ${diasRestantes} días` : 'Sin días restantes'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--bg3);border:1px solid var(--red);border-radius:10px;padding:16px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--red);margin-bottom:10px;">
+        ⚠ MÉTRICAS A MEJORAR
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;color:var(--muted2);">
+        <div style="margin-bottom:8px;padding:8px;background:var(--bg2);border-radius:6px;">
+          <div style="color:var(--text);"><strong>Win Rate: ${winRate.toFixed(1)}%</strong></div>
+          <div style="font-size:10px;margin-top:4px;">
+            ${winRate >= 50 ? '✅ Encima del 50% - Mantén este nivel' : '⚠ Debajo del 50% - Necesitas mejorar la selección de trades'}
+          </div>
+        </div>
+        
+        <div style="margin-bottom:8px;padding:8px;background:var(--bg2);border-radius:6px;">
+          <div style="color:var(--text);"><strong>HTB (Hard to Borrow): ${fd(htbTotal)}</strong></div>
+          <div style="font-size:10px;margin-top:4px;">
+            ${htbTotal > (pnl * 0.10) ? '⚠ HTB muy alto - Afecta tu PNL neto' : '✅ HTB controlado'}
+          </div>
+        </div>
+
+        <div style="padding:8px;background:var(--bg2);border-radius:6px;">
+          <div style="color:var(--text);"><strong>Consistencia: ${dias} días operados</strong></div>
+          <div style="font-size:10px;margin-top:4px;">
+            ${dias >= 15 ? '✅ Buen volumen de operativa' : '⚠ Pocos días operados - Aumenta frecuencia'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#a855f710;border:1px solid #a855f7;border-radius:10px;padding:16px;margin-top:16px;text-align:center;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:8px;">
+        📊 ANÁLISIS GENERADO EL ${new Date().toLocaleString()}
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);">
+        Informe básico generado desde datos locales · Para análisis con IA claudeana, usa el botón principal "ANALIZAR IA"
+      </div>
+    </div>
+  `;
+}
+
+// Función captureScreenshot ya no se usa (reemplazada por ejecutarAnalisisCompletoIA)
+// que captura tabla + estadísticas en un solo flujo
 
 function closeAnalizarPNLModal() {
   document.getElementById('analizarPNLModal').style.display = 'none';
@@ -7290,9 +7605,13 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' && document.getElementById('analizarPNLModal').style.display === 'flex')
     closeAnalizarPNLModal();
 });
-document.getElementById('analizarPNLModal').addEventListener('click', function(e) {
-  if (e.target === this) closeAnalizarPNLModal();
-});
+
+const analizarPNLModalEl = document.getElementById('analizarPNLModal');
+if (analizarPNLModalEl) {
+  analizarPNLModalEl.addEventListener('click', function(e) {
+    if (e.target === this) closeAnalizarPNLModal();
+  });
+}
 
 // ══ SISTEMA DE COSTE API ══════════════════════════════════════════════════════
 const COST_KEY = 'pirata_api_cost';
