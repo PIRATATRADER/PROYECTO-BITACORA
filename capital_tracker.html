@@ -467,6 +467,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>% Day</th>
           <th>R</th>
           <th style="text-align:center;color:#7c6af7;min-width:140px;">PNL</th>
+          <th style="text-align:center;color:#a855f7;min-width:70px;">INFORME</th>
           <th style="text-align:center;color:#e8634a;min-width:100px;">PDF</th>
         </tr></thead>
         <tbody id="mb"></tbody>
@@ -898,6 +899,14 @@ function renderMain() {
       <td style="text-align:center;padding:4px;" class="tradely-img-cell">
         <div class="tradely-thumb-wrap" data-key="tradely_img_${month}_${k}"></div>
       </td>
+      <td style="text-align:center;padding:4px;" class="informe-cell">
+        ${(D[k]&&D[k].informeIA)
+          ? `<div style="display:flex;gap:4px;justify-content:center;align-items:center;">
+               <button onclick="verInformeDia('${k}')" title="Ver informe" style="font-size:14px;line-height:1;background:transparent;border:1px solid #a855f755;border-radius:6px;padding:3px 7px;cursor:pointer;color:#a855f7;transition:all .15s;" onmouseover="this.style.borderColor='#a855f7';this.style.background='#a855f715'" onmouseout="this.style.borderColor='#a855f755';this.style.background='transparent'">📄</button>
+               <button onclick="abrirEditorInforme('${k}')" title="Editar" style="font-size:11px;line-height:1;background:transparent;border:1px solid #ffffff22;border-radius:6px;padding:3px 6px;cursor:pointer;color:var(--muted2);transition:all .15s;" onmouseover="this.style.color='var(--text)';this.style.borderColor='#ffffff55'" onmouseout="this.style.color='var(--muted2)';this.style.borderColor='#ffffff22'">✎</button>
+             </div>`
+          : `<button onclick="abrirEditorInforme('${k}')" title="Añadir informe" style="font-size:16px;line-height:1;background:transparent;border:1px dashed #a855f755;border-radius:6px;padding:3px 9px;cursor:pointer;color:#a855f7;transition:all .15s;" onmouseover="this.style.borderColor='#a855f7';this.style.background='#a855f715'" onmouseout="this.style.borderColor='#a855f755';this.style.background='transparent'">+</button>`}
+      </td>
       <td style="text-align:center;padding:4px;" class="pdf-cell">
         <div class="pdf-wrap" data-key="pdf_${month}_${k}"></div>
       </td>
@@ -937,6 +946,7 @@ function renderMain() {
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
+    <td></td>
     <td></td>
     <td></td>
   </tr>`;
@@ -1916,6 +1926,443 @@ function hideInformeIA() {
   document.getElementById('informeIAScreen').style.display = 'none';
   document.body.style.overflow = '';
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── INFORME IA POR DÍA — campo D[k].informeIA (persistido en Firestore) ────────
+// Añadido: guarda/lee un informe de análisis enriquecido dentro del registro
+// de cada día. Reutiliza la pantalla #informeIAScreen (showInformeIA).
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Lee el informe guardado del día y lo muestra
+function verInformeDia(k) {
+  if (D[k] && D[k].informeIA) {
+    showInformeIA(D[k].informeIA);
+  } else {
+    showToast('Sin informe para este día');
+  }
+}
+
+// Guarda un informe HTML en el día indicado (clave YYYY-MM-DD) y persiste
+function guardarInformeDia(k, html) {
+  if (!D[k]) D[k] = {};
+  D[k].informeIA = html;
+  save();              // escribe en Firestore (campo data del doc main_data)
+  renderAll();         // refresca para que aparezca el botón 📄 en la fila
+  showToast('✓ Informe guardado · ' + k);
+}
+
+// Informe del 29/05/2026 (generado desde las ejecuciones DAS)
+const INFORME_29MAY_HTML = `
+<div class="i29" style="--g:#1fd682;--r:#ff4d5e;--gold:#f5b942;--short:#ff8a3d;--long:#39c0ff;--mut:#7d8f95;--dim:#54656b;--ln:#1d2a30;--pan:#0d1316;color:#dfe7e9;font-family:'DM Mono',ui-monospace,monospace;max-width:1040px;margin:0 auto;line-height:1.55;">
+  <style>
+    .i29 h2.s{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#dfe7e9;margin:30px 0 14px;display:flex;align-items:baseline;gap:12px}
+    .i29 .num{font-size:11px;color:var(--g);border:1px solid #0f7a4c;border-radius:6px;padding:2px 7px}
+    .i29 .kp{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#162227;border:1px solid var(--ln);border-radius:12px;overflow:hidden;margin:14px 0 8px}
+    .i29 .kp>div{background:var(--pan);padding:13px 14px}
+    .i29 .kp .l{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+    .i29 .kp .v{font-size:18px;font-weight:700}
+    .i29 .kp .v small{font-size:10px;color:var(--mut)}
+    .i29 .pos{color:var(--g)} .i29 .neg{color:var(--r)} .i29 .amb{color:var(--gold)}
+    .i29 .ov{background:var(--pan);border:1px solid var(--ln);border-left:3px solid var(--g);border-radius:12px;padding:18px 20px;font-size:13px;color:#c6d2d5}
+    .i29 .ov b{color:#dfe7e9}
+    .i29 table{width:100%;border-collapse:collapse;font-size:12.5px}
+    .i29 th{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:left;padding:9px 10px;border-bottom:1px solid var(--ln);font-weight:500}
+    .i29 th.r,.i29 td.r{text-align:right}
+    .i29 td{padding:9px 10px;border-bottom:1px solid #162227}
+    .i29 .tk{font-weight:700;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px}
+    .i29 .pill{font-size:9px;padding:2px 6px;border-radius:5px}
+    .i29 .pill.s{color:var(--short);background:rgba(255,138,61,.1);border:1px solid rgba(255,138,61,.3)}
+    .i29 .pill.l{color:var(--long);background:rgba(57,192,255,.1);border:1px solid rgba(57,192,255,.3)}
+    .i29 .gr{font-weight:800;font-size:12px;padding:2px 7px;border-radius:6px}
+    .i29 .ap{color:#04140c;background:var(--g)} .i29 .a{color:var(--g);border:1px solid #0f7a4c} .i29 .b{color:var(--gold);border:1px solid rgba(245,185,66,.35)} .i29 .c{color:var(--mut);border:1px solid var(--ln)} .i29 .d{color:var(--r);border:1px solid #7a1f2c}
+    .i29 .sum td{border-top:1px solid var(--ln);font-weight:800;background:rgba(31,214,130,.05)}
+    .i29 .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}
+    .i29 .sc{background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:16px 18px}
+    .i29 .big{font-size:26px;font-weight:800}
+    .i29 .meter{height:7px;border-radius:6px;background:var(--ln);margin:12px 0 6px;overflow:hidden}
+    .i29 .meter i{display:block;height:100%}
+    .i29 .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+    .i29 .kf{border-radius:12px;padding:16px 18px;border:1px solid var(--ln)}
+    .i29 .keep{border-left:3px solid var(--g)} .i29 .fix{border-left:3px solid var(--r)}
+    .i29 .kf h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+    .i29 .keep h3{color:var(--g)} .i29 .fix h3{color:var(--r)}
+    .i29 .it{margin-bottom:12px} .i29 .it .t{font-weight:600;color:#dfe7e9;margin-bottom:3px}
+    .i29 .it .x{color:var(--mut);font-size:12px} .i29 .ev{color:var(--gold)}
+    .i29 .cc{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:22px 24px;font-size:13.5px;color:#c6d2d5}
+    .i29 .cc p{margin-bottom:12px} .i29 .hl{color:var(--gold)} .i29 .cc .rule{color:#dfe7e9;font-weight:600}
+    .i29 .chart{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:16px}
+    .i29 svg{width:100%;height:auto;display:block}
+    .i29 .lead{color:var(--mut);font-size:12.5px;margin-top:10px}
+    .i29 .lead b{color:#dfe7e9}
+  </style>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--ln);padding-bottom:16px;">
+    <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:#a855f7;">PIRATA · INFORME 29 MAY</div><div style="font-size:10px;letter-spacing:2px;color:var(--mut);">DAS · 482 EJECUCIONES · COSTE MEDIO</div></div>
+    <div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:var(--g);">+$590.13</div><div style="font-size:9px;letter-spacing:2px;color:var(--dim);">NETO REAL · 4.84R</div></div>
+  </div>
+
+  <div class="kp">
+    <div><div class="l">Realizado</div><div class="v pos">+623.08</div></div>
+    <div><div class="l">Fees netas</div><div class="v pos">+1.76 <small>cred</small></div></div>
+    <div><div class="l">HTB</div><div class="v neg">-34.71</div></div>
+    <div><div class="l">Neto real</div><div class="v pos">+590.13</div></div>
+    <div><div class="l">R / WR</div><div class="v">4.84R <small>90%</small></div></div>
+    <div><div class="l">Fills</div><div class="v amb">482</div></div>
+  </div>
+
+  <h2 class="s"><span class="num">00</span> Descripción general</h2>
+  <div class="ov">Día verde y limpio: <b>+$623.08 bruto (4.84R)</b>, una sola línea roja (-$1.07) y un <b>neto real de +$590.13</b>. Dos claves: <b>(1)</b> el <b>77% del P&L se hizo en premarket</b> ($481 antes de las 09:30, solo $142 después); <b>(2)</b> las fees fueron <b>crédito (+$1.76)</b> porque el 68% de tus 482 fills añadieron liquidez (rebates ECN +$8.97 &gt; comisiones -$5.58). El único peaje real fue el <b>HTB ($34.71)</b>. Motor: cortos sobre parabólicas, concentrado en STG y QTEX (60% del día).</div>
+
+  <h2 class="s"><span class="num">01</span> Curva de P&L realizado · intradía</h2>
+  <div class="chart">
+    <svg viewBox="0 0 980 250" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="i29ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1fd682" stop-opacity="0.32"/><stop offset="100%" stop-color="#1fd682" stop-opacity="0"/></linearGradient></defs>
+      <line x1="8" y1="224" x2="972" y2="224" stroke="#1d2a30"/>
+      <line x1="8" y1="125.6" x2="972" y2="125.6" stroke="#162227" stroke-dasharray="2 4"/>
+      <line x1="8" y1="27.1" x2="972" y2="27.1" stroke="#162227" stroke-dasharray="2 4"/>
+      <text x="12" y="221" fill="#54656b" font-size="10">$0</text>
+      <text x="12" y="122" fill="#54656b" font-size="10">$300</text>
+      <text x="12" y="37" fill="#54656b" font-size="10">$600</text>
+      <line x1="863.2" y1="14" x2="863.2" y2="224" stroke="#f5b942" stroke-dasharray="4 4" opacity="0.7"/>
+      <text x="857" y="24" fill="#f5b942" font-size="10" text-anchor="end">09:30 apertura</text>
+      <path d="M 10.6 224.0 L 10.6 224.0 L 15.8 224.0 L 21.0 224.0 L 28.7 224.0 L 36.5 224.0 L 39.1 224.0 L 46.9 220.5 L 49.5 205.1 L 88.3 205.1 L 101.3 205.1 L 135.0 186.8 L 147.9 186.4 L 181.6 186.8 L 192.0 191.9 L 210.1 190.1 L 246.4 190.1 L 251.6 146.9 L 267.1 140.3 L 269.7 152.2 L 280.1 152.2 L 293.1 144.5 L 319.0 128.7 L 321.6 126.9 L 350.1 131.3 L 368.2 133.7 L 417.4 139.1 L 456.3 134.7 L 474.5 127.3 L 497.8 113.0 L 521.1 109.7 L 593.7 104.2 L 614.4 93.5 L 718.0 90.0 L 736.2 83.8 L 756.9 68.2 L 813.9 66.2 L 907.2 66.2 L 909.8 49.7 L 927.9 29.2 L 964.2 25.6 L 972.0 19.6 L 972.0 224.0 Z" fill="url(#i29ar)"/>
+      <path d="M 10.6 224.0 L 46.9 220.5 L 49.5 205.1 L 101.3 205.1 L 135.0 186.8 L 181.6 186.8 L 192.0 191.9 L 246.4 190.1 L 251.6 146.9 L 267.1 140.3 L 269.7 152.2 L 293.1 144.5 L 319.0 128.7 L 321.6 126.9 L 350.1 131.3 L 417.4 139.1 L 456.3 134.7 L 474.5 127.3 L 497.8 113.0 L 521.1 109.7 L 593.7 104.2 L 614.4 93.5 L 718.0 90.0 L 736.2 83.8 L 756.9 68.2 L 813.9 66.2 L 907.2 66.2 L 909.8 49.7 L 927.9 29.2 L 964.2 25.6 L 972.0 19.6" fill="none" stroke="#1fd682" stroke-width="2.2" stroke-linejoin="round"/>
+      <text x="430" y="62" fill="#7d8f95" font-size="11" text-anchor="middle">premarket · $481 (77%)</text>
+      <circle cx="972" cy="19.6" r="4" fill="#1fd682"/>
+      <text x="8" y="244" fill="#54656b" font-size="10">04:00</text>
+      <text x="630" y="244" fill="#54656b" font-size="10" text-anchor="middle">08:00</text>
+      <text x="972" y="244" fill="#54656b" font-size="10" text-anchor="end">10:12</text>
+    </svg>
+  </div>
+  <div class="lead">Escalera casi sin retrocesos; único bache realizado ~-$15 (05:30–06:00). El grueso, antes de la apertura.</div>
+
+  <h2 class="s"><span class="num">02</span> Largo vs Corto</h2>
+  <div class="split">
+    <div class="sc"><div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--short);margin-bottom:10px;">CORTOS</div><div class="big pos">+$378.94 <small style="font-size:12px;color:var(--mut)">2.95R</small></div><div class="meter"><i style="width:60.8%;background:linear-gradient(90deg,#ff8a3d,#c95e1d)"></i></div><div style="font-size:11px;color:var(--mut);display:flex;justify-content:space-between"><span>60.8% · 5W/0L</span><span>neto HTB +$344.23</span></div></div>
+    <div class="sc"><div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--long);margin-bottom:10px;">LARGOS</div><div class="big pos">+$244.14 <small style="font-size:12px;color:var(--mut)">1.90R</small></div><div class="meter"><i style="width:39.2%;background:linear-gradient(90deg,#39c0ff,#1d76c9)"></i></div><div style="font-size:11px;color:var(--mut);display:flex;justify-content:space-between"><span>39.2% · 4W/1L</span><span>sin borrow</span></div></div>
+  </div>
+  <div class="lead">El corto fue el motor incluso pagando HTB. La única pérdida del día fue un largo (IOTR).</div>
+
+  <h2 class="s"><span class="num">03</span> Desglose por cierre</h2>
+  <table>
+    <thead><tr><th>Ticker</th><th>Lado</th><th class="r">Realizado</th><th class="r">R</th><th class="r">% día</th><th class="r">Fills</th><th>Calif.</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tk">QTEX</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+143.56</td><td class="r pos">1.12R</td><td class="r">23.0%</td><td class="r">123</td><td><span class="gr ap">A+</span></td></tr>
+      <tr><td><span class="tk">STG</span></td><td><span class="pill l">MARGIN</span></td><td class="r pos">+133.47</td><td class="r pos">1.04R</td><td class="r">21.4%</td><td class="r">—</td><td><span class="gr ap">A+</span></td></tr>
+      <tr><td><span class="tk">STG</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+98.12</td><td class="r pos">0.76R</td><td class="r">15.7%</td><td class="r">171*</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">MASK</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+80.49</td><td class="r pos">0.63R</td><td class="r">12.9%</td><td class="r">60</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">BNRG</span></td><td><span class="pill l">MARGIN</span></td><td class="r pos">+57.72</td><td class="r pos">0.45R</td><td class="r">9.3%</td><td class="r">48</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">ASTC</span></td><td><span class="pill l">MARGIN</span></td><td class="r pos">+46.67</td><td class="r pos">0.36R</td><td class="r">7.5%</td><td class="r">7</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">CYCU</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+45.38</td><td class="r pos">0.35R</td><td class="r">7.3%</td><td class="r">49</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">IOTR</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+11.39</td><td class="r pos">0.09R</td><td class="r">1.8%</td><td class="r">21*</td><td><span class="gr c">C</span></td></tr>
+      <tr><td><span class="tk">VCIG</span></td><td><span class="pill l">MARGIN</span></td><td class="r pos">+7.35</td><td class="r pos">0.06R</td><td class="r">1.2%</td><td class="r">3</td><td><span class="gr c">Baby</span></td></tr>
+      <tr><td><span class="tk">IOTR</span></td><td><span class="pill l">MARGIN</span></td><td class="r neg">-1.07</td><td class="r neg">-0.01R</td><td class="r">-0.2%</td><td class="r">—</td><td><span class="gr d">D</span></td></tr>
+      <tr class="sum"><td colspan="2">SUMMARY · 8 tickers</td><td class="r pos">+623.08</td><td class="r pos">4.84R</td><td class="r">100%</td><td class="r">482</td><td>WR 90%</td></tr>
+    </tbody>
+  </table>
+  <div class="lead"><span style="color:var(--dim)">*fills por símbolo (largo+corto): STG 171, IOTR 21.</span> <b>Concentración:</b> STG $231.59 (37.2%) + QTEX $143.56 (23.0%) = 60% del día.</div>
+
+  <h2 class="s"><span class="num">04</span> Eficiencia de ejecución · ¿sobre-escalado?</h2>
+  <div class="lead" style="margin-bottom:8px;"><b>482 fills para $623</b> = $1.29/fill de media. Reparto muy desigual.</div>
+  <table>
+    <thead><tr><th>Ticker</th><th class="r">Fills</th><th class="r">Acciones</th><th class="r">$/fill</th><th class="r">Duración</th><th>Lectura</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tk">ASTC</span></td><td class="r">7</td><td class="r">20</td><td class="r pos">$6.67</td><td class="r">9 min</td><td style="color:var(--mut)">Modelo de eficiencia. Post-apertura.</td></tr>
+      <tr><td><span class="tk">VCIG</span></td><td class="r">3</td><td class="r">60</td><td class="r pos">$2.45</td><td class="r">3 min</td><td style="color:var(--mut)">Pocos fills, P&L de ruido.</td></tr>
+      <tr><td><span class="tk">STG</span></td><td class="r amb">171</td><td class="r">1314</td><td class="r pos">$1.35</td><td class="r">96 min</td><td style="color:var(--mut)">Top P&L pero 171 fills: ¿gestión o duda?</td></tr>
+      <tr><td><span class="tk">MASK</span></td><td class="r">60</td><td class="r">330</td><td class="r pos">$1.34</td><td class="r">69 min</td><td style="color:var(--mut)">Aceptable.</td></tr>
+      <tr><td><span class="tk">BNRG</span></td><td class="r">48</td><td class="r">550</td><td class="r pos">$1.20</td><td class="r">5 min</td><td style="color:var(--mut)">Rápido y rentable.</td></tr>
+      <tr><td><span class="tk">QTEX</span></td><td class="r amb">123</td><td class="r">1242</td><td class="r pos">$1.17</td><td class="r">371 min</td><td style="color:var(--mut)">Más P&L, trabajado toda la sesión.</td></tr>
+      <tr><td><span class="tk">CYCU</span></td><td class="r amb">49</td><td class="r">1950</td><td class="r amb">$0.93</td><td class="r">29 min</td><td style="color:var(--mut)">1950 acciones, comisión más alta, P&L modesto.</td></tr>
+      <tr><td><span class="tk">IOTR</span></td><td class="r amb">21</td><td class="r">114</td><td class="r neg">$0.49</td><td class="r">109 min</td><td style="color:var(--mut)">109 min y 21 fills para $10. Lo peor.</td></tr>
+    </tbody>
+  </table>
+  <div class="lead">El sobre-escalado es real y medible: STG (171), QTEX (123) y CYCU (49) concentran el conteo. Una regla de "máx. 1 add por idea" ataca a CYCU e IOTR sin tocar a ASTC/BNRG.</div>
+
+  <h2 class="s"><span class="num">05</span> Costes reales</h2>
+  <table>
+    <thead><tr><th>Concepto</th><th class="r">Importe</th><th>Nota</th></tr></thead>
+    <tbody>
+      <tr><td>Comisiones</td><td class="r neg">-$5.58</td><td style="color:var(--mut)">482 fills</td></tr>
+      <tr><td>Rebates ECN</td><td class="r pos">+$8.97</td><td style="color:var(--mut)">68% de fills añadieron liquidez</td></tr>
+      <tr><td>SEC + TAF + NSCC + CAT</td><td class="r neg">-$1.63</td><td style="color:var(--mut)">tasas regulatorias</td></tr>
+      <tr class="sum"><td>Fees netas</td><td class="r pos">+$1.76</td><td>crédito, no coste</td></tr>
+      <tr><td>HTB (borrow)</td><td class="r neg">-$34.71</td><td style="color:var(--mut)">9.2% del bruto corto · el peaje real</td></tr>
+    </tbody>
+  </table>
+  <div class="lead"><b>Corrección:</b> tu coste de ejecución no fue un gasto — fue un <b>crédito de $1.76</b>. Operas como proveedor de liquidez. Lo que muerde es el HTB; vigílalo por trade.</div>
+
+  <h2 class="s"><span class="num">06</span> Conservar · Corregir</h2>
+  <div class="twocol">
+    <div class="kf keep"><h3>▲ Conservar</h3>
+      <div class="it"><div class="t">Cortar pérdidas al instante</div><div class="x">Única roja: IOTR largo <span class="ev">-$1.07</span>.</div></div>
+      <div class="it"><div class="t">Proveer liquidez</div><div class="x"><span class="ev">68% de fills con rebate</span> → fees en crédito.</div></div>
+      <div class="it"><div class="t">Corto + premarket</div><div class="x"><span class="ev">2.95R en cortos · $481 premarket.</span> Tu ventaja.</div></div>
+      <div class="it"><div class="t">ASTC como plantilla</div><div class="x"><span class="ev">7 fills, $6.67 c/u.</span></div></div>
+    </div>
+    <div class="kf fix"><h3>▼ Corregir</h3>
+      <div class="it"><div class="t">IOTR fuera del plan</div><div class="x"><span class="ev">21 fills, 109 min, +0.08R neto.</span></div></div>
+      <div class="it"><div class="t">CYCU: churn caro</div><div class="x"><span class="ev">1950 acciones, comisión más alta, $0.93/fill.</span></div></div>
+      <div class="it"><div class="t">STG: contar los adds</div><div class="x"><span class="ev">171 fills.</span> ¿Gestión o re-entradas por duda?</div></div>
+      <div class="it"><div class="t">HTB por operación</div><div class="x"><span class="ev">$34.71 = 9.2% del corto.</span></div></div>
+    </div>
+  </div>
+
+  <h2 class="s"><span class="num">07</span> Conclusión</h2>
+  <div class="cc">
+    <p>Día excelente y bien ejecutado: 4.84R, 90% de aciertos, sin drawdown realizado, neto real <span class="hl">+$590.13</span>. Pero la base es <span class="hl">dependiente del régimen y del premarket</span>: STG + QTEX = 60% del día; 77% antes de la apertura.</p>
+    <p class="rule">Regla: protege el motor (cortos en parabólicas, premarket, límites con rebate), recorta el churn (IOTR y CYCU) y mide el HTB por trade.</p>
+    <p>El número que importa no es +$623, es <span class="hl">+$590 neto</span>.</p>
+  </div>
+
+  <div style="margin-top:24px;padding-top:14px;border-top:1px solid var(--ln);font-size:10px;color:var(--dim);letter-spacing:1px;display:flex;justify-content:space-between;">
+    <span>PIRATA · DILU-BITÁCORA</span><span>DAS · 482 ejecuciones</span><span>29-05-2026</span>
+  </div>
+</div>`;
+
+
+// Borra el informe de un día
+function borrarInformeDia(k) {
+  if (D[k] && D[k].informeIA) {
+    delete D[k].informeIA;
+    save();
+    renderAll();
+    showToast('Informe borrado · ' + k);
+  }
+}
+
+// Editor: pegar / editar / previsualizar / guardar un informe para el día k
+function abrirEditorInforme(k) {
+  const parts = k.split('-');
+  const displayDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+  const existe = !!(D[k] && D[k].informeIA);
+  const actual = existe ? D[k].informeIA : '';
+
+  const bg = document.createElement('div');
+  bg.style.cssText = 'position:fixed;inset:0;background:#000000dd;z-index:10001;';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid #a855f7;border-radius:16px;width:min(820px,95vw);max-height:85vh;z-index:10002;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(168,85,247,0.3);';
+
+  const cerrar = () => { document.body.removeChild(bg); document.body.removeChild(box); };
+  bg.onclick = cerrar;
+
+  box.innerHTML =
+    '<div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:#a855f7;">📄 INFORME IA — ' + displayDate + '</div>' +
+      '<button id="infCerrar" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);cursor:pointer;font-size:15px;">✕</button>' +
+    '</div>' +
+    '<div style="padding:16px 22px;overflow-y:auto;">' +
+      '<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">PEGA AQUÍ EL HTML DEL INFORME (o edítalo) Y GUARDA</div>' +
+      '<textarea id="infTA" spellcheck="false" style="width:100%;min-height:300px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:11px;line-height:1.5;padding:12px;resize:vertical;"></textarea>' +
+    '</div>' +
+    '<div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">' +
+      (existe ? '<button id="infBorrar" style="font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1px;padding:8px 16px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;">BORRAR</button>' : '') +
+      '<button id="infVer" style="font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1px;padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;">VISTA PREVIA</button>' +
+      '<button id="infGuardar" style="font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1px;padding:8px 18px;border-radius:8px;border:1px solid #a855f7;background:#a855f7;color:#fff;cursor:pointer;font-weight:600;">GUARDAR</button>' +
+    '</div>';
+
+  document.body.appendChild(bg);
+  document.body.appendChild(box);
+
+  const ta = box.querySelector('#infTA');
+  ta.value = actual;
+  box.querySelector('#infCerrar').onclick = cerrar;
+  box.querySelector('#infGuardar').onclick = () => {
+    const v = ta.value.trim();
+    if (!v) { showToast('Vacío — nada que guardar'); return; }
+    guardarInformeDia(k, v);
+    cerrar();
+  };
+  box.querySelector('#infVer').onclick = () => {
+    const v = ta.value.trim();
+    if (!v) { showToast('Nada que previsualizar'); return; }
+    showInformeIA(v);
+  };
+  const bd = box.querySelector('#infBorrar');
+  if (bd) bd.onclick = () => { borrarInformeDia(k); cerrar(); };
+}
+
+const INFORME_28MAY_HTML = `
+<div class="i28" style="--g:#1fd682;--r:#ff4d5e;--gold:#f5b942;--short:#ff8a3d;--long:#39c0ff;--mut:#7d8f95;--dim:#54656b;--ln:#1d2a30;--pan:#0d1316;color:#dfe7e9;font-family:'DM Mono',ui-monospace,monospace;max-width:1040px;margin:0 auto;line-height:1.55;">
+  <style>
+    .i28 h2.s{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#dfe7e9;margin:30px 0 14px;display:flex;align-items:baseline;gap:12px}
+    .i28 .num{font-size:11px;color:var(--r);border:1px solid #7a1f2c;border-radius:6px;padding:2px 7px}
+    .i28 .kp{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#162227;border:1px solid var(--ln);border-radius:12px;overflow:hidden;margin:14px 0 8px}
+    .i28 .kp>div{background:var(--pan);padding:13px 14px}
+    .i28 .kp .l{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+    .i28 .kp .v{font-size:18px;font-weight:700}
+    .i28 .kp .v small{font-size:10px;color:var(--mut)}
+    .i28 .pos{color:var(--g)} .i28 .neg{color:var(--r)} .i28 .amb{color:var(--gold)}
+    .i28 .ov{background:var(--pan);border:1px solid var(--ln);border-left:3px solid var(--r);border-radius:12px;padding:18px 20px;font-size:13px;color:#c6d2d5}
+    .i28 .ov b{color:#dfe7e9}
+    .i28 table{width:100%;border-collapse:collapse;font-size:12.5px}
+    .i28 th{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:left;padding:9px 10px;border-bottom:1px solid var(--ln);font-weight:500}
+    .i28 th.r,.i28 td.r{text-align:right}
+    .i28 td{padding:8px 10px;border-bottom:1px solid #162227}
+    .i28 .tk{font-weight:700;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px}
+    .i28 .pill{font-size:9px;padding:2px 6px;border-radius:5px}
+    .i28 .pill.s{color:var(--short);background:rgba(255,138,61,.1);border:1px solid rgba(255,138,61,.3)}
+    .i28 .pill.l{color:var(--long);background:rgba(57,192,255,.1);border:1px solid rgba(57,192,255,.3)}
+    .i28 .gr{font-weight:800;font-size:12px;padding:2px 7px;border-radius:6px}
+    .i28 .ap{color:#04140c;background:var(--g)} .i28 .a{color:var(--g);border:1px solid #0f7a4c} .i28 .b{color:var(--gold);border:1px solid rgba(245,185,66,.35)} .i28 .c{color:var(--mut);border:1px solid var(--ln)} .i28 .d{color:var(--r);border:1px solid #7a1f2c}
+    .i28 .sum td{border-top:1px solid var(--ln);font-weight:800;background:rgba(255,77,94,.06)}
+    .i28 .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}
+    .i28 .sc{background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:16px 18px}
+    .i28 .big{font-size:26px;font-weight:800}
+    .i28 .meter{height:7px;border-radius:6px;background:var(--ln);margin:12px 0 6px;overflow:hidden}
+    .i28 .meter i{display:block;height:100%}
+    .i28 .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+    .i28 .kf{border-radius:12px;padding:16px 18px;border:1px solid var(--ln)}
+    .i28 .keep{border-left:3px solid var(--g)} .i28 .fix{border-left:3px solid var(--r)}
+    .i28 .kf h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+    .i28 .keep h3{color:var(--g)} .i28 .fix h3{color:var(--r)}
+    .i28 .it{margin-bottom:12px} .i28 .it .t{font-weight:600;color:#dfe7e9;margin-bottom:3px}
+    .i28 .it .x{color:var(--mut);font-size:12px} .i28 .ev{color:var(--gold)}
+    .i28 .cc{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:22px 24px;font-size:13.5px;color:#c6d2d5}
+    .i28 .cc p{margin-bottom:12px} .i28 .hl{color:var(--gold)} .i28 .cc .rule{color:#dfe7e9;font-weight:600}
+    .i28 .chart{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:16px}
+    .i28 svg{width:100%;height:auto;display:block}
+    .i28 .lead{color:var(--mut);font-size:12.5px;margin-top:10px} .i28 .lead b{color:#dfe7e9}
+    .i28 .note{margin-top:18px;border:1px dashed var(--ln);border-radius:12px;padding:14px 18px;font-size:12px;color:var(--mut)}
+    .i28 .note b{color:var(--gold)}
+  </style>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--ln);padding-bottom:16px;">
+    <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:#a855f7;">PIRATA · INFORME 28 MAY</div><div style="font-size:10px;letter-spacing:2px;color:var(--mut);">DAS · 1685 EJECUCIONES · COSTE MEDIO</div></div>
+    <div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:var(--r);">-$935.40</div><div style="font-size:9px;letter-spacing:2px;color:var(--dim);">REALIZADO · NETO s/HTB -$968.48</div></div>
+  </div>
+
+  <div class="kp">
+    <div><div class="l">Realizado</div><div class="v neg">-935.40</div></div>
+    <div><div class="l">Fees</div><div class="v neg">-33.08 <small>coste</small></div></div>
+    <div><div class="l">Neto s/HTB</div><div class="v neg">-968.48</div></div>
+    <div><div class="l">Fills</div><div class="v amb">1685</div></div>
+    <div><div class="l">Tickers</div><div class="v">27</div></div>
+    <div><div class="l">Liq. added</div><div class="v neg">14%</div></div>
+  </div>
+
+  <h2 class="s"><span class="num">00</span> Descripción general</h2>
+  <div class="ov">El espejo del 29: <b>ganaste por la mañana y lo regalaste por la tarde</b>. Premarket otra vez verde — <b>+$377 al abrir, pico de +$432 a las 08:57</b>. Tras la campana, <b>-$2.019 de drawdown</b> hasta el suelo de -$1.587 (13:08), recuperando algo hasta cerrar en <b>-$935.40</b>. Dos verdugos: <b>SPRC -$970</b> (un corto que peleaste 200 fills / 7h) y <b>ASTC -$274</b> (345 fills, 11h de churn — el mismo ticker que el 29 cerraste en 7 fills). Encima, día de <b>tomar liquidez</b>: solo 14% de fills con rebate (vs 68% el 29) → las fees fueron coste. La base era buena (cortos ganadores), la gestión la hundió.</div>
+
+  <h2 class="s"><span class="num">01</span> Curva de P&L realizado · intradía</h2>
+  <div class="chart">
+    <svg viewBox="0 0 980 250" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="i28ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff4d5e" stop-opacity="0.30"/><stop offset="100%" stop-color="#ff4d5e" stop-opacity="0"/></linearGradient></defs>
+      <line x1="8" y1="14" x2="972" y2="14" stroke="#162227" stroke-dasharray="2 4"/>
+      <line x1="8" y1="109.5" x2="972" y2="109.5" stroke="#162227" stroke-dasharray="2 4"/>
+      <line x1="8" y1="157.2" x2="972" y2="157.2" stroke="#162227" stroke-dasharray="2 4"/>
+      <line x1="8" y1="204.9" x2="972" y2="204.9" stroke="#162227" stroke-dasharray="2 4"/>
+      <line x1="8" y1="61.7" x2="972" y2="61.7" stroke="#2c3a40"/>
+      <text x="12" y="24" fill="#54656b" font-size="10">+$500</text>
+      <text x="12" y="59" fill="#7d8f95" font-size="10">$0</text>
+      <text x="12" y="107" fill="#54656b" font-size="10">-$500</text>
+      <text x="12" y="155" fill="#54656b" font-size="10">-$1000</text>
+      <text x="12" y="202" fill="#54656b" font-size="10">-$1500</text>
+      <line x1="352.1" y1="14" x2="352.1" y2="224" stroke="#f5b942" stroke-dasharray="4 4" opacity="0.7"/>
+      <text x="346" y="234" fill="#f5b942" font-size="10" text-anchor="end">09:30 apertura</text>
+      <path d="M 8.0 61.7 L 8.0 61.7 L 27.9 59.2 L 32.2 57.6 L 36.4 54.0 L 42.1 58.1 L 46.4 56.4 L 53.5 55.2 L 57.8 52.3 L 62.0 51.9 L 66.3 70.4 L 70.6 65.8 L 76.2 73.2 L 83.4 73.1 L 87.6 70.3 L 91.9 68.0 L 96.2 78.1 L 103.3 78.0 L 108.9 78.4 L 113.2 76.8 L 117.5 73.0 L 121.7 69.9 L 126.0 67.0 L 131.7 64.8 L 137.4 62.3 L 145.9 60.9 L 151.6 59.8 L 155.9 59.0 L 161.6 58.0 L 165.8 54.3 L 171.5 50.8 L 177.2 46.8 L 185.7 46.7 L 191.4 45.9 L 198.5 47.4 L 204.2 45.0 L 209.9 44.6 L 219.9 44.7 L 238.3 41.5 L 242.6 41.7 L 252.6 40.6 L 256.8 28.0 L 262.5 27.1 L 275.3 24.8 L 286.7 22.9 L 290.9 22.7 L 295.2 20.6 L 306.6 20.9 L 310.8 21.3 L 315.1 22.2 L 319.4 22.5 L 323.6 23.7 L 327.9 24.1 L 332.2 24.0 L 336.4 26.1 L 340.7 27.2 L 346.4 26.4 L 352.1 27.1 L 356.3 25.6 L 360.6 22.4 L 366.3 22.1 L 370.6 25.3 L 377.7 25.5 L 384.8 64.8 L 390.5 73.6 L 396.2 81.3 L 407.5 85.0 L 421.8 140.0 L 433.1 140.0 L 437.4 141.2 L 450.2 183.4 L 455.9 182.0 L 460.1 177.0 L 477.2 205.2 L 598.1 205.2 L 602.3 205.3 L 606.6 205.9 L 612.3 208.3 L 618.0 208.3 L 623.7 197.5 L 627.9 194.2 L 632.2 194.4 L 643.6 194.3 L 649.2 195.4 L 653.5 210.2 L 657.8 210.0 L 662.0 213.2 L 667.7 206.0 L 672.0 203.3 L 677.7 201.8 L 716.1 196.6 L 723.2 194.9 L 728.9 194.8 L 737.4 194.3 L 744.5 193.6 L 748.8 193.6 L 753.0 192.3 L 764.4 190.8 L 768.7 187.5 L 775.8 188.0 L 780.1 181.5 L 784.3 176.5 L 792.8 176.6 L 802.8 176.2 L 811.3 176.2 L 817.0 173.9 L 825.6 175.0 L 831.2 187.0 L 836.9 186.9 L 844.0 187.9 L 849.7 188.2 L 854.0 188.0 L 859.7 186.1 L 863.9 187.2 L 868.2 184.5 L 879.6 188.0 L 891.0 193.1 L 908.0 182.5 L 913.7 182.0 L 919.4 179.0 L 923.7 179.9 L 927.9 180.1 L 933.6 168.6 L 937.9 165.9 L 942.1 158.9 L 946.4 150.3 L 969.2 155.1 L 972.0 151.0 L 972.0 61.7 Z" fill="url(#i28ar)"/>
+      <path d="M 8.0 61.7 L 27.9 59.2 L 32.2 57.6 L 36.4 54.0 L 42.1 58.1 L 46.4 56.4 L 53.5 55.2 L 57.8 52.3 L 62.0 51.9 L 66.3 70.4 L 70.6 65.8 L 76.2 73.2 L 83.4 73.1 L 87.6 70.3 L 91.9 68.0 L 96.2 78.1 L 103.3 78.0 L 108.9 78.4 L 113.2 76.8 L 117.5 73.0 L 121.7 69.9 L 126.0 67.0 L 131.7 64.8 L 137.4 62.3 L 145.9 60.9 L 151.6 59.8 L 155.9 59.0 L 161.6 58.0 L 165.8 54.3 L 171.5 50.8 L 177.2 46.8 L 185.7 46.7 L 191.4 45.9 L 198.5 47.4 L 204.2 45.0 L 209.9 44.6 L 219.9 44.7 L 238.3 41.5 L 242.6 41.7 L 252.6 40.6 L 256.8 28.0 L 262.5 27.1 L 275.3 24.8 L 286.7 22.9 L 290.9 22.7 L 295.2 20.6 L 306.6 20.9 L 310.8 21.3 L 315.1 22.2 L 319.4 22.5 L 323.6 23.7 L 327.9 24.1 L 332.2 24.0 L 336.4 26.1 L 340.7 27.2 L 346.4 26.4 L 352.1 27.1 L 356.3 25.6 L 360.6 22.4 L 366.3 22.1 L 370.6 25.3 L 377.7 25.5 L 384.8 64.8 L 390.5 73.6 L 396.2 81.3 L 407.5 85.0 L 421.8 140.0 L 433.1 140.0 L 437.4 141.2 L 450.2 183.4 L 455.9 182.0 L 460.1 177.0 L 477.2 205.2 L 598.1 205.2 L 602.3 205.3 L 606.6 205.9 L 612.3 208.3 L 618.0 208.3 L 623.7 197.5 L 627.9 194.2 L 632.2 194.4 L 643.6 194.3 L 649.2 195.4 L 653.5 210.2 L 657.8 210.0 L 662.0 213.2 L 667.7 206.0 L 672.0 203.3 L 677.7 201.8 L 716.1 196.6 L 723.2 194.9 L 728.9 194.8 L 737.4 194.3 L 744.5 193.6 L 748.8 193.6 L 753.0 192.3 L 764.4 190.8 L 768.7 187.5 L 775.8 188.0 L 780.1 181.5 L 784.3 176.5 L 792.8 176.6 L 802.8 176.2 L 811.3 176.2 L 817.0 173.9 L 825.6 175.0 L 831.2 187.0 L 836.9 186.9 L 844.0 187.9 L 849.7 188.2 L 854.0 188.0 L 859.7 186.1 L 863.9 187.2 L 868.2 184.5 L 879.6 188.0 L 891.0 193.1 L 908.0 182.5 L 913.7 182.0 L 919.4 179.0 L 923.7 179.9 L 927.9 180.1 L 933.6 168.6 L 937.9 165.9 L 942.1 158.9 L 946.4 150.3 L 969.2 155.1 L 972.0 151.0" fill="none" stroke="#ff4d5e" stroke-width="2.1" stroke-linejoin="round"/>
+      <circle cx="305.2" cy="20.5" r="3.5" fill="#1fd682"/>
+      <text x="305" y="14" fill="#1fd682" font-size="10" text-anchor="middle">pico +$432</text>
+      <circle cx="662.0" cy="213.2" r="3.5" fill="#ff4d5e"/>
+      <text x="662" y="226" fill="#ff4d5e" font-size="10" text-anchor="middle">suelo -$1587</text>
+      <circle cx="972" cy="151.0" r="4" fill="#ff4d5e"/>
+      <text x="8" y="244" fill="#54656b" font-size="10">05:28</text>
+      <text x="565" y="244" fill="#54656b" font-size="10" text-anchor="middle">12:00</text>
+      <text x="972" y="244" fill="#54656b" font-size="10" text-anchor="end">16:46</text>
+    </svg>
+  </div>
+  <div class="lead">Premarket +$377 (verde). El daño es 100% post-apertura: del pico al suelo, <b>-$2.019</b> en ~4 horas.</div>
+
+  <h2 class="s"><span class="num">02</span> Largo vs Corto</h2>
+  <div class="split">
+    <div class="sc"><div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--short);margin-bottom:10px;">CORTOS</div><div class="big neg">-$198.61</div><div class="meter"><i style="width:21%;background:linear-gradient(90deg,#ff8a3d,#c95e1d)"></i></div><div style="font-size:11px;color:var(--mut);display:flex;justify-content:space-between"><span>1190 fills</span><span>ganadores salvo SPRC -$970</span></div></div>
+    <div class="sc"><div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--long);margin-bottom:10px;">LARGOS</div><div class="big neg">-$736.79</div><div style="font-size:11px;color:var(--mut);margin-top:8px;display:flex;justify-content:space-between"><span>495 fills</span><span>casi todos rojos</span></div></div>
+  </div>
+  <div class="lead">Tu libro <b>corto</b> volvió a ser el bueno (ATPC, PRZO, IOTR, HUBC… casi todos verdes); lo hundió un único corto, <b>SPRC -$970</b>. Los <b>largos</b> fueron un desastre lineal: ASTC, MNTS, NTCL, SNYR, CUPR, VCIG, todos en rojo.</div>
+
+  <h2 class="s"><span class="num">03</span> Desglose por cierre</h2>
+  <table>
+    <thead><tr><th>Ticker</th><th>Lado</th><th class="r">Realizado</th><th class="r">Fills</th><th class="r">Duración</th><th>Calif. ($)</th></tr></thead>
+    <tbody><tr><td><span class="tk">ATPC</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$177.81</td><td class="r" class="amb">142</td><td class="r">7h20m</td><td><span class="gr ap">A+</span></td></tr><tr><td><span class="tk">PRZO</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$161.30</td><td class="r" class="amb">131</td><td class="r">2h38m</td><td><span class="gr ap">A+</span></td></tr><tr><td><span class="tk">IOTR</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$145.51</td><td class="r">49</td><td class="r">19m</td><td><span class="gr ap">A+</span></td></tr><tr><td><span class="tk">HUBC</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$92.31</td><td class="r">50</td><td class="r">55m</td><td><span class="gr a">A</span></td></tr><tr><td><span class="tk">ELAB</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$70.78</td><td class="r">35</td><td class="r">19m</td><td><span class="gr a">A</span></td></tr><tr><td><span class="tk">RKTO</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$62.72</td><td class="r">49</td><td class="r">2h19m</td><td><span class="gr a">A</span></td></tr><tr><td><span class="tk">MIMI</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$61.82</td><td class="r">72</td><td class="r">55m</td><td><span class="gr a">A</span></td></tr><tr><td><span class="tk">KIDZ</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$58.10</td><td class="r">19</td><td class="r">25m</td><td><span class="gr b">B</span></td></tr><tr><td><span class="tk">UAVS</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$49.05</td><td class="r">47</td><td class="r">1h43m</td><td><span class="gr b">B</span></td></tr><tr><td><span class="tk">FOFO</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$45.37</td><td class="r">34</td><td class="r">4m</td><td><span class="gr b">B</span></td></tr><tr><td><span class="tk">DBGI</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$32.57</td><td class="r">5</td><td class="r">71m</td><td><span class="gr b">B</span></td></tr><tr><td><span class="tk">MAMO</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$29.70</td><td class="r">16</td><td class="r">7m</td><td><span class="gr b">B</span></td></tr><tr><td><span class="tk">TVGN</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$23.01</td><td class="r">4</td><td class="r">68m</td><td><span class="gr b">B</span></td></tr><tr><td><span class="tk">ATYR</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$18.49</td><td class="r">9</td><td class="r">2m</td><td><span class="gr c">C</span></td></tr><tr><td><span class="tk">ASAN</span></td><td><span class="pill l">LONG</span></td><td class="r pos">+$13.27</td><td class="r">20</td><td class="r">17m</td><td><span class="gr c">C</span></td></tr><tr><td><span class="tk">YYGH</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$7.40</td><td class="r">2</td><td class="r">28m</td><td><span class="gr c">C</span></td></tr><tr><td><span class="tk">CODX</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$1.32</td><td class="r">21</td><td class="r">4h18m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">WGRX</span></td><td><span class="pill l">LONG</span></td><td class="r neg">-$1.50</td><td class="r">3</td><td class="r"><1m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">VCIG</span></td><td><span class="pill l">LONG</span></td><td class="r neg">-$14.90</td><td class="r">5</td><td class="r">8m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">CUPR</span></td><td><span class="pill l">LONG</span></td><td class="r neg">-$34.42</td><td class="r">21</td><td class="r">26m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">SNYR</span></td><td><span class="pill l">LONG</span></td><td class="r neg">-$93.85</td><td class="r">18</td><td class="r">5m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">QTEX</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$129.47</td><td class="r" class="amb">136</td><td class="r">7h44m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">MASK</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$133.15</td><td class="r" class="amb">169</td><td class="r">4h27m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">MNTS</span></td><td><span class="pill l">LONG</span></td><td class="r neg">-$163.38</td><td class="r">25</td><td class="r">41m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">NTCL</span></td><td><span class="pill l">LONG</span></td><td class="r neg">-$168.11</td><td class="r">58</td><td class="r">3h26m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">ASTC</span></td><td><span class="pill l">LONG</span></td><td class="r neg">-$273.89</td><td class="r" class="amb">345</td><td class="r">11h05m</td><td><span class="gr d">D</span></td></tr><tr><td><span class="tk">SPRC</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$970.60</td><td class="r" class="amb">200</td><td class="r">7h15m</td><td><span class="gr d">D</span></td></tr><tr class="sum"><td colspan="2">SUMMARY · 27 tickers</td><td class="r neg">-$935.40</td><td class="r">1685</td><td class="r">—</td><td>11 rojos</td></tr></tbody>
+  </table>
+  <div class="lead">Sin SOD del 28 no puedo dar R, así que la calificación va por <b>$ realizado de la sesión</b> (no por R). 16 ganadores, 11 perdedores — pero los 11 rojos pesan -$2.072 frente a +$1.137 de los verdes.</div>
+
+  <h2 class="s"><span class="num">04</span> Sobre-operación · el problema del día</h2>
+  <div class="lead" style="margin-bottom:8px;"><b>1685 fills</b> en 27 tickers (vs 482 en 8 el 29). La actividad no fue gestión, fue pelea.</div>
+  <table>
+    <thead><tr><th>Ticker</th><th class="r">Fills</th><th class="r">Duración</th><th class="r">Realizado</th><th>Lectura</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tk">SPRC</span></td><td class="r amb">200</td><td class="r">7h15m</td><td class="r neg">-$970.60</td><td style="color:var(--mut)">El día entero. Un corto perdedor peleado durante 7h.</td></tr>
+      <tr><td><span class="tk">ASTC</span></td><td class="r amb">345</td><td class="r">11h05m</td><td class="r neg">-$273.89</td><td style="color:var(--mut)">345 fills (el 29 lo cerraste en 7). Churn de libro de texto.</td></tr>
+      <tr><td><span class="tk">MASK</span></td><td class="r amb">169</td><td class="r">4h27m</td><td class="r neg">-$133.15</td><td style="color:var(--mut)">169 fills para perder. Re-entradas por duda.</td></tr>
+      <tr><td><span class="tk">QTEX</span></td><td class="r amb">136</td><td class="r">7h44m</td><td class="r neg">-$129.47</td><td style="color:var(--mut)">El ganador del 29, aquí peleado todo el día = rojo.</td></tr>
+      <tr><td><span class="tk">NTCL</span></td><td class="r">58</td><td class="r">3h26m</td><td class="r neg">-$168.11</td><td style="color:var(--mut)">Largo sostenido en rojo.</td></tr>
+    </tbody>
+  </table>
+  <div class="lead">Patrón claro: los nombres con <b>más fills y más horas son los que más perdieron</b>. Cuanto más peleabas, más perdías.</div>
+
+  <h2 class="s"><span class="num">05</span> Costes reales</h2>
+  <table>
+    <thead><tr><th>Concepto</th><th class="r">Importe</th><th>Nota</th></tr></thead>
+    <tbody>
+      <tr><td>Comisiones</td><td class="r neg">-$50.39</td><td style="color:var(--mut)">1685 fills</td></tr>
+      <tr><td>Rebates ECN</td><td class="r pos">+$26.83</td><td style="color:var(--mut)">solo 14% de fills añadieron liquidez</td></tr>
+      <tr><td>SEC + TAF + NSCC + CAT</td><td class="r neg">-$9.52</td><td style="color:var(--mut)">tasas regulatorias</td></tr>
+      <tr class="sum"><td>Fees netas</td><td class="r neg">-$33.08</td><td>coste (el 29 fue crédito +$1.76)</td></tr>
+    </tbody>
+  </table>
+  <div class="lead">Tomaste liquidez (mercado/persiguiendo) → pagaste comisiones. El 29, con 68% de adds, las fees fueron crédito. <b>El estilo del 28 fue más caro y más frenético.</b></div>
+
+  <h2 class="s"><span class="num">06</span> Conservar · Corregir</h2>
+  <div class="twocol">
+    <div class="kf keep"><h3>▲ Conservar</h3>
+      <div class="it"><div class="t">El edge del premarket</div><div class="x"><span class="ev">+$432 de pico antes de la apertura.</span> Otra vez. Ahí ganas.</div></div>
+      <div class="it"><div class="t">Cortos de calidad</div><div class="x">ATPC +$178, PRZO +$161, IOTR +$146, HUBC +$92. La tesis corta funciona.</div></div>
+    </div>
+    <div class="kf fix"><h3>▼ Corregir</h3>
+      <div class="it"><div class="t">SPRC: dejar de pelear un perdedor</div><div class="x"><span class="ev">-$970 en 200 fills / 7h.</span> Esto es el día entero. Stop y fuera, no promediar.</div></div>
+      <div class="it"><div class="t">Parar tras el premarket</div><div class="x">Verde +$432 a las 09:00. Todo el daño vino después. Cuando el premarket ya pagó, baja tamaño o para.</div></div>
+      <div class="it"><div class="t">ASTC + el churn</div><div class="x"><span class="ev">345 fills / 11h.</span> Más fills = más pérdida. Mata el over-trading.</div></div>
+      <div class="it"><div class="t">Largos y tomar liquidez</div><div class="x">Libro largo -$736 y solo 14% adds. Los largos no son tu edge; déjalos.</div></div>
+    </div>
+  </div>
+
+  <h2 class="s"><span class="num">07</span> Conclusión</h2>
+  <div class="cc">
+    <p>No fue un mal día de <b>ideas</b> — fue un mal día de <b>gestión</b>. Estabas <span class="hl">+$432 en premarket</span> con cortos limpios y lo convertiste en <span class="hl">-$935</span> a base de pelear SPRC, churnear ASTC y operar de más tras la apertura.</p>
+    <p class="rule">Regla del día: cuando el premarket ya ha pagado, el trabajo está hecho — reduce tamaño o cierra el día. Y un perdedor no se promedia: SPRC tenía que ser un stop, no una batalla de 7 horas.</p>
+    <p>El 29 hiciste exactamente esto bien (parar tras el premarket). El 28 es el contraejemplo. <span class="hl">Mismo edge, gestión opuesta, resultado opuesto.</span></p>
+  </div>
+
+  <div class="note"><b>Pendiente:</b> R y HTB del 28. Pásame el SOD del día (o la captura de posiciones de DAS con HTB Cost / RealR) y relleno la columna R, el neto real y la calificación por R en vez de por $.</div>
+
+  <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--ln);font-size:10px;color:var(--dim);letter-spacing:1px;display:flex;justify-content:space-between;">
+    <span>PIRATA · DILU-BITÁCORA</span><span>DAS · 1685 ejecuciones</span><span>28-05-2026</span>
+  </div>
+</div>`;
+
+// ── REGISTRO DE INFORMES SEMBRABLES (por fecha YYYY-MM-DD) ────────────────────
+// Para añadir un día nuevo: define su constante y añádela aquí. seedInformes()
+// los vuelca en D[k].informeIA si no existen y persiste en Firestore.
+const INFORMES_SEED = {
+  '2026-05-29': INFORME_29MAY_HTML,
+  '2026-05-28': INFORME_28MAY_HTML,
+};
+
+function seedInformes() {
+  let added = 0;
+  for (const k in INFORMES_SEED) {
+    if (!D[k]) D[k] = {};
+    if (!D[k].informeIA) { D[k].informeIA = INFORMES_SEED[k]; added++; }
+  }
+  if (added > 0) {
+    save();
+    console.log('📄 ' + added + ' informe(s) sembrado(s) y guardado(s) en Firestore');
+  }
+}
+
 
 async function renderPNLAnual() {
   console.log('=== INICIANDO renderPNLAnual ===');
@@ -5672,6 +6119,7 @@ function renderLongSide(monthIdx) {
   const bar = document.getElementById('loadBar');
   bar.style.width = '40%';
   await loadD();
+  seedInformes();   // siembra los informes del registro (28 y 29 may) si no existen
   bar.style.width = '100%';
   setTimeout(() => {
     document.getElementById('loadingOverlay').style.display = 'none';
