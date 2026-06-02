@@ -147,7 +147,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .prog-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:10px;}
 .prog-fill{height:100%;border-radius:4px;transition:width .8s ease;}
 /* Bottom */
-.bot{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+.bot{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .bc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;overflow:hidden;}
 .bc-t{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;}
 .srows{display:flex;flex-direction:column;gap:7px;}
@@ -437,7 +437,8 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 </div>
 
 <div class="trow">
-  <!-- Main table -->
+  <!-- Main table + mejores/peores días debajo -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;">
   <div class="card" style="flex:1;min-width:0;">
     <div class="card-hdr">
       <div class="card-ttl" id="ttl">— 2026</div>
@@ -466,14 +467,25 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
-          <th style="text-align:center;color:#7c6af7;min-width:140px;">PNL</th>
           <th style="text-align:center;color:#a855f7;min-width:70px;">INFORME</th>
+          <th style="text-align:center;color:#5bc0c4;min-width:90px;">ANÁLISIS</th>
+          <th style="text-align:center;color:#7c6af7;min-width:140px;">PNL</th>
           <th style="text-align:center;color:#e8634a;min-width:100px;">PDF</th>
         </tr></thead>
         <tbody id="mb"></tbody>
       </table>
     </div>
   </div>
+
+  <!-- 4 tarjetas en línea debajo de la tabla -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+    <div class="bc"><div class="bc-t">Estadísticas del mes</div><div class="srows" id="mStats"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
+    <div class="bc"><div class="bc-t">Progreso objetivos mensuales</div><div id="yProg"><span class="cm" style="font-size:12px">Introduce el capital inicial</span></div></div>
+    <div class="bc"><div class="bc-t">Mejores días del mes</div><div class="srows" id="bDays"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
+    <div class="bc"><div class="bc-t">Peores días del mes</div><div class="srows" id="wDays"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
+  </div>
+
+  </div><!-- end main table column -->
 
   <!-- Right column: Objectives + Avg % card -->
   <div style="display:flex;flex-direction:column;gap:14px;width:400px;flex-shrink:0;">
@@ -553,15 +565,29 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     </div>
   </div>
 
+  <!-- Gráfico 3% diario vs PNL real -->
+  <div class="card" style="width:100%;padding:20px 22px;position:relative;overflow:hidden;margin-top:0;">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--green));"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Proyección +3%/día vs PNL Neto Acumulado</div>
+      <div style="display:flex;gap:14px;align-items:center;">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="width:20px;height:2px;background:var(--gold);border-radius:2px;border:1px dashed var(--gold);"></div>
+          <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);">Objetivo 3%/día</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="width:20px;height:3px;background:var(--green);border-radius:2px;"></div>
+          <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);">PNL Neto Real</span>
+        </div>
+      </div>
+    </div>
+    <canvas id="chart3pct" style="width:100%;max-height:200px;"></canvas>
+    <div id="chart3pctInfo" style="display:flex;gap:20px;margin-top:12px;flex-wrap:wrap;"></div>
+  </div>
+
 </div><!-- end right column -->
 </div>
 
-<div class="bot">
-  <div class="bc"><div class="bc-t">Estadísticas del mes</div><div class="srows" id="mStats"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
-  <div class="bc"><div class="bc-t">Progreso objetivos mensuales</div><div id="yProg"><span class="cm" style="font-size:12px">Introduce el capital inicial</span></div></div>
-  <div class="bc"><div class="bc-t">Mejores días del mes</div><div class="srows" id="bDays"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
-  <div class="bc"><div class="bc-t">Peores días del mes</div><div class="srows" id="wDays"><span class="cm" style="font-size:12px">Sin datos</span></div></div>
-</div>
 
 <!-- ══ PANTALLA ESTADÍSTICAS ══ -->
 </div>
@@ -896,9 +922,6 @@ function renderMain() {
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
-      <td style="text-align:center;padding:4px;" class="tradely-img-cell">
-        <div class="tradely-thumb-wrap" data-key="tradely_img_${month}_${k}"></div>
-      </td>
       <td style="text-align:center;padding:4px;" class="informe-cell">
         ${(D[k]&&D[k].informeIA)
           ? `<div style="display:flex;gap:4px;justify-content:center;align-items:center;">
@@ -906,6 +929,14 @@ function renderMain() {
                <button onclick="abrirEditorInforme('${k}')" title="Editar" style="font-size:11px;line-height:1;background:transparent;border:1px solid #ffffff22;border-radius:6px;padding:3px 6px;cursor:pointer;color:var(--muted2);transition:all .15s;" onmouseover="this.style.color='var(--text)';this.style.borderColor='#ffffff55'" onmouseout="this.style.color='var(--muted2)';this.style.borderColor='#ffffff22'">✎</button>
              </div>`
           : `<button onclick="abrirEditorInforme('${k}')" title="Añadir informe" style="font-size:16px;line-height:1;background:transparent;border:1px dashed #a855f755;border-radius:6px;padding:3px 9px;cursor:pointer;color:#a855f7;transition:all .15s;" onmouseover="this.style.borderColor='#a855f7';this.style.background='#a855f715'" onmouseout="this.style.borderColor='#a855f755';this.style.background='transparent'">+</button>`}
+      </td>
+      <td style="text-align:center;padding:4px;" class="obs-cell">
+        ${(D[k]&&D[k].observaciones&&D[k].observaciones.trim())
+          ? `<button onclick="abrirObservaciones('${k}')" title="Ver/editar análisis" style="font-size:14px;line-height:1;background:transparent;border:1px solid #5bc0c455;border-radius:6px;padding:3px 8px;cursor:pointer;color:#5bc0c4;transition:all .15s;" onmouseover="this.style.borderColor='#5bc0c4';this.style.background='#5bc0c415'" onmouseout="this.style.borderColor='#5bc0c455';this.style.background='transparent'">📝</button>`
+          : `<button onclick="abrirObservaciones('${k}')" title="Añadir análisis" style="font-size:10px;letter-spacing:.5px;line-height:1;background:transparent;border:1px dashed #5bc0c440;border-radius:6px;padding:5px 8px;cursor:pointer;color:#5bc0c499;transition:all .15s;" onmouseover="this.style.borderColor='#5bc0c4';this.style.color='#5bc0c4'" onmouseout="this.style.borderColor='#5bc0c440';this.style.color='#5bc0c499'">análisis</button>`}
+      </td>
+      <td style="text-align:center;padding:4px;" class="tradely-img-cell">
+        <div class="tradely-thumb-wrap" data-key="tradely_img_${month}_${k}"></div>
       </td>
       <td style="text-align:center;padding:4px;" class="pdf-cell">
         <div class="pdf-wrap" data-key="pdf_${month}_${k}"></div>
@@ -946,6 +977,7 @@ function renderMain() {
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
+    <td></td>
     <td></td>
     <td></td>
     <td></td>
@@ -1348,6 +1380,169 @@ function renderYear() {
   } catch(e) {
     console.error('Error en renderYear:', e);
   }
+
+  // ── GRÁFICO 3%/día vs PNL NETO ACUMULADO ──────────────────────────────────
+  render3pctChart();
+}
+
+let _chart3pct = null;
+
+function render3pctChart() {
+  const canvas = document.getElementById('chart3pct');
+  const infoEl = document.getElementById('chart3pctInfo');
+  if (!canvas || !infoEl) return;
+
+  const m = MONTHS[month];
+
+  // Capital inicial del mes
+  let som = null;
+  for (let i = 0; i < m.days.length; i++) {
+    const s = pd((D[dk(m.days[i])] || {}).startOfDay);
+    if (s) { som = s; break; }
+  }
+  if (!som) {
+    if (_chart3pct) { _chart3pct.destroy(); _chart3pct = null; }
+    infoEl.innerHTML = '';
+    return;
+  }
+
+  // Construir datos día a día
+  const labels = ['INICIO'];
+  const proj   = [0];   // % ganancia proyectada compuesto 3%
+  const real   = [0];   // % ganancia real acumulada (PNL Neto)
+  let cumulPnlNeto = 0;
+  let lastRealIdx  = 0;
+
+  m.days.forEach((d, i) => {
+    const row  = D[dk(d)] || {};
+    const p    = pd(row.pnlDay);
+    const h    = pd(row.htb) || 0;
+    const sod  = pd(row.startOfDay);
+
+    labels.push(d);
+    // Proyección: (1.03)^(i+1) - 1  en %
+    proj.push(+(( Math.pow(1.03, i + 1) - 1 ) * 100).toFixed(2));
+
+    if (p !== null) {
+      cumulPnlNeto += p - h;
+      real.push(+((cumulPnlNeto / som) * 100).toFixed(2));
+      lastRealIdx = i + 1;
+    } else {
+      real.push(null); // gap — no conectar
+    }
+  });
+
+  // Calcular diferencia actual real vs proyectada
+  const latestReal = real.slice(0, lastRealIdx + 1).filter(v => v !== null).pop() ?? 0;
+  const latestProj = proj[lastRealIdx];
+  const diff       = +(latestReal - latestProj).toFixed(2);
+  const diffColor  = diff >= 0 ? '#00e676' : '#ff3d57';
+
+  // Info stats
+  infoEl.innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;flex:1;min-width:120px;">
+      <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:var(--muted2);text-transform:uppercase;margin-bottom:4px;">Real acumulado</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:${latestReal>=0?'var(--green)':'var(--red)'};">${latestReal>=0?'+':''}${latestReal.toFixed(2)}%</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">${fd(som*latestReal/100)}</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;flex:1;min-width:120px;">
+      <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:var(--muted2);text-transform:uppercase;margin-bottom:4px;">Proyección 3%/día</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--gold);">+${latestProj.toFixed(2)}%</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">${fd(som*latestProj/100)}</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid ${diffColor}33;border-radius:8px;padding:10px 14px;flex:1;min-width:120px;">
+      <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:var(--muted2);text-transform:uppercase;margin-bottom:4px;">Vs Objetivo 3%</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:${diffColor};">${diff>=0?'+':''}${diff.toFixed(2)}%</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">${diff>=0?'Por encima':'Por debajo'} del objetivo</div>
+    </div>
+  `;
+
+  // Destruir chart anterior si existe
+  if (_chart3pct) { _chart3pct.destroy(); _chart3pct = null; }
+
+  const ctx = canvas.getContext('2d');
+  _chart3pct = new Chart(ctx, {
+    type: 'line',
+    plugins: [{ id: 'noDatalabels' }],
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Proyección +3%/día',
+          data: proj,
+          borderColor: '#f5a623',
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          fill: false,
+          tension: 0.3,
+        },
+        {
+          label: 'PNL Neto Real',
+          data: real,
+          borderColor: '#00e676',
+          borderWidth: 2.5,
+          pointRadius: (ctx) => real[ctx.dataIndex] !== null ? 3 : 0,
+          pointBackgroundColor: (ctx) => {
+            const v = real[ctx.dataIndex];
+            if (v === null) return 'transparent';
+            const p = proj[ctx.dataIndex];
+            return v >= p ? '#00e676' : '#ff3d57';
+          },
+          pointHoverRadius: 5,
+          fill: false,
+          tension: 0.3,
+          spanGaps: false,
+          segment: {
+            borderColor: (ctx) => {
+              const v = ctx.p1.parsed.y;
+              const p = proj[ctx.p1DataIndex];
+              if (v === null || p === undefined) return '#00e676';
+              return v >= p ? '#00e676' : '#ff3d57';
+            }
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: { duration: 400 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+        tooltip: {
+          backgroundColor: '#111318',
+          borderColor: '#1e2530',
+          borderWidth: 1,
+          titleFont: { family: 'DM Mono', size: 10 },
+          bodyFont:  { family: 'DM Mono', size: 10 },
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.parsed.y;
+              if (v === null) return null;
+              return ` ${ctx.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid:  { color: '#1e253033' },
+          ticks: { font: { family: 'DM Mono', size: 8 }, color: '#4a5568', maxTicksLimit: 10 }
+        },
+        y: {
+          grid:  { color: '#1e253055' },
+          ticks: {
+            font: { family: 'DM Mono', size: 8 }, color: '#4a5568',
+            callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%'
+          }
+        }
+      }
+    }
+  });
 }
 
 // ── EDITORS ───────────────────────────────────────────────────────────────────
@@ -2137,24 +2332,46 @@ function abrirEditorInforme(k) {
   const displayDate = parts[2] + '/' + parts[1] + '/' + parts[0];
   const existe = !!(D[k] && D[k].informeIA);
   const actual = existe ? D[k].informeIA : '';
+  const obsActual = (D[k] && D[k].observaciones) ? D[k].observaciones.trim() : '';
 
   const bg = document.createElement('div');
   bg.style.cssText = 'position:fixed;inset:0;background:#000000dd;z-index:10001;';
 
   const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid #a855f7;border-radius:16px;width:min(820px,95vw);max-height:85vh;z-index:10002;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(168,85,247,0.3);';
+  box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid #a855f7;border-radius:16px;width:min(860px,95vw);max-height:90vh;z-index:10002;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(168,85,247,0.3);';
 
   const cerrar = () => { document.body.removeChild(bg); document.body.removeChild(box); };
   bg.onclick = cerrar;
 
+  // Datos numéricos del día
+  const row = D[k] || {};
+  const sod = pd(row.startOfDay);
+  const pnl = pd(row.pnlDay);
+  const htb = pd(row.htb) || 0;
+  const pnlNeto = pnl !== null ? pnl - htb : null;
+  const pctDay = (pnl !== null && sod && sod > 0) ? ((pnl/sod)*100).toFixed(2) : null;
+  const c = calc(sod, displayDate);
+  const rValue = (pnl !== null && c.rt) ? (pnl/c.rt).toFixed(2) : null;
+  const score = calcScore(pnl, sod, htb);
+
   box.innerHTML =
     '<div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:#a855f7;">📄 INFORME IA — ' + displayDate + '</div>' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:#a855f7;">📄 INFORME — ' + displayDate + '</div>' +
       '<button id="infCerrar" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);cursor:pointer;font-size:15px;">✕</button>' +
     '</div>' +
-    '<div style="padding:16px 22px;overflow-y:auto;">' +
-      '<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">PEGA AQUÍ EL HTML DEL INFORME (o edítalo) Y GUARDA</div>' +
-      '<textarea id="infTA" spellcheck="false" style="width:100%;min-height:300px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:11px;line-height:1.5;padding:12px;resize:vertical;"></textarea>' +
+    // SECCIÓN: Tu análisis del día
+    '<div style="padding:14px 22px 0;border-bottom:1px solid var(--border);">' +
+      '<div style="font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#5bc0c4;margin-bottom:6px;display:flex;align-items:center;gap:8px;">📝 TU ANÁLISIS DEL DÍA <span style="font-size:9px;color:var(--muted2)">(la IA lo leerá y te dirá qué mejorar)</span></div>' +
+      '<textarea id="infObs" spellcheck="true" placeholder="Escribe aquí tu análisis del día: qué hiciste bien, qué hiciste mal, cómo te sentiste, qué cambiarías... La IA lo analizará junto con los datos numéricos." style="width:100%;min-height:90px;max-height:140px;background:var(--bg3);border:1px solid #5bc0c455;border-radius:10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:12px;line-height:1.6;padding:12px;resize:vertical;outline:none;transition:border-color .15s;margin-bottom:10px;" onfocus="this.style.borderColor=\'#5bc0c4\'" onblur="this.style.borderColor=\'#5bc0c455\'">' + obsActual + '</textarea>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">' +
+        '<button id="infGenerar" style="font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:9px 20px;border-radius:9px;border:1px solid #a855f7;background:#a855f720;color:#a855f7;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;" onmouseover="this.style.background=\'#a855f7\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#a855f720\';this.style.color=\'#a855f7\'">🧠 GENERAR INFORME CON IA</button>' +
+        '<div id="infStatus" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted2);"></div>' +
+      '</div>' +
+    '</div>' +
+    // SECCIÓN: HTML del informe
+    '<div style="padding:14px 22px;overflow-y:auto;flex:1;">' +
+      '<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">HTML DEL INFORME — PEGA O EDITA MANUALMENTE</div>' +
+      '<textarea id="infTA" spellcheck="false" style="width:100%;min-height:220px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:11px;line-height:1.5;padding:12px;resize:vertical;"></textarea>' +
     '</div>' +
     '<div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">' +
       (existe ? '<button id="infBorrar" style="font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1px;padding:8px 16px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;">BORRAR</button>' : '') +
@@ -2171,6 +2388,9 @@ function abrirEditorInforme(k) {
   box.querySelector('#infGuardar').onclick = () => {
     const v = ta.value.trim();
     if (!v) { showToast('Vacío — nada que guardar'); return; }
+    // Guardar también el análisis del día si se ha modificado
+    const obsV = box.querySelector('#infObs').value.trim();
+    if (obsV && obsV !== obsActual) guardarObservaciones(k, obsV);
     guardarInformeDia(k, v);
     cerrar();
   };
@@ -2181,6 +2401,123 @@ function abrirEditorInforme(k) {
   };
   const bd = box.querySelector('#infBorrar');
   if (bd) bd.onclick = () => { borrarInformeDia(k); cerrar(); };
+
+  // ── Botón GENERAR CON IA ────────────────────────────────────────────────────
+  box.querySelector('#infGenerar').onclick = async () => {
+    const obsTexto = box.querySelector('#infObs').value.trim();
+    const statusEl = box.querySelector('#infStatus');
+    const btn = box.querySelector('#infGenerar');
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    statusEl.textContent = '⏳ Generando informe con IA...';
+
+    // Guardar el análisis del día antes de enviar
+    if (obsTexto && obsTexto !== obsActual) guardarObservaciones(k, obsTexto);
+
+    // Construir contexto numérico del día
+    const datosNumericos = [
+      sod     !== null ? `- Capital inicio (SOD): ${fd(sod)}` : '',
+      pnl     !== null ? `- PNL Bruto: ${fd(pnl)}` : '',
+      htb     > 0     ? `- HTB (Hard to Borrow): ${fd(htb)}` : '',
+      pnlNeto !== null ? `- PNL Neto: ${fd(pnlNeto)}` : '',
+      pctDay  !== null ? `- % del día: ${pctDay}%` : '',
+      rValue  !== null ? `- R conseguida: ${rValue}R` : '',
+      c.rt    ? `- Risk Trade (1% SOD): ${fd(c.rt)}` : '',
+      c.ml    ? `- Max Loss (5% SOD): ${fd(c.ml)}` : '',
+      c.t1    ? `- Target 1%: ${fd(c.t1)}` : '',
+      c.t3    ? `- Target 3%: ${fd(c.t3)}` : '',
+      score   !== null ? `- Score automático: ${score}/10` : '',
+    ].filter(Boolean).join('\n');
+
+    // Leer los trades del día si existen
+    const mi = parseInt(k.split('-')[1]) - 1;
+    const aiKey = `ai_day_${mi}_${k}`;
+    let tradesInfo = '';
+    try {
+      const raw = localStorage.getItem(aiKey);
+      if (raw) {
+        const entry = JSON.parse(raw);
+        const trades = (entry.trades || []).filter(t => t.symbol !== 'TABLA');
+        if (trades.length) {
+          tradesInfo = '\n\nTRADES DEL DÍA:\n' + trades.map(t =>
+            `- ${t.symbol} ${t.direction.toUpperCase()} · PNL: ${fd(t.pnl)} · R: ${t.realR}R`
+          ).join('\n');
+        }
+      }
+    } catch(e) {}
+
+    // Meta global: 100K para diciembre 2026
+    let capActualInfo = '';
+    if (sod !== null) {
+      const meta = 100000;
+      const faltan = meta - sod;
+      const mesesRestantes = 12 - new Date().getMonth();
+      capActualInfo = `\n\nMETA GLOBAL: llegar a $100,000 en diciembre 2026.\nCapital actual (SOD): ${fd(sod)}\nFaltan: ${fd(faltan)} en ~${mesesRestantes} meses`;
+    }
+
+    const userContent = `Fecha: ${displayDate}\n\nDATOS NUMÉRICOS DEL DÍA:\n${datosNumericos}${tradesInfo}${capActualInfo}${obsTexto ? `\n\nANÁLISIS DEL TRADER (lo que él mismo escribe sobre su día):\n"${obsTexto}"` : '\n\n(El trader no ha escrito análisis propio para este día.)'}`;
+
+    const systemPrompt = `Eres el coach de trading de PIRATA, un trader que quiere llegar a $100,000 en diciembre 2026.
+
+Tu tarea: generar un INFORME HTML del día en español, completo y directo.
+
+IMPORTANTE — Tu análisis del trader:
+- Si el trader ha escrito su propio análisis del día, LÉELO CON ATENCIÓN y:
+  1. Destaca lo que ha identificado correctamente (refuerza su autoconciencia)
+  2. Señala lo que NO ha visto o está ignorando (ciegos)
+  3. Corrige sus interpretaciones erróneas si las hay
+  4. Evalúa si su análisis es superficial o profundo
+- Sé BRUTAL pero constructivo. No le des palmaditas si comete los mismos errores.
+- Conecta siempre el día con la META de $100K en diciembre 2026.
+
+ESTRUCTURA DEL INFORME HTML:
+Genera HTML limpio (sin DOCTYPE, sin body/head) con estilos inline y CSS en un bloque <style>.
+Usa la paleta: --g:#1fd682 (verde), --r:#ff4d5e (rojo), --gold:#f5b942, fondo oscuro #0d1316.
+Incluye estas secciones:
+1. Header con fecha y PNL destacado
+2. KPIs del día (SOD, PNL Bruto, HTB, PNL Neto, % Día, R conseguida, Score)
+3. Evaluación del análisis del trader (si lo hay) — QUÉ VIO BIEN / QUÉ NO VIO / CIEGOS
+4. Métricas clave: targets alcanzados, respeto del Max Loss, gestión del HTB
+5. Conservar / Corregir (2 columnas)
+6. Progreso hacia $100K: cuánto falta, ritmo necesario, si el día ayuda o retrasa la meta
+7. Conclusión — 1 regla concreta para mañana
+
+Responde SOLO con el HTML del informe, sin explicaciones fuera del HTML.`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'anthropic-dangerous-direct-browser-ipc': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userContent }]
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      const rawHtml = data.content.map(b => b.text || '').join('');
+      // Registrar coste
+      if (data.usage) {
+        const ic = data.usage.input_tokens || 0;
+        const oc = data.usage.output_tokens || 0;
+        trackAPICost((ic/1_000_000*3)+(oc/1_000_000*15), ic, oc);
+        updateCostDisplay();
+      }
+      ta.value = rawHtml;
+      statusEl.textContent = '✅ Informe generado · revisa y guarda';
+      statusEl.style.color = 'var(--green)';
+    } catch(e) {
+      statusEl.textContent = '❌ Error: ' + e.message;
+      statusEl.style.color = 'var(--red)';
+    }
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  };
 }
 
 const INFORME_28MAY_HTML = `
@@ -2342,6 +2679,88 @@ const INFORME_28MAY_HTML = `
     <span>PIRATA · DILU-BITÁCORA</span><span>DAS · 1685 ejecuciones</span><span>28-05-2026</span>
   </div>
 </div>`;
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── OBSERVACIONES POR DÍA — campo D[k].observaciones (texto libre, Firestore) ──
+// Notas de ejecución de la sesión. Click → ver/editar lo escrito.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function guardarObservaciones(k, txt) {
+  if (!D[k]) D[k] = {};
+  D[k].observaciones = txt;
+  save();
+  renderAll();
+  showToast('✓ Análisis guardado · ' + k);
+}
+
+function borrarObservaciones(k) {
+  if (D[k] && D[k].observaciones !== undefined) {
+    delete D[k].observaciones;
+    save();
+    renderAll();
+    showToast('Análisis borrado · ' + k);
+  }
+}
+
+// Editor de texto libre: escribir / ver / guardar / borrar las observaciones del día
+function abrirObservaciones(k) {
+  const parts = k.split('-');
+  const displayDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+  const existe = !!(D[k] && D[k].observaciones && D[k].observaciones.trim());
+  const actual = existe ? D[k].observaciones : '';
+
+  const bg = document.createElement('div');
+  bg.style.cssText = 'position:fixed;inset:0;background:#000000dd;z-index:10001;';
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid #5bc0c4;border-radius:16px;width:min(680px,95vw);max-height:85vh;z-index:10002;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(91,192,196,0.25);';
+
+  const cerrar = () => { document.body.removeChild(bg); document.body.removeChild(box); };
+  bg.onclick = cerrar;
+
+  box.innerHTML =
+    '<div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:#5bc0c4;">📝 ANÁLISIS — ' + displayDate + '</div>' +
+      '<button id="obsCerrar" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);cursor:pointer;font-size:15px;">✕</button>' +
+    '</div>' +
+    '<div style="padding:16px 22px;overflow-y:auto;">' +
+      '<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">¿CÓMO HAS EJECUTADO LA SESIÓN? · La IA leerá esto al generar el informe del día</div>' +
+      '<textarea id="obsTA" spellcheck="true" placeholder="Disciplina, errores, estado mental, qué harías distinto... lo que sea. Cuanto más detallado, mejor feedback recibirás." style="width:100%;min-height:220px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:13px;line-height:1.6;padding:14px;resize:vertical;"></textarea>' +
+      '<div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;border-left:3px solid #a855f7;">' +
+        '<div style="font-family:\'DM Mono\',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;">💡 CONSEJO: guarda el análisis y luego abre el botón INFORME del día para que la IA lo analice junto con tus números y te diga qué mejorar para llegar a $100K en diciembre.</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;align-items:center;">' +
+      '<div style="display:flex;gap:8px;">' +
+        (existe ? '<button id="obsBorrar" style="font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1px;padding:8px 16px;border-radius:8px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;">BORRAR</button>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button id="obsGuardarYGenerar" style="font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1px;padding:8px 16px;border-radius:8px;border:1px solid #a855f7;background:#a855f720;color:#a855f7;cursor:pointer;transition:all .15s;" onmouseover="this.style.background=\'#a855f7\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#a855f720\';this.style.color=\'#a855f7\'">💾 GUARDAR Y ABRIR INFORME IA</button>' +
+        '<button id="obsGuardar" style="font-family:\'DM Mono\',monospace;font-size:11px;letter-spacing:1px;padding:8px 18px;border-radius:8px;border:1px solid #5bc0c4;background:#5bc0c4;color:#04211f;cursor:pointer;font-weight:600;">GUARDAR</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(bg);
+  document.body.appendChild(box);
+
+  const ta = box.querySelector('#obsTA');
+  ta.value = actual;
+  setTimeout(() => ta.focus(), 50);
+  box.querySelector('#obsCerrar').onclick = cerrar;
+  box.querySelector('#obsGuardar').onclick = () => {
+    guardarObservaciones(k, ta.value.trim());
+    cerrar();
+  };
+  box.querySelector('#obsGuardarYGenerar').onclick = () => {
+    const v = ta.value.trim();
+    guardarObservaciones(k, v);
+    cerrar();
+    // Pequeño delay para que se cierre el modal y se guarde
+    setTimeout(() => abrirEditorInforme(k), 200);
+  };
+  const bd = box.querySelector('#obsBorrar');
+  if (bd) bd.onclick = () => { borrarObservaciones(k); cerrar(); };
+}
 
 // ── REGISTRO DE INFORMES SEMBRABLES (por fecha YYYY-MM-DD) ────────────────────
 // Para añadir un día nuevo: define su constante y añádela aquí. seedInformes()
@@ -7819,15 +8238,16 @@ function closeAnalizarPNLModal() {
 
 function simulacion3PctMayo() {
   try {
-    // Obtener datos de mayo (mes 4)
-    const m = MONTHS[4];
+    // Detectar mes actual automáticamente
+    const mesActualIdx = new Date().getMonth(); // 0-based
+    const m = MONTHS[mesActualIdx];
     
     if (!m || !m.days || m.days.length === 0) {
-      alert('No hay datos para mayo');
+      alert('No hay datos para el mes actual');
       return;
     }
     
-    // Calcular capital inicial
+    // Capital inicial = primer SOD del mes actual
     let capitalInicial = null;
     for (let d of m.days) {
       const row = D[dk(d)] || {};
@@ -7839,7 +8259,7 @@ function simulacion3PctMayo() {
     }
     
     if (!capitalInicial) {
-      alert('No se encontró capital inicial para mayo');
+      alert('No se encontró capital inicial para ' + m.name + '. Asegúrate de tener el Start of Day del primer día del mes.');
       return;
     }
     
@@ -7849,7 +8269,7 @@ function simulacion3PctMayo() {
     let diasCon5Pct = 0;
     let totalDiasConDatos = 0;
     
-    for (let monthIdx = 0; monthIdx <= month; monthIdx++) {
+    for (let monthIdx = 0; monthIdx <= mesActualIdx; monthIdx++) {
       const mes = MONTHS[monthIdx];
       if (!mes || !mes.days) continue;
       
@@ -7921,9 +8341,7 @@ function simulacion3PctMayo() {
     tableHTML += '<th style="padding:8px;text-align:right;color:#ff8a8a;">Risk Trade</th>';
     tableHTML += '<th style="padding:8px;text-align:right;color:var(--yellow);">Target 3%</th>';
     tableHTML += '<th style="padding:8px;text-align:right;color:var(--gold);">Setup</th>';
-    tableHTML += '<th style="padding:8px;text-align:center;color:#a855f7;">P</th>';
-    tableHTML += '<th style="padding:8px;text-align:center;color:#a855f7;">MKT</th>';
-    tableHTML += '<th style="padding:8px;text-align:center;color:#a855f7;">A</th>';
+    tableHTML += '<th style="padding:8px;text-align:center;color:#00e676;">+3R REAL</th>';
     tableHTML += '<th style="padding:8px;text-align:right;color:var(--green);">PNL</th>';
     tableHTML += '<th style="padding:8px;text-align:right;color:var(--green);">%</th>';
     tableHTML += '<th style="padding:8px;text-align:right;color:var(--blue);">R</th>';
@@ -7941,9 +8359,15 @@ function simulacion3PctMayo() {
       tableHTML += `<td style="padding:6px 8px;text-align:right;color:#ff8a8a;">${fd(r.rt)}</td>`;
       tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--yellow);">${fd(r.t3)}</td>`;
       tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--gold);">${fd(r.sb)}</td>`;
-      tableHTML += `<td style="padding:6px 8px;text-align:center;">☐</td>`;
-      tableHTML += `<td style="padding:6px 8px;text-align:center;">☐</td>`;
-      tableHTML += `<td style="padding:6px 8px;text-align:center;">☐</td>`;
+      const realRow = D[dk(r.fecha)] || {};
+      const realPnl = pd(realRow.pnlDay);
+      const realSod = pd(realRow.startOfDay) || r.sod;
+      const realRt = realSod * 0.01;
+      const realR = (realPnl !== null && realRt > 0) ? realPnl / realRt : null;
+      const hecho = realR !== null && realR >= 3;
+      const hechoTxt = realR !== null ? (hecho ? '✅ HECHO' : realR.toFixed(2) + 'R') : '—';
+      const hechoColor = realR !== null ? (hecho ? '#00e676' : '#ff8a8a') : 'var(--muted2)';
+      tableHTML += `<td style="padding:6px 8px;text-align:center;font-weight:${hecho?'700':'400'};color:${hechoColor};">${hechoTxt}</td>`;
       tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--green);">+${fd(r.pnl)}</td>`;
       tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--green);">+${r.pct.toFixed(2)}%</td>`;
       tableHTML += `<td style="padding:6px 8px;text-align:right;color:var(--blue);">+${r.r.toFixed(2)}R</td>`;
@@ -7958,9 +8382,13 @@ function simulacion3PctMayo() {
     tableHTML += `<td style="padding:8px;text-align:right;color:#ff8a8a;">${fd(rtProm)}</td>`;
     tableHTML += `<td style="padding:8px;text-align:right;color:var(--yellow);">${fd(t3Prom)}</td>`;
     tableHTML += `<td style="padding:8px;text-align:right;color:var(--gold);">${fd(sbProm)}</td>`;
-    tableHTML += `<td style="padding:8px;text-align:center;">—</td>`;
-    tableHTML += `<td style="padding:8px;text-align:center;">—</td>`;
-    tableHTML += `<td style="padding:8px;text-align:center;">—</td>`;
+    const diasHecho = resultados.filter(r => {
+      const rr = D[dk(r.fecha)] || {};
+      const rp = pd(rr.pnlDay); const rs = pd(rr.startOfDay) || r.sod;
+      return rp !== null && rs > 0 && (rp / (rs * 0.01)) >= 3;
+    }).length;
+    const diasConDatosReal = resultados.filter(r => pd((D[dk(r.fecha)]||{}).pnlDay) !== null).length;
+    tableHTML += `<td style="padding:8px;text-align:center;color:#00e676;font-weight:700;">${diasHecho}/${diasConDatosReal} días</td>`;
     tableHTML += `<td style="padding:8px;text-align:right;color:var(--green);">+${fd(pnlSum)}</td>`;
     tableHTML += `<td style="padding:8px;text-align:right;color:var(--green);">+${pctSum.toFixed(2)}%</td>`;
     tableHTML += `<td style="padding:8px;text-align:right;color:var(--blue);">+${rSum.toFixed(2)}R</td>`;
@@ -8014,7 +8442,7 @@ function simulacion3PctMayo() {
       </div>
 
       <div style="background:#1a3a5f;border:1px solid #00b0ff;border-radius:8px;padding:12px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text);line-height:1.6;">
-        <strong style="color:#00b0ff;">💡 CONCLUSIÓN:</strong> Con +3% compuesto ${resultados.length} días en mayo = <strong style="color:var(--green);">+${pctGanancia.toFixed(2)}%</strong> de ganancias. 
+        <strong style="color:#00b0ff;">💡 CONCLUSIÓN:</strong> Con +3% compuesto ${resultados.length} días en ${m.name} = <strong style="color:var(--green);">+${pctGanancia.toFixed(2)}%</strong> de ganancias. 
         <br><strong style="color:#f5a623;">Realidad:</strong> Desde enero solo alcanzaste +3% en ${diasCon3Pct} de ${totalDiasConDatos} días operados. Esa es la brecha a cerrar.
       </div>
     `;
