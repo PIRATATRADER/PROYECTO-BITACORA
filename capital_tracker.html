@@ -159,6 +159,44 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .prog-t{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;}
 .prog-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold),#ffcc02);transition:width 1s ease;}
 
+/* ── OBJETIVO / AFTER-HOURS OVERLAYS ── */
+#objetivoOverlay,#afterHoursOverlay{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,.88);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;
+  animation:fadeInOv .35s ease;
+}
+#objetivoOverlay.show,#afterHoursOverlay.show{display:flex;}
+@keyframes fadeInOv{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+.ov-box{
+  max-width:560px;width:90%;border-radius:20px;padding:40px 44px;
+  background:#0a0c0f;border:1px solid #1e2530;
+  box-shadow:0 0 80px rgba(0,230,118,.18);
+  text-align:center;position:relative;
+}
+.ov-box.obj{border-color:#00e676;box-shadow:0 0 80px rgba(0,230,118,.25);}
+.ov-box.after{border-color:#f5a623;box-shadow:0 0 80px rgba(245,166,35,.2);}
+.ov-emoji{font-size:64px;margin-bottom:16px;line-height:1;}
+.ov-title{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:3px;margin-bottom:10px;}
+.ov-box.obj .ov-title{color:#00e676;}
+.ov-box.after .ov-title{color:#f5a623;}
+.ov-sub{font-family:'DM Mono',monospace;font-size:13px;color:#7a8599;line-height:1.7;margin-bottom:8px;}
+.ov-pnl{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:2px;color:#00e676;margin:8px 0 20px;}
+.ov-msg{font-family:'DM Mono',monospace;font-size:12px;color:#c6d2d5;line-height:1.8;
+  background:#111318;border:1px solid #1e2530;border-radius:12px;
+  padding:16px 20px;margin-bottom:24px;text-align:left;}
+.ov-msg b{color:#dfe7e9;}
+.ov-close{
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:10px 28px;border-radius:10px;border:none;cursor:pointer;transition:all .15s;
+}
+.ov-box.obj .ov-close{background:#00e676;color:#04140c;}
+.ov-box.obj .ov-close:hover{background:#00ff88;}
+.ov-box.after .ov-close{background:#f5a623;color:#0a0c0f;}
+.ov-box.after .ov-close:hover{background:#ffc84a;}
+.ov-dismiss{font-family:'DM Mono',monospace;font-size:10px;color:#4a5568;background:transparent;border:none;cursor:pointer;margin-top:12px;display:block;width:100%;text-align:center;}
+.ov-dismiss:hover{color:#7a8599;}
+
 /* Trade image cell */
 .trade-thumb-wrap{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
 .tradely-thumb-wrap{display:flex;align-items:center;justify-content:center;width:100%;min-height:36px;}
@@ -467,6 +505,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
+          <th style="text-align:center;color:#00e676;min-width:50px;" title="Objetivo: PNL ≥ 3R + HTB + 1% SOD">OBJ</th>
           <th style="text-align:center;color:#a855f7;min-width:70px;">INFORME</th>
           <th style="text-align:center;color:#5bc0c4;min-width:90px;">ANÁLISIS</th>
           <th style="text-align:center;color:#7c6af7;min-width:140px;">PNL</th>
@@ -873,7 +912,7 @@ function renderMain() {
     // Check if this day is a holiday
     const hol = HOLIDAYS[d];
     if (hol) {
-      const colCount = 18; // total columns in table
+      const colCount = 19; // total columns in table
       rows += `<tr class="tr-holiday">
         <td>${d}</td>
         <td colspan="${colCount - 1}" style="text-align:left;padding-left:12px">
@@ -900,6 +939,9 @@ function renderMain() {
     const rNum = (pnl!==null&&c.rt) ? (pnl/c.rt) : null;
     if(rNum!==null){ rSum+=rNum; rCount++; }
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
+    // OBJ: PNL >= 3×RT + HTB + 1% SOD
+    const objTarget = (sod && c.rt) ? (3 * c.rt + (htb||0) + sod * 0.01) : null;
+    const objMet = (pnl !== null && objTarget !== null) ? (pnl >= objTarget) : null;
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
 
     // JUNIO (mes 6): Sin coloreado especial
@@ -922,6 +964,7 @@ function renderMain() {
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
+      <td style="text-align:center;font-size:18px;padding:4px;" title="${objTarget!==null?'Objetivo: '+fd(objTarget):'Sin datos'}">${objMet===null?'':objMet?'✅':'❌'}</td>
       <td style="text-align:center;padding:4px;" class="informe-cell">
         ${(D[k]&&D[k].informeIA)
           ? `<div style="display:flex;gap:4px;justify-content:center;align-items:center;">
@@ -946,12 +989,18 @@ function renderMain() {
 
   // Total row — promedios de Setup DATA, A, B, C basados en SOD promedio
   // Contar checkboxes P, MKT, A
-  let countP = 0, countMKT = 0, countA = 0;
+  let countP = 0, countMKT = 0, countA = 0, countObjMet = 0, countObjDays = 0;
   m.days.forEach(d => {
     const row = D[dk(d)] || {};
     if (row.chk_p) countP++;
     if (row.chk_mkt) countMKT++;
     if (row.chk_a) countA++;
+    const _pnl = pd(row.pnlDay), _sod = pd(row.startOfDay), _htb = pd(row.htb)||0;
+    const _c = calc(_sod, d);
+    if (_pnl !== null && _sod && _c.rt) {
+      countObjDays++;
+      if (_pnl >= 3 * _c.rt + _htb + _sod * 0.01) countObjMet++;
+    }
   });
   
   const tc=pnlTotal>0?'pp':pnlTotal<0?'pn':'';
@@ -977,6 +1026,7 @@ function renderMain() {
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
+    <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);">${countObjDays>0?countObjMet+'/'+countObjDays:''}</td>
     <td></td>
     <td></td>
     <td></td>
@@ -1562,6 +1612,7 @@ function attachEd() {
         if(v==='') delete D[k][f]; else D[k][f]=v;
         syncAIDayFromTable(k, f);
         save(); renderAll(); showToast('✓ Guardado');
+        if (f === 'pnlDay' || f === 'htb') checkObjetivoAlert(k);
       };
       inp.addEventListener('blur',commit);
       inp.addEventListener('keydown',e=>{
@@ -2762,12 +2813,592 @@ function abrirObservaciones(k) {
   if (bd) bd.onclick = () => { borrarObservaciones(k); cerrar(); };
 }
 
+// ── INFORME 01 JUN 2026 ───────────────────────────────────────────────────────
+const INFORME_01JUN_HTML = `
+<div class="i01j" style="--g:#1fd682;--r:#ff4d5e;--gold:#f5b942;--short:#ff8a3d;--long:#39c0ff;--mut:#7d8f95;--dim:#54656b;--ln:#1d2a30;--pan:#0d1316;color:#dfe7e9;font-family:'DM Mono',ui-monospace,monospace;max-width:1040px;margin:0 auto;line-height:1.55;">
+  <style>
+    .i01j h2.s{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#dfe7e9;margin:30px 0 14px;display:flex;align-items:baseline;gap:12px}
+    .i01j .num{font-size:11px;color:var(--g);border:1px solid #0f7a4c;border-radius:6px;padding:2px 7px}
+    .i01j .kp{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#162227;border:1px solid var(--ln);border-radius:12px;overflow:hidden;margin:14px 0 8px}
+    .i01j .kp>div{background:var(--pan);padding:13px 14px}
+    .i01j .kp .l{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+    .i01j .kp .v{font-size:18px;font-weight:700}
+    .i01j .kp .v small{font-size:10px;color:var(--mut)}
+    .i01j .pos{color:var(--g)} .i01j .neg{color:var(--r)} .i01j .amb{color:var(--gold)}
+    .i01j .ov{background:var(--pan);border:1px solid var(--ln);border-left:3px solid var(--g);border-radius:12px;padding:18px 20px;font-size:13px;color:#c6d2d5}
+    .i01j .ov b{color:#dfe7e9}
+    .i01j table{width:100%;border-collapse:collapse;font-size:12.5px}
+    .i01j th{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:left;padding:9px 10px;border-bottom:1px solid var(--ln);font-weight:500}
+    .i01j th.r,.i01j td.r{text-align:right}
+    .i01j td{padding:7px 10px;border-bottom:1px solid #162227}
+    .i01j .tk{font-weight:700;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px}
+    .i01j .pill{font-size:9px;padding:2px 6px;border-radius:5px}
+    .i01j .pill.s{color:var(--short);background:rgba(255,138,61,.1);border:1px solid rgba(255,138,61,.3)}
+    .i01j .pill.m{color:var(--long);background:rgba(57,192,255,.1);border:1px solid rgba(57,192,255,.3)}
+    .i01j .gr{font-weight:800;font-size:12px;padding:2px 7px;border-radius:6px}
+    .i01j .ap{color:#04140c;background:var(--g)} .i01j .a{color:var(--g);border:1px solid #0f7a4c} .i01j .b{color:var(--gold);border:1px solid rgba(245,185,66,.35)} .i01j .c{color:var(--mut);border:1px solid var(--ln)} .i01j .d{color:var(--r);border:1px solid #7a1f2c}
+    .i01j .sum td{border-top:2px solid var(--ln);font-weight:800;background:rgba(31,214,130,.05)}
+    .i01j .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}
+    .i01j .sc{background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:16px 18px}
+    .i01j .big{font-size:26px;font-weight:800}
+    .i01j .meter{height:7px;border-radius:6px;background:var(--ln);margin:12px 0 6px;overflow:hidden}
+    .i01j .meter i{display:block;height:100%}
+    .i01j .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+    .i01j .kf{border-radius:12px;padding:16px 18px;border:1px solid var(--ln)}
+    .i01j .keep{border-left:3px solid var(--g)} .i01j .fix{border-left:3px solid var(--r)}
+    .i01j .kf h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+    .i01j .keep h3{color:var(--g)} .i01j .fix h3{color:var(--r)}
+    .i01j .it{margin-bottom:12px} .i01j .it .t{font-weight:600;color:#dfe7e9;margin-bottom:3px}
+    .i01j .it .x{color:var(--mut);font-size:12px} .i01j .ev{color:var(--gold)}
+    .i01j .cc{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:22px 24px;font-size:13.5px;color:#c6d2d5}
+    .i01j .cc p{margin-bottom:12px} .i01j .hl{color:var(--gold)} .i01j .cc .rule{color:#dfe7e9;font-weight:600}
+    .i01j .chart{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:16px}
+    .i01j svg{width:100%;height:auto;display:block}
+    .i01j .lead{color:var(--mut);font-size:12.5px;margin-top:10px}
+    .i01j .lead b{color:#dfe7e9}
+    .i01j .alert{background:rgba(255,77,94,.08);border:1px solid rgba(255,77,94,.3);border-left:3px solid var(--r);border-radius:12px;padding:14px 18px;margin:8px 0;font-size:12.5px;color:#c6d2d5}
+    .i01j .alert b{color:#ff8a8a}
+    .i01j .badge-g{display:inline-block;background:rgba(31,214,130,.12);border:1px solid #0f7a4c;border-radius:6px;padding:2px 8px;font-size:10px;color:var(--g);margin-left:8px}
+    .i01j .badge-r{display:inline-block;background:rgba(255,77,94,.12);border:1px solid #7a1f2c;border-radius:6px;padding:2px 8px;font-size:10px;color:var(--r);margin-left:8px}
+    .i01j .bar-row{margin-bottom:10px}
+    .i01j .bar-row .bar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px}
+    .i01j .bar-row .bar-track{height:6px;background:var(--ln);border-radius:4px;overflow:hidden}
+    .i01j .bar-row .bar-fill{height:100%;border-radius:4px}
+  </style>
+
+  <!-- HEADER -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--ln);padding-bottom:16px;">
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:#a855f7;">PIRATA · INFORME 01 JUN</div>
+      <div style="font-size:10px;letter-spacing:2px;color:var(--mut);">TRADELY · 35 POSICIONES · 27 TICKERS DISTINTOS</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:30px;font-weight:800;color:var(--g);">+$966.06</div>
+      <div style="font-size:9px;letter-spacing:2px;color:var(--dim);">NETO ESTIMADO · 9.84R</div>
+    </div>
+  </div>
+
+  <!-- KP GRID -->
+  <div class="kp">
+    <div><div class="l">Realizado bruto</div><div class="v pos">+$1,099.29</div></div>
+    <div><div class="l">HTB (borrow)</div><div class="v neg">-$133.24</div></div>
+    <div><div class="l">Neto estimado</div><div class="v pos">+$966.05</div></div>
+    <div><div class="l">R · WR</div><div class="v">9.84R <small>77.1%</small></div></div>
+    <div><div class="l">Posiciones</div><div class="v amb">35</div></div>
+    <div><div class="l">Tickers</div><div class="v amb">27</div></div>
+  </div>
+
+  <!-- 00 DESCRIPCIÓN GENERAL -->
+  <h2 class="s"><span class="num">00</span> Descripción general</h2>
+  <div class="ov">
+    Día de gran resultado: <b>+$1,099.29 bruto (9.84R)</b>, neto estimado <b>+$966.05</b> tras descontar HTB de $133.24.
+    El motor fue exclusivamente el <b>lado corto: +$1,112.90 neto (81.5% WR sobre 27 posiciones)</b>.
+    El margin quedó prácticamente plano con -$13.61, siendo TGHL Margin (-$200.97) la única posición que lo arrastró a negativo.
+    Se operaron <b>27 tickers distintos en 35 posiciones</b> — la dispersión más alta del mes hasta la fecha.
+    Las dos grandes trampas (TGHL combinado <b>-$218.72</b> y AIIO <b>-$175.60</b>) sumaron <b>-$394.32</b>;
+    sin ese lastre el bruto habría sido <b>+$1,493.61</b>.
+    CTNT fue el ticker del día: <b>+$228.84 entre Short y Margin (2.05R combinados, 20.8% del día)</b>.
+  </div>
+
+  <!-- 01 WINNERS vs LOSERS -->
+  <h2 class="s"><span class="num">01</span> Winners vs Losers — resultado bruto</h2>
+  <div class="chart">
+    <svg viewBox="0 0 980 220" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="i01wg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1fd682" stop-opacity="0.85"/>
+          <stop offset="100%" stop-color="#0f7a4c" stop-opacity="0.55"/>
+        </linearGradient>
+        <linearGradient id="i01lg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff4d5e" stop-opacity="0.75"/>
+          <stop offset="100%" stop-color="#7a1f2c" stop-opacity="0.4"/>
+        </linearGradient>
+        <linearGradient id="i01ng" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f5b942" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#9a7219" stop-opacity="0.5"/>
+        </linearGradient>
+      </defs>
+      <!-- Grid -->
+      <line x1="0" y1="175" x2="980" y2="175" stroke="#1d2a30"/>
+      <line x1="0" y1="110" x2="980" y2="110" stroke="#162227" stroke-dasharray="3 5"/>
+      <line x1="0" y1="45" x2="980" y2="45" stroke="#162227" stroke-dasharray="3 5"/>
+      <text x="8" y="178" fill="#54656b" font-size="10">$0</text>
+      <text x="8" y="108" fill="#54656b" font-size="10">$875</text>
+      <text x="8" y="43" fill="#54656b" font-size="10">$1,750</text>
+      <!-- WINNERS bar: $1748.54 → 175px altura -->
+      <rect x="70" y="0" width="280" height="175" rx="5" fill="url(#i01wg)"/>
+      <text x="210" y="22" fill="#1fd682" font-size="14" font-weight="800" text-anchor="middle">+$1,748.54</text>
+      <text x="210" y="38" fill="#7d8f95" font-size="10" text-anchor="middle">27 WINNERS</text>
+      <!-- LOSERS bar: $649.25 → 649/1748*175 = 65px -->
+      <rect x="420" y="110" width="280" height="65" rx="5" fill="url(#i01lg)"/>
+      <text x="560" y="105" fill="#ff8a8a" font-size="14" font-weight="800" text-anchor="middle">-$649.25</text>
+      <text x="560" y="121" fill="#7d8f95" font-size="10" text-anchor="middle">8 LOSERS</text>
+      <!-- NET bar: $1099.29 → 1099/1748*175 = 110px -->
+      <rect x="770" y="65" width="180" height="110" rx="5" fill="url(#i01ng)"/>
+      <text x="860" y="60" fill="#f5b942" font-size="14" font-weight="800" text-anchor="middle">+$1,099.29</text>
+      <text x="860" y="76" fill="#7d8f95" font-size="10" text-anchor="middle">RESULTADO NETO BRUTO</text>
+      <!-- X labels -->
+      <text x="210" y="200" fill="#54656b" font-size="11" text-anchor="middle">WINNERS</text>
+      <text x="560" y="200" fill="#54656b" font-size="11" text-anchor="middle">LOSERS</text>
+      <text x="860" y="200" fill="#54656b" font-size="11" text-anchor="middle">RESULTADO</text>
+    </svg>
+  </div>
+  <div class="lead"><b>Asimetría positiva 2.69:1</b>: por cada $1 perdido se ganaron $2.69. Sin los dos grandes losers (TGHL + AIIO = -$394.32) el ratio habría sido <b>9.1:1</b>.</div>
+
+  <!-- 02 CORTO vs MARGIN -->
+  <h2 class="s"><span class="num">02</span> Corto vs Margin</h2>
+  <div class="split">
+    <div class="sc">
+      <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--short);margin-bottom:10px;">CORTOS</div>
+      <div class="big pos">+$1,112.90 <small style="font-size:12px;color:var(--mut)">~10.0R</small></div>
+      <div class="meter"><i style="width:81.5%;background:linear-gradient(90deg,#ff8a3d,#c95e1d)"></i></div>
+      <div style="font-size:11px;color:var(--mut);display:flex;justify-content:space-between"><span>81.5% WR · 22W / 5L · 27 pos</span><span>HTB: -$133.24</span></div>
+    </div>
+    <div class="sc">
+      <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--long);margin-bottom:10px;">MARGIN (LONG)</div>
+      <div class="big neg">-$13.61 <small style="font-size:12px;color:var(--mut)">-0.12R</small></div>
+      <div class="meter"><i style="width:62.5%;background:linear-gradient(90deg,#39c0ff,#1d76c9)"></i></div>
+      <div style="font-size:11px;color:var(--mut);display:flex;justify-content:space-between"><span>62.5% WR · 5W / 3L · 8 pos</span><span>sin borrow</span></div>
+    </div>
+  </div>
+  <div class="lead">El corto fue el motor absoluto del día. El margin sumó 5 winners pero TGHL Margin (-$200.97) se comió toda la ganancia del lado largo y más. <b>El margin como vehículo de pérdida grande: atención.</b></div>
+
+  <!-- 03 DESGLOSE COMPLETO -->
+  <h2 class="s"><span class="num">03</span> Desglose por posición <span class="badge-g">27 WINNERS</span><span class="badge-r">8 LOSERS</span></h2>
+  <table>
+    <thead>
+      <tr><th>Ticker</th><th>Lado</th><th class="r">Realizado</th><th class="r">R</th><th class="r">% día</th><th>Calif.</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="tk">SOAR</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$160.62</td><td class="r pos">+1.44R</td><td class="r">14.6%</td><td><span class="gr ap">A+</span></td></tr>
+      <tr><td><span class="tk">CTNT</span></td><td><span class="pill m">MARGIN</span></td><td class="r pos">+$115.23</td><td class="r pos">+1.03R</td><td class="r">10.5%</td><td><span class="gr ap">A+</span></td></tr>
+      <tr><td><span class="tk">CTNT</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$113.61</td><td class="r pos">+1.02R</td><td class="r">10.3%</td><td><span class="gr ap">A+</span></td></tr>
+      <tr><td><span class="tk">HKIT</span></td><td><span class="pill m">MARGIN</span></td><td class="r pos">+$124.00</td><td class="r pos">+1.11R</td><td class="r">11.3%</td><td><span class="gr ap">A+</span></td></tr>
+      <tr><td><span class="tk">JZ</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$120.82</td><td class="r pos">+1.08R</td><td class="r">11.0%</td><td><span class="gr ap">A+</span></td></tr>
+      <tr><td><span class="tk">HCWC</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$91.20</td><td class="r pos">+0.82R</td><td class="r">8.3%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">MSGY</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$89.11</td><td class="r pos">+0.80R</td><td class="r">8.1%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">EEIQ</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$85.85</td><td class="r pos">+0.77R</td><td class="r">7.8%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">LIQT</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$82.53</td><td class="r pos">+0.74R</td><td class="r">7.5%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">ZJYL</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$80.56</td><td class="r pos">+0.72R</td><td class="r">7.3%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">SPCE</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$70.22</td><td class="r pos">+0.63R</td><td class="r">6.4%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">SUUN</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$67.67</td><td class="r pos">+0.61R</td><td class="r">6.2%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">FOFO</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$65.76</td><td class="r pos">+0.59R</td><td class="r">6.0%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">MASK</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$59.51</td><td class="r pos">+0.53R</td><td class="r">5.4%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">JZXN</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$59.47</td><td class="r pos">+0.53R</td><td class="r">5.4%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">ABTS</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$56.33</td><td class="r pos">+0.50R</td><td class="r">5.1%</td><td><span class="gr a">A</span></td></tr>
+      <tr><td><span class="tk">CRE</span></td><td><span class="pill m">MARGIN</span></td><td class="r pos">+$49.97</td><td class="r pos">+0.45R</td><td class="r">4.5%</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">SEGG</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$41.38</td><td class="r pos">+0.37R</td><td class="r">3.8%</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">GOVX</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$40.29</td><td class="r pos">+0.36R</td><td class="r">3.7%</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">HCWB</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$36.77</td><td class="r pos">+0.33R</td><td class="r">3.3%</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">EQ</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$32.61</td><td class="r pos">+0.29R</td><td class="r">3.0%</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">DBGI</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$32.37</td><td class="r pos">+0.29R</td><td class="r">2.9%</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">SBEV</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$28.97</td><td class="r pos">+0.26R</td><td class="r">2.6%</td><td><span class="gr b">B</span></td></tr>
+      <tr><td><span class="tk">VSA</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$21.70</td><td class="r pos">+0.19R</td><td class="r">2.0%</td><td><span class="gr c">C</span></td></tr>
+      <tr><td><span class="tk">FOFO</span></td><td><span class="pill m">MARGIN</span></td><td class="r pos">+$16.24</td><td class="r pos">+0.15R</td><td class="r">1.5%</td><td><span class="gr c">C</span></td></tr>
+      <tr><td><span class="tk">WALD</span></td><td><span class="pill m">MARGIN</span></td><td class="r pos">+$4.75</td><td class="r pos">+0.04R</td><td class="r">0.4%</td><td><span class="gr c">Baby</span></td></tr>
+      <tr><td><span class="tk">EZRA</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$1.00</td><td class="r pos">+0.01R</td><td class="r">0.1%</td><td><span class="gr c">Baby</span></td></tr>
+      <tr style="border-top:2px solid rgba(255,77,94,0.4)"><td><span class="tk">AIM</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$5.52</td><td class="r neg">-0.05R</td><td class="r">-0.5%</td><td><span class="gr c">C-</span></td></tr>
+      <tr><td><span class="tk">TGHL</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$17.75</td><td class="r neg">-0.16R</td><td class="r">-1.6%</td><td><span class="gr d">D</span></td></tr>
+      <tr><td><span class="tk">ASTC</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$40.82</td><td class="r neg">-0.37R</td><td class="r">-3.7%</td><td><span class="gr d">D</span></td></tr>
+      <tr><td><span class="tk">ANY</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$54.58</td><td class="r neg">-0.49R</td><td class="r">-5.0%</td><td><span class="gr d">D</span></td></tr>
+      <tr><td><span class="tk">DXST</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$72.00</td><td class="r neg">-0.64R</td><td class="r">-6.5%</td><td><span class="gr d">D</span></td></tr>
+      <tr><td><span class="tk">MASK</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$82.01</td><td class="r neg">-0.73R</td><td class="r">-7.5%</td><td><span class="gr d">D</span></td></tr>
+      <tr><td><span class="tk">AIIO</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$175.60</td><td class="r neg">-1.57R</td><td class="r">-16.0%</td><td><span class="gr d">D</span></td></tr>
+      <tr><td><span class="tk">TGHL</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$200.97</td><td class="r neg">-1.80R</td><td class="r">-18.3%</td><td><span class="gr d">D</span></td></tr>
+      <tr class="sum"><td colspan="2">SUMMARY · 27 tickers · 35 posiciones</td><td class="r pos">+$1,099.29</td><td class="r pos">9.84R</td><td class="r">100%</td><td>WR 77.1%</td></tr>
+    </tbody>
+  </table>
+  <div class="lead">Las 5 posiciones A+ generaron <b>+$734.28 (66.8%)</b> del total. Las 2 peores (TGHL Margin + AIIO) representaron <b>-$376.57 = -34.3%</b> del bruto total generado.</div>
+
+  <!-- 04 LAS DOS GRANDES TRAMPAS -->
+  <h2 class="s"><span class="num">04</span> Las dos grandes pérdidas del día</h2>
+  <div class="alert">
+    <b>TGHL — Doble posición, resultado combinado: -$218.72 (-1.96R)</b><br><br>
+    Jugaste TGHL por dos vías simultáneas: Short (-$17.75, -0.16R) y Margin (-$200.97, -1.80R).
+    La línea Margin fue la mayor pérdida del día. TGHL fue el único ticker con rojo en ambos lados.
+    Pregunta clave: <b>¿eran dos ideas distintas o el mismo trade desdoblado?</b>
+    Si era el mismo setup, el riesgo combinado superó 1 unidad de riesgo sin querer. Si eran ideas distintas, hay que revisar por qué las dos fallaron en el mismo ticker.
+  </div>
+  <div class="alert" style="margin-top:8px;">
+    <b>AIIO Short — -$175.60 (-1.57R)</b><br><br>
+    Segunda pérdida más grande del día. Con 1R = ~$111.76, perder 1.57R significa que la posición se fue 57% más allá del riesgo planificado o el stop no se ejecutó a tiempo.
+    Con el día ya claramente verde, la tentación de aguantar "por si gira" es real — pero aquí costó $175.
+    <b>¿Estaba dentro del plan o fue un trade de revenge/hope?</b>
+  </div>
+  <div class="lead">Sin TGHL + AIIO: bruto <b>+$1,493.61</b>, R <b>+13.37R</b>. Estas dos posiciones consumieron el <b>35.8% del beneficio bruto generado</b>. Son el foco de mejora 1 del mes.</div>
+
+  <!-- 05 CONCENTRACIÓN -->
+  <h2 class="s"><span class="num">05</span> Concentración — top ideas del día</h2>
+  <div style="background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:18px 20px;">
+    <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:14px;">Contribución al bruto total ($1,099.29)</div>
+    <div class="bar-row">
+      <div class="bar-label"><span style="color:#dfe7e9;font-weight:600">CTNT (Short + Margin)</span><span class="pos">+$228.84 · 20.8%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:20.8%;background:linear-gradient(90deg,#1fd682,#0f7a4c)"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"><span style="color:#dfe7e9;font-weight:600">SOAR Short</span><span class="pos">+$160.62 · 14.6%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:14.6%;background:linear-gradient(90deg,#1fd682,#0f7a4c)"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"><span style="color:#dfe7e9;font-weight:600">HKIT Margin</span><span class="pos">+$124.00 · 11.3%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:11.3%;background:linear-gradient(90deg,#39c0ff,#1d76c9)"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"><span style="color:#dfe7e9;font-weight:600">JZ Short</span><span class="pos">+$120.82 · 11.0%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:11.0%;background:linear-gradient(90deg,#1fd682,#0f7a4c)"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"><span style="color:#dfe7e9;font-weight:600">HCWC + MSGY + EEIQ</span><span class="pos">+$271.16 · 24.7%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:24.7%;background:linear-gradient(90deg,#f5b942,#9a7219)"></div></div>
+    </div>
+    <div style="height:1px;background:var(--ln);margin:14px 0"></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;">
+      <span style="color:var(--mut)">Top 5 ideas (9 posiciones) → <b style="color:var(--g)">+$905.44 · 82.4% del día</b></span>
+      <span style="color:var(--mut)">Resto 26 posiciones → <b style="color:var(--mut)">+$193.85 · 17.6%</b></span>
+    </div>
+  </div>
+  <div class="lead">Día de alta dispersión (27 tickers) pero <b>5 ideas concentran el 82% del resultado</b>. Las 26 posiciones restantes aportaron $193 de media a $7.4/posición — muchas son scalps de oportunidad marginal que consumen atención y energía sin mover la aguja.</div>
+
+  <!-- 06 COSTES -->
+  <h2 class="s"><span class="num">06</span> Costes reales</h2>
+  <table>
+    <thead><tr><th>Concepto</th><th class="r">Importe</th><th>Nota</th></tr></thead>
+    <tbody>
+      <tr><td>HTB (borrow cortos)</td><td class="r neg">-$133.24</td><td style="color:var(--mut)">12.1% del bruto · mayor peaje del día</td></tr>
+      <tr><td>Fees / comisiones / rebates</td><td class="r amb">N/D</td><td style="color:var(--mut)">Sin detalle en reporte Tradely · usar DAS para desglose</td></tr>
+      <tr class="sum"><td>Neto estimado</td><td class="r pos">+$966.05</td><td>sin contabilizar fees de ejecución (~±$15-30)</td></tr>
+    </tbody>
+  </table>
+  <div class="lead">El HTB de $133.24 es el 12.1% del bruto — un coste real y significativo. En el 29 May el HTB fue $34.71 (5.6% del bruto). <b>El aumento del borrow implica que los setups de hoy tenían más acciones HTB en cartera.</b> Vigilar el HTB por posición antes de entrar.</div>
+
+  <!-- 07 TU ANÁLISIS DEL DÍA -->
+  <h2 class="s"><span class="num">07</span> Tu análisis · Lo que tú viste</h2>
+  <div style="background:rgba(91,192,196,.06);border:1px solid rgba(91,192,196,.25);border-left:3px solid #5bc0c4;border-radius:12px;padding:18px 20px;font-size:13px;color:#c6d2d5;font-style:italic;line-height:1.8;">
+    "He tenido que utilizar el market porque he tenido dos en contra. El market después se me ha dado bastante bien.
+    No he sabido leer bien a TGHL, AIIO, ANY.<br><br>
+    Ha habido dos stocks en long que las he tenido que aguantar — WALD y CRE. No las tenía que hacer long... todo el día para recuperarlas.<br><br>
+    No estoy contento porque al final he estado peleando con 3 stocks por estar en el ordenador.
+    Tengo que dejar de tener el DAS abierto así no podré tradear — tengo que acostumbrarme a hacer 3R y cerrar.<br><br>
+    Al final me he liado en el aftermarket y he sacado casi 10R. Intento hacerlo de la forma correcta, pero creo que mi operativa es esa. Solo que tengo que ponerle más stop loss a los stocks."
+    <div style="margin-top:10px;font-size:10px;color:rgba(91,192,196,.6);font-style:normal;letter-spacing:1px;text-transform:uppercase;">Trader · 01/06/2026 · 18:00</div>
+  </div>
+
+  <!-- COACH RESPONSE -->
+  <div style="background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:18px 20px;margin-top:10px;">
+    <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#a855f7;margin-bottom:14px;">📍 Lo que yo veo que tú no has visto del todo</div>
+
+    <div class="it">
+      <div class="t" style="color:#5bc0c4;">✅ Tienes razón en TGHL, AIIO, ANY</div>
+      <div class="x">Las tres lectura errónea confirmada por los números: TGHL combinado -$218.72 (-1.96R), AIIO -$175.60 (-1.57R), ANY -$54.58 (-0.49R). Total: <span class="ev">-$448.85 en tus 3 problemáticos</span>. Sin ellos: +$1,548 bruto y +13.9R.</div>
+    </div>
+
+    <div class="it">
+      <div class="t" style="color:var(--r);">⚠️ WALD y CRE: el error que no has cuantificado bien</div>
+      <div class="x">Dices que no tenías que hacer esos longs — pero en el resultado WALD Margin fue +$4.75 y CRE Margin +$49.97. <b>Te costaron el día completo en energía y tiempo, pero saliste con +$54.72 de ellos.</b> El verdadero coste no fue en dinero: fue en <span class="ev">horas de pantalla, atención dispersa y trades reactivos</span> que vinieron después. Eso es lo que te enfadó, no las pérdidas.</div>
+    </div>
+
+    <div class="it">
+      <div class="t" style="color:var(--r);">🔴 PREMARKET +$274 → UNREALIZED -$246: el momento bisagra</div>
+      <div class="x">Empezaste el día con +$274 en premarket. En algún punto del día tenías -$246 sin realizar. Esa bajada de <span class="ev">$520 en unrealized</span> es exactamente donde entraron los market orders y la batalla mental con TGHL/AIIO/ANY. Si hubieras cortado ahí, el día habría sido mediocre. Que lo recuperaras y cerraras en +$966 neto es <span class="ev">resiliencia real</span> — pero también demuestra que el sistema "aguantar y recuperar" funciona a veces. El peligro es que lo normalices.</div>
+    </div>
+
+    <div class="it">
+      <div class="t" style="color:var(--g);">✅ Lo que sí identificas perfectamente: la regla 3R y cerrar</div>
+      <div class="x">"Tengo que acostumbrarme a hacer 3R y cerrar." Eso es exactamente lo que dicen los números: tus primeros trades del día (premarket, CTNT, SOAR, HKIT, JZ) generaron la mayor parte del resultado. <span class="ev">El aftermarket y los trades tardíos son ruido que a veces sale bien</span> — pero hoy salió bien. Mañana puede no salir.</div>
+    </div>
+
+    <div class="it">
+      <div class="t" style="color:#f5b942;">⚡ Sobre tu operativa de aftermarket: ojo con lo que normalizas</div>
+      <div class="x">"Creo que mi operativa es esa" — cuidado. Hoy el aftermarket te dio +R extra. Pero la pregunta real es: <span class="ev">¿cuántos días el aftermarket te ha costado R ganadas?</span> Tu edge real está demostrado en los cortos de premarket y mercado regular. El aftermarket puede ser complementario, pero no puede ser el plan principal. <b>Stops más estrictos ahí es la dirección correcta.</b></div>
+    </div>
+  </div>
+
+  <!-- 08 CONSERVAR / CORREGIR -->
+  <h2 class="s"><span class="num">08</span> Conservar · Corregir</h2>
+  <div class="twocol">
+    <div class="kf keep">
+      <h3>▲ Conservar</h3>
+      <div class="it"><div class="t">Motor corto implacable</div><div class="x">Short: <span class="ev">+$1,112.90 (~10R), 81.5% WR</span>. Tu ventaja estadística clara y reproducible.</div></div>
+      <div class="it"><div class="t">Resiliencia ante el drawdown</div><div class="x">De <span class="ev">-$246 unrealized a +$966 neto</span>. Eso es mentalidad. Pero úsala como red de seguridad, no como plan.</div></div>
+      <div class="it"><div class="t">CTNT, SOAR, HKIT, JZ — el modelo</div><div class="x">Cuatro posiciones limpias de <span class="ev">+1R cada una</span>. Eso es lo que quieres replicar. Sin drama, sin aguantar.</div></div>
+      <div class="it"><div class="t">Autoconciencia honesta</div><div class="x">Sabes exactamente qué fallaste (TGHL, AIIO, ANY, longs por error). Eso ya es la mitad del trabajo.</div></div>
+    </div>
+    <div class="kf fix">
+      <h3>▼ Corregir</h3>
+      <div class="it"><div class="t">Cerrar DAS al llegar a 3R</div><div class="x">Lo has dicho tú: <span class="ev">"si cierro DAS no podré tradear"</span>. Eso es la regla. Configura una alarma. Sin excusa.</div></div>
+      <div class="it"><div class="t">WALD y CRE: cero longs no planificados</div><div class="x">Saliste con +$55 pero te costaron el día entero en energía. <span class="ev">El coste real no fue en dinero.</span> Fue en atención, en tiempo y en los trades reactivos que vinieron después.</div></div>
+      <div class="it"><div class="t">TGHL, AIIO, ANY — stop obligatorio</div><div class="x"><span class="ev">-$448.85 en 3 posiciones</span>. Si hubieras cortado cada una al 1R = -$335 en lugar de -$449. La diferencia es el stop que no llegó.</div></div>
+      <div class="it"><div class="t">Aftermarket: stops más cortos, siempre</div><div class="x">Hoy salió bien. Pero <span class="ev">sin stop en aftermarket el riesgo es asimétrico</span>. El mercado está fino y los movimientos son bruscos. Stops estrictos o no operar.</div></div>
+    </div>
+  </div>
+
+  <!-- 09 CONCLUSIÓN -->
+  <h2 class="s"><span class="num">09</span> Conclusión</h2>
+  <div class="cc">
+    <p>Día de 9.84R con una historia detrás: empezaste con +$274 en premarket, caíste a -$246 unrealized peleando con TGHL, AIIO y ANY, y terminaste en +$966 neto. <b>El resultado es excelente. El proceso tuvo agujeros.</b></p>
+    <p>WALD y CRE no eran parte del plan. Te costaron el día en energía, no en dinero. Eso es peor, porque el coste en dinero lo ves en el P&L — <span class="hl">el coste en energía mental lo pagas en los trades que vienen después.</span></p>
+    <p>Tu diagnóstico es correcto: la regla es <b>3R y cerrar el DAS</b>. No como aspiración, sino como protocolo no negociable. Hoy llegaste a 10R en aftermarket y te alegra — mañana puede costarte 5R perdidas. <span class="hl">El edge está en el premarket y en el mercado regular. El aftermarket es bonus, no plan.</span></p>
+    <p class="rule">Regla del día siguiente: cuando abras el DAS mañana, escribe en papel el número de R al que cierras todo y sales. Sin excepción. Sin "solo un trade más". El ordenador cerrado es la posición más rentable que existe.</p>
+    <p>"Trabajo hecho" — sí. <span class="hl">La próxima vez, que esté hecho antes de las 18:00.</span></p>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:24px;padding-top:14px;border-top:1px solid var(--ln);font-size:10px;color:var(--dim);letter-spacing:1px;display:flex;justify-content:space-between;">
+    <span>PIRATA · DILU-BITÁCORA</span>
+    <span>TRADELY · 35 posiciones · 27 tickers</span>
+    <span>01-06-2026</span>
+  </div>
+</div>`;
+
+// ── INFORME 02 JUN 2026 ───────────────────────────────────────────────────────
+const INFORME_02JUN_HTML = `
+<div class="i02j" style="--g:#1fd682;--r:#ff4d5e;--gold:#f5b942;--short:#ff8a3d;--long:#39c0ff;--mut:#7d8f95;--dim:#54656b;--ln:#1d2a30;--pan:#0d1316;color:#dfe7e9;font-family:'DM Mono',ui-monospace,monospace;max-width:1040px;margin:0 auto;line-height:1.55;">
+  <style>
+    .i02j h2.s{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#dfe7e9;margin:30px 0 14px;display:flex;align-items:baseline;gap:12px}
+    .i02j .num{font-size:11px;color:var(--g);border:1px solid #0f7a4c;border-radius:6px;padding:2px 7px}
+    .i02j .kp{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#162227;border:1px solid var(--ln);border-radius:12px;overflow:hidden;margin:14px 0 8px}
+    .i02j .kp>div{background:var(--pan);padding:13px 14px}
+    .i02j .kp .l{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+    .i02j .kp .v{font-size:18px;font-weight:700}
+    .i02j .kp .v small{font-size:10px;color:var(--mut)}
+    .i02j .pos{color:var(--g)} .i02j .neg{color:var(--r)} .i02j .amb{color:var(--gold)}
+    .i02j .ov{background:var(--pan);border:1px solid var(--ln);border-left:3px solid var(--g);border-radius:12px;padding:18px 20px;font-size:13px;color:#c6d2d5}
+    .i02j .ov b{color:#dfe7e9}
+    .i02j table{width:100%;border-collapse:collapse;font-size:12.5px}
+    .i02j th{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:left;padding:9px 10px;border-bottom:1px solid var(--ln);font-weight:500}
+    .i02j th.r,.i02j td.r{text-align:right}
+    .i02j td{padding:7px 10px;border-bottom:1px solid #162227}
+    .i02j .tk{font-weight:700;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px}
+    .i02j .pill{font-size:9px;padding:2px 6px;border-radius:5px}
+    .i02j .pill.s{color:var(--short);background:rgba(255,138,61,.1);border:1px solid rgba(255,138,61,.3)}
+    .i02j .pill.m{color:var(--long);background:rgba(57,192,255,.1);border:1px solid rgba(57,192,255,.3)}
+    .i02j .gr{font-weight:800;font-size:12px;padding:2px 7px;border-radius:6px}
+    .i02j .ap{color:#04140c;background:var(--g)} .i02j .a{color:var(--g);border:1px solid #0f7a4c} .i02j .b{color:var(--gold);border:1px solid rgba(245,185,66,.35)} .i02j .c{color:var(--mut);border:1px solid var(--ln)} .i02j .d{color:var(--r);border:1px solid #7a1f2c}
+    .i02j .sum td{border-top:2px solid var(--ln);font-weight:800;background:rgba(31,214,130,.05)}
+    .i02j .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}
+    .i02j .sc{background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:16px 18px}
+    .i02j .big{font-size:26px;font-weight:800}
+    .i02j .meter{height:7px;border-radius:6px;background:var(--ln);margin:12px 0 6px;overflow:hidden}
+    .i02j .meter i{display:block;height:100%}
+    .i02j .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+    .i02j .kf{border-radius:12px;padding:16px 18px;border:1px solid var(--ln)}
+    .i02j .keep{border-left:3px solid var(--g)} .i02j .fix{border-left:3px solid var(--r)}
+    .i02j .kf h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+    .i02j .keep h3{color:var(--g)} .i02j .fix h3{color:var(--r)}
+    .i02j .it{margin-bottom:12px} .i02j .it .t{font-weight:600;color:#dfe7e9;margin-bottom:3px}
+    .i02j .it .x{color:var(--mut);font-size:12px} .i02j .ev{color:var(--gold)}
+    .i02j .cc{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:22px 24px;font-size:13.5px;color:#c6d2d5}
+    .i02j .cc p{margin-bottom:12px} .i02j .hl{color:var(--gold)} .i02j .cc .rule{color:#dfe7e9;font-weight:600}
+    .i02j .chart{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:16px}
+    .i02j svg{width:100%;height:auto;display:block}
+    .i02j .lead{color:var(--mut);font-size:12.5px;margin-top:10px}
+    .i02j .lead b{color:#dfe7e9}
+    .i02j .alert{background:rgba(255,77,94,.08);border:1px solid rgba(255,77,94,.3);border-left:3px solid var(--r);border-radius:12px;padding:14px 18px;margin:8px 0;font-size:12.5px;color:#c6d2d5}
+    .i02j .alert b{color:#ff8a8a}
+    .i02j .warn{background:rgba(245,185,66,.08);border:1px solid rgba(245,185,66,.3);border-left:3px solid var(--gold);border-radius:12px;padding:14px 18px;margin:8px 0;font-size:12.5px;color:#c6d2d5}
+    .i02j .warn b{color:var(--gold)}
+    .i02j .badge-g{display:inline-block;background:rgba(31,214,130,.12);border:1px solid #0f7a4c;border-radius:6px;padding:2px 8px;font-size:10px;color:var(--g);margin-left:8px}
+    .i02j .badge-r{display:inline-block;background:rgba(255,77,94,.12);border:1px solid #7a1f2c;border-radius:6px;padding:2px 8px;font-size:10px;color:var(--r);margin-left:8px}
+    .i02j .badge-o{display:inline-block;background:rgba(245,185,66,.12);border:1px solid rgba(245,185,66,.35);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--gold);margin-left:8px}
+    .i02j .bar-row{margin-bottom:10px}
+    .i02j .bar-row .bar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px}
+    .i02j .bar-row .bar-track{height:6px;background:var(--ln);border-radius:4px;overflow:hidden}
+    .i02j .bar-row .bar-fill{height:100%;border-radius:4px}
+  </style>
+
+  <!-- HEADER -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--ln);padding-bottom:16px;">
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:#a855f7;">PIRATA · INFORME 02 JUN</div>
+      <div style="font-size:10px;letter-spacing:2px;color:var(--mut);">TRADELY · 50 POSICIONES · 34 TICKERS DISTINTOS · 1 OVERNIGHT (WCT)</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:30px;font-weight:800;color:var(--g);">+$783.29</div>
+      <div style="font-size:9px;letter-spacing:2px;color:var(--dim);">NETO ESTIMADO ~+$667.12 · 6.16R</div>
+    </div>
+  </div>
+
+  <!-- KP GRID -->
+  <div class="kp">
+    <div><div class="l">Realizado bruto</div><div class="v pos">+$783.29</div></div>
+    <div><div class="l">HTB (borrow)</div><div class="v neg">-$116.17</div></div>
+    <div><div class="l">Neto estimado</div><div class="v pos">+$667.12</div></div>
+    <div><div class="l">R · WR</div><div class="v">6.16R <small>72.0%</small></div></div>
+    <div><div class="l">Posiciones</div><div class="v amb">50</div></div>
+    <div><div class="l">Tickers</div><div class="v amb">34</div></div>
+  </div>
+
+  <div class="warn"><b>⚠ OVERNIGHT ABIERTO:</b> WCT con -757 acciones Short todavía activo al cierre del día. Realizado hasta ahora: <b>-$467.28 (-3.67R)</b>. La posición queda en riesgo para la jornada del 03 Jun.</div>
+
+  <!-- 00 DESCRIPCIÓN GENERAL -->
+  <h2 class="s"><span class="num">00</span> Descripción general</h2>
+  <div class="ov">
+    Día de tres fases bien diferenciadas. <b>Pre-market: +~$600</b> con GXAI y QUCY corriendo.
+    En el <b>market</b> se cometió el error principal: CODX Long <b>-$187.30</b>, aunque se compensó parcialmente con la vuelta corta en CODX <b>+$47.49</b>.
+    ASTC fue el trade más estresante: -$400 en unrealized que acabó siendo <b>+$248.34 Short / -$169.33 Margin</b> (neto <b>+$79.01</b>).
+    Tras el cierre del market la posición superó los <b>$1,000</b>; en la búsqueda del récord personal de $1,250 WCT se giró en contra y causó <b>-$467.28</b>, quedando en overnight.
+    Resultado final: <b>+$783.29 bruto / ~+$667 neto</b>, pero con el riesgo overnight de WCT pendiente.
+    Ratio de ganadores/perdedores bruto: <b>$2,231.19 winners vs -$1,447.90 losers</b>.
+  </div>
+
+  <!-- 01 WINNERS vs LOSERS -->
+  <h2 class="s"><span class="num">01</span> Winners vs Losers — resultado bruto</h2>
+  <div class="chart">
+    <svg viewBox="0 0 980 220" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="i02wg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1fd682" stop-opacity="0.85"/>
+          <stop offset="100%" stop-color="#0f7a4c" stop-opacity="0.55"/>
+        </linearGradient>
+        <linearGradient id="i02lg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff4d5e" stop-opacity="0.75"/>
+          <stop offset="100%" stop-color="#7a1f2c" stop-opacity="0.4"/>
+        </linearGradient>
+        <linearGradient id="i02ng" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f5b942" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#9a7219" stop-opacity="0.5"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="175" x2="980" y2="175" stroke="#1d2a30"/>
+      <line x1="0" y1="110" x2="980" y2="110" stroke="#162227" stroke-dasharray="3 5"/>
+      <line x1="0" y1="45" x2="980" y2="45" stroke="#162227" stroke-dasharray="3 5"/>
+      <text x="8" y="178" fill="#54656b" font-size="10">$0</text>
+      <text x="8" y="108" fill="#54656b" font-size="10">$1,116</text>
+      <text x="8" y="43" fill="#54656b" font-size="10">$2,231</text>
+      <!-- WINNERS bar: $2231.19 → 175px full height -->
+      <rect x="70" y="0" width="280" height="175" rx="5" fill="url(#i02wg)"/>
+      <text x="210" y="22" fill="#1fd682" font-size="14" font-weight="800" text-anchor="middle">+$2,231.19</text>
+      <text x="210" y="38" fill="#7d8f95" font-size="10" text-anchor="middle">36 WINNERS</text>
+      <!-- LOSERS bar: $1447.90 → 1447.90/2231.19*175 = 113.5px -->
+      <rect x="420" y="61" width="280" height="114" rx="5" fill="url(#i02lg)"/>
+      <text x="560" y="56" fill="#ff8a8a" font-size="14" font-weight="800" text-anchor="middle">-$1,447.90</text>
+      <text x="560" y="72" fill="#7d8f95" font-size="10" text-anchor="middle">14 LOSERS</text>
+      <!-- NET bar: $783.29 → 783.29/2231.19*175 = 61.5px -->
+      <rect x="770" y="113" width="180" height="62" rx="5" fill="url(#i02ng)"/>
+      <text x="860" y="108" fill="#f5b942" font-size="14" font-weight="800" text-anchor="middle">+$783.29</text>
+      <text x="860" y="124" fill="#7d8f95" font-size="10" text-anchor="middle">RESULTADO NETO BRUTO</text>
+      <text x="210" y="200" fill="#54656b" font-size="11" text-anchor="middle">WINNERS</text>
+      <text x="560" y="200" fill="#54656b" font-size="11" text-anchor="middle">LOSERS</text>
+      <text x="860" y="200" fill="#54656b" font-size="11" text-anchor="middle">RESULTADO</text>
+    </svg>
+  </div>
+  <div class="lead"><b>Asimetría 1.54:1</b>: por cada $1 perdido se ganaron $1.54. Sin WCT overnight (-$529.85 combinado) el resultado habría sido <b>+$1,313.14</b> — un día muy diferente. El daño es concentrado: <b>3 tickers (WCT, CODX, XOS) = -$843.11</b> de pérdidas totales.</div>
+
+  <!-- 02 CORTO vs MARGIN -->
+  <h2 class="s"><span class="num">02</span> Corto vs Margin</h2>
+  <div class="split">
+    <div class="sc">
+      <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--short);margin-bottom:10px;">CORTOS</div>
+      <div class="big pos">+$975.73 <small style="font-size:12px;color:var(--mut)">~8.8R</small></div>
+      <div class="meter"><i style="width:84%;background:linear-gradient(90deg,#ff8a3d,#c95e1d)"></i></div>
+      <div style="font-size:11px;color:var(--mut);display:flex;justify-content:space-between"><span>84.4% WR · 27W / 5L · 32 pos</span><span>HTB: -$116.17</span></div>
+    </div>
+    <div class="sc">
+      <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--long);margin-bottom:10px;">MARGIN (LONG)</div>
+      <div class="big neg">-$192.44 <small style="font-size:12px;color:var(--mut)">-1.74R</small></div>
+      <div class="meter"><i style="width:50%;background:linear-gradient(90deg,#39c0ff,#1d76c9)"></i></div>
+      <div style="font-size:11px;color:var(--mut);">50.0% WR · 9W / 9L · 18 pos</div>
+    </div>
+  </div>
+  <div class="lead" style="margin-top:6px;">El lado <b>corto es el motor</b> con 84.4% WR y +$975.73. El lado Margin arrastra con -$192.44 — principalmente CODX Long (-$187.30) y SBFM Margin (-$150.57). La paridad 50% WR en Margin es señal de que los longs no tienen el mismo edge que los shorts.</div>
+
+  <!-- 03 TRADES DESTACADOS -->
+  <h2 class="s"><span class="num">03</span> Trades destacados</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th><th>Tipo</th><th class="r">Realizado</th><th class="r">R</th><th>Grado</th><th>Nota</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="tk">ASTC</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$248.34</td><td class="r pos">1.95R</td><td><span class="gr a">A</span></td><td style="font-size:11px;color:var(--mut)">Mejor trade del día. Unrealized -$400 aguantado.</td></tr>
+      <tr><td><span class="tk">DLXY</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$87.34</td><td class="r pos">0.69R</td><td><span class="gr a">A</span></td><td style="font-size:11px;color:var(--mut)">Complementado con Margin +$123.11. Total ticker +$210.45.</td></tr>
+      <tr><td><span class="tk">DLXY</span></td><td><span class="pill m">MARGIN</span></td><td class="r pos">+$123.11</td><td class="r pos">0.97R</td><td><span class="gr a">A</span></td><td style="font-size:11px;color:var(--mut)">Parte del combo DLXY. Buen seguimiento.</td></tr>
+      <tr><td><span class="tk">TOPS</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$125.90</td><td class="r pos">0.99R</td><td><span class="gr a">A</span></td><td style="font-size:11px;color:var(--mut)">Casi 1R limpio.</td></tr>
+      <tr><td><span class="tk">ZJYL</span></td><td><span class="pill m">MARGIN</span></td><td class="r pos">+$120.99</td><td class="r pos">0.95R</td><td><span class="gr a">A</span></td><td style="font-size:11px;color:var(--mut)">Mejor trade Margin del día.</td></tr>
+      <tr><td><span class="tk">DXST</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$123.20</td><td class="r pos">0.97R</td><td><span class="gr a">A</span></td><td style="font-size:11px;color:var(--mut)">Sólido, casi 1R.</td></tr>
+      <tr><td><span class="tk">YMAT</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$105.27</td><td class="r pos">0.83R</td><td><span class="gr b">B</span></td><td style="font-size:11px;color:var(--mut)">Buena captura.</td></tr>
+      <tr><td><span class="tk">GXAI</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$75.99</td><td class="r pos">0.6R</td><td><span class="gr b">B</span></td><td style="font-size:11px;color:var(--mut)">Pre-market. Total ticker con Margin +$147.22.</td></tr>
+      <tr><td><span class="tk">CODX</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$187.30</td><td class="r neg">-1.47R</td><td><span class="gr d">D</span></td><td style="font-size:11px;color:var(--mut)">Error de dirección — Long cuando debía ser Short.</td></tr>
+      <tr><td><span class="tk">SBFM</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$150.57</td><td class="r neg">-1.18R</td><td><span class="gr d">D</span></td><td style="font-size:11px;color:var(--mut)">Margin en contra, sin setup claro.</td></tr>
+      <tr><td><span class="tk">ASTC</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$169.33</td><td class="r neg">-1.33R</td><td><span class="gr c">C</span></td><td style="font-size:11px;color:var(--mut)">El contrapeso del Short. Estrés de -$400 unrealized gestionado.</td></tr>
+      <tr><td><span class="tk">KLXE</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$113.92</td><td class="r neg">-0.9R</td><td><span class="gr d">D</span></td><td style="font-size:11px;color:var(--mut)">Pérdida Margin, sin compensación corta suficiente.</td></tr>
+      <tr><td><span class="tk">XOS</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$178.96</td><td class="r neg">-1.41R</td><td><span class="gr d">D</span></td><td style="font-size:11px;color:var(--mut)">Segunda mayor pérdida del día en cortos.</td></tr>
+      <tr class="sum"><td colspan="2"><b>WCT OVERNIGHT</b><span class="badge-o">OPEN -757sh</span></td><td class="r neg"><b>-$529.85</b></td><td class="r neg"><b>-4.16R</b></td><td><span class="gr d">D</span></td><td style="font-size:11px;color:#ff8a8a">Short -$467.28 + Margin -$62.57. Cazado buscando el récord de $1,250.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 04 ANÁLISIS DE SESIÓN -->
+  <h2 class="s"><span class="num">04</span> Análisis de sesión — voz del trader</h2>
+  <div class="split">
+    <div class="sc">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-bottom:10px;">PRE-MARKET</div>
+      <div style="font-size:13px;color:#dfe7e9;margin-bottom:8px;">~<b class="pos">+$600</b> con GXAI y QUCY corriendo.</div>
+      <div style="font-size:12px;color:var(--mut);">GXAI: Short +$75.99 / Margin +$71.23 = <b style="color:#dfe7e9">+$147.22</b>. Jornada pre-market bien ejecutada.</div>
+    </div>
+    <div class="sc">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-bottom:10px;">MARKET OPEN</div>
+      <div style="font-size:13px;color:#dfe7e9;margin-bottom:8px;">CODX Long: <b class="neg">-$187.30</b>. Error de dirección.</div>
+      <div style="font-size:12px;color:var(--mut);">Corrección rápida: vuelta corta en CODX <b style="color:var(--g)">+$47.49</b>. ASTC muy estresante con -$400 unrealized, pero la tesis corta era correcta — se mantuvo y salió con <b style="color:var(--g)">+$248.34</b>.</div>
+    </div>
+  </div>
+  <div class="split" style="margin-top:12px;">
+    <div class="sc">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-bottom:10px;">AFTER MARKET</div>
+      <div style="font-size:13px;color:#dfe7e9;margin-bottom:8px;">Posición subió hasta <b class="pos">~+$1,000</b>.</div>
+      <div style="font-size:12px;color:var(--mut);">Se intentó llegar al récord personal de $1,250. WCT se giró: <b style="color:var(--r)">-$467.28</b> realizados y quedó overnight con -757 acciones.</div>
+    </div>
+    <div class="sc">
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-bottom:10px;">SELECTIVIDAD EN MARKET</div>
+      <div style="font-size:13px;color:#dfe7e9;margin-bottom:8px;">50 posiciones = mucho ruido.</div>
+      <div style="font-size:12px;color:var(--mut);">El trader reconoce que con 2-3 buenos plays de market podría mejorar el resultado. Sobre-trading en Margin (18 posiciones, 50% WR) confirma que la dispersión no ayuda.</div>
+    </div>
+  </div>
+
+  <!-- 05 KEEP / FIX -->
+  <h2 class="s"><span class="num">05</span> Keep / Fix</h2>
+  <div class="twocol">
+    <div class="kf keep">
+      <h3>Mantener</h3>
+      <div class="it"><div class="t">Gestión de ASTC</div><div class="x">Aguantar -$400 unrealized con la tesis correcta es difícil. Se salió bien: +$248.34. Eso es disciplina real.</div></div>
+      <div class="it"><div class="t">Corrección rápida en CODX</div><div class="x">Al reconocer el error de dirección se giró inmediatamente al lado corto y recuperó parcialmente. Buena respuesta.</div></div>
+      <div class="it"><div class="t">Pre-market sólido</div><div class="x">~$600 en pre con GXAI bien ejecutado. Es el tipo de play que hay que repetir.</div></div>
+      <div class="it"><div class="t">Alta tasa de cierre</div><div class="x">84.4% WR en cortos con 32 posiciones. El edge en el lado corto está funcionando.</div></div>
+    </div>
+    <div class="kf fix">
+      <h3>Corregir</h3>
+      <div class="it"><div class="t">Nunca cazar el récord</div><div class="x">El récord cuesta -$467 overnight. Los récords se superan solos con el tiempo — no se fuerzan.</div></div>
+      <div class="it"><div class="t">Reducir posiciones Margin</div><div class="x">18 posiciones Margin al 50% WR: demasiado ruido. 2-3 longs selectivos daría mejor resultado.</div></div>
+      <div class="it"><div class="t">No dejar overnight por codicia</div><div class="x">WCT overnight = riesgo descontrolado al día siguiente. Cerrar aunque sea con pérdida es mejor que transferir el problema.</div></div>
+      <div class="it"><div class="t">Definir stop en after/pre antes de entrar</div><div class="x">El problema con WCT fue no tener un stop claro una vez el P&L superó $1K. Sin stop = posición overnight.</div></div>
+    </div>
+  </div>
+
+  <!-- 06 LA MORALEJA -->
+  <h2 class="s"><span class="num">06</span> La Moraleja del día</h2>
+  <div class="cc">
+    <p><span class="rule">"Nunca buscar el récord — los récords con el paso del tiempo se van a sobrepasar solos."</span></p>
+    <p>A las <b>~$1,000</b> de P&L el día ya era bueno. En vez de aceptarlo, se buscó el hito de <b class="hl">$1,250</b> — el récord personal. WCT se giró y se perdieron <b>-$467.28</b>, dejando además una posición overnight que añade incertidumbre al 03 Jun.</p>
+    <p>La lección no es solo sobre ese trade: es sobre el estado mental que genera perseguir un número. Cuando el objetivo cambia de <em>operar bien</em> a <em>llegar a X</em>, las decisiones de riesgo se distorsionan. <b class="hl">Un día de $783 bien ejecutado vale más que un día de $1,250 mal gestionado</b> — especialmente si el segundo deja un overnight abierto.</p>
+    <p style="margin-bottom:0"><span class="rule">Regla nueva: cuando el P&L supera $900, solo plays de altísima convicción con stop definido. Sin excepción. NUNCA MÁS.</span></p>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:24px;padding-top:14px;border-top:1px solid var(--ln);font-size:10px;color:var(--dim);letter-spacing:1px;display:flex;justify-content:space-between;">
+    <span>PIRATA · DILU-BITÁCORA</span>
+    <span>TRADELY · 50 posiciones · 34 tickers · 1 overnight WCT</span>
+    <span>02-06-2026</span>
+  </div>
+</div>`;
+
 // ── REGISTRO DE INFORMES SEMBRABLES (por fecha YYYY-MM-DD) ────────────────────
 // Para añadir un día nuevo: define su constante y añádela aquí. seedInformes()
 // los vuelca en D[k].informeIA si no existen y persiste en Firestore.
 const INFORMES_SEED = {
   '2026-05-29': INFORME_29MAY_HTML,
   '2026-05-28': INFORME_28MAY_HTML,
+  '2026-06-01': INFORME_01JUN_HTML,
+  '2026-06-02': INFORME_02JUN_HTML,
 };
 
 function seedInformes() {
@@ -8841,7 +9472,126 @@ function updateCostDisplay() {
     new Date(ultimo.ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—';
 }
 
+
+
+// ── OVERLAY: OBJETIVO DEL DÍA CUMPLIDO ───────────────────────────────────────
+function checkObjetivoAlert(k) {
+  const row = D[k] || {};
+  const pnl = pd(row.pnlDay);
+  const sod = pd(row.startOfDay);
+  const htb = pd(row.htb) || 0;
+  if (pnl === null || !sod) return;
+
+  // Solo mostrar si es hoy
+  const today = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' });
+  const [dd, mm, yyyy] = today.split('/');
+  const todayKey = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+  if (k !== todayKey) return;
+
+  const c = calc(sod, k);
+  if (!c.rt) return;
+
+  const target = 3 * c.rt + htb + sod * 0.01;
+  if (pnl >= target) {
+    const ov = document.getElementById('objetivoOverlay');
+    document.getElementById('ovPNL').textContent = (pnl >= 0 ? '+' : '') + fd(pnl);
+    document.getElementById('ovTarget').textContent = fd(target);
+    document.getElementById('ovHTB').textContent = htb > 0 ? fd(htb) : '$0';
+    document.getElementById('ovR').textContent = (pnl / c.rt).toFixed(2) + 'R';
+    ov.classList.add('show');
+  }
+}
+
+function cerrarObjetivoOverlay() {
+  document.getElementById('objetivoOverlay').classList.remove('show');
+}
+
+// ── OVERLAY: AFTER-HOURS (después 14:00 Madrid) ──────────────────────────────
+const AFTER_MSGS = [
+  { emoji: '🐕', title: 'SACA AL PERRO', msg: 'Lleva al perro a pasear. El mercado seguirá mañana —<br>tu perro <b>te necesita ahora</b>.' },
+  { emoji: '🏠', title: 'CUIDA LA CASA', msg: 'Hay cosas pendientes en casa. <b>La casa es tu base</b> —<br>mantenla en orden y tu mente también lo estará.' },
+  { emoji: '💻', title: 'MEJORA TUS APPS', msg: 'Una hora de mejora en tu bitácora o tus herramientas<br>vale más que una hora de trading en la tarde.' },
+  { emoji: '🤖', title: 'TRADING ALGORÍTMICO', msg: 'Dedica tiempo a mejorar tus sistemas.<br><b>El algoritmo trabaja cuando tú duermes.</b>' },
+  { emoji: '📈', title: 'TRADING DISCRECIONAL', msg: 'Revisa tus setups, estudia gráficas.<br><b>El estudio de hoy es el edge de mañana.</b>' },
+  { emoji: '🧘', title: 'DESCANSA LA MENTE', msg: 'Un trader descansado toma mejores decisiones.<br><b>El descanso es parte del proceso.</b>' },
+  { emoji: '🚶', title: 'CAMINA UN RATO', msg: 'Sal a la calle, despeja la cabeza.<br><b>Las mejores ideas no vienen delante de la pantalla.</b>' },
+  { emoji: '📚', title: 'LEE / APRENDE', msg: 'Un libro de trading, psicología o finanzas.<br><b>Invertir en conocimiento siempre da el mejor retorno.</b>' },
+];
+let afterMsgIdx = 0;
+let afterHoursIntervalId = null;
+
+function getMadridMinutes() {
+  const str = new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false });
+  const [h, m] = str.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function showAfterHoursReminder() {
+  const mins = getMadridMinutes();
+  if (mins < 14 * 60 || mins >= 22 * 60) return; // solo entre 14:00 y 22:00
+  const m = AFTER_MSGS[afterMsgIdx % AFTER_MSGS.length];
+  afterMsgIdx++;
+  const ov = document.getElementById('afterHoursOverlay');
+  document.getElementById('ahEmoji').textContent = m.emoji;
+  document.getElementById('ahTitle').textContent = m.title;
+  document.getElementById('ahMsg').innerHTML = m.msg;
+  const t = new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' });
+  document.getElementById('ahTime').textContent = 'Son las ' + t + ' (Madrid). Tu jornada laboral terminó a las 14:00.';
+  ov.classList.add('show');
+}
+
+function cerrarAfterHoursOverlay() {
+  document.getElementById('afterHoursOverlay').classList.remove('show');
+}
+
+function startAfterHoursWatcher() {
+  // Check every 30 minutes
+  setInterval(() => {
+    const mins = getMadridMinutes();
+    if (mins >= 14 * 60) showAfterHoursReminder();
+  }, 30 * 60 * 1000);
+
+  // Also check immediately if already in the 14:00–22:00 window
+  setTimeout(() => {
+    const mins = getMadridMinutes();
+    if (mins >= 14 * 60 && mins < 22 * 60) showAfterHoursReminder();
+  }, 3000);
+}
+
+// Arrancar el watcher cuando la página carga
+document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
+
 </script>
+
+<!-- ── OVERLAY: OBJETIVO CUMPLIDO ─────────────────────────────────────────── -->
+<div id="objetivoOverlay" onclick="if(event.target===this)cerrarObjetivoOverlay()">
+  <div class="ov-box obj">
+    <div class="ov-emoji">🏆</div>
+    <div class="ov-title">OBJETIVO CUMPLIDO</div>
+    <div class="ov-sub">Has alcanzado el trabajo bien hecho del día.<br>Ya puedes cerrar las pantallas.</div>
+    <div class="ov-pnl" id="ovPNL">+$0</div>
+    <div class="ov-msg">
+      <b>🎯 Objetivo superado:</b> <span id="ovTarget">—</span> · <b>HTB cubierto:</b> <span id="ovHTB">—</span> · <b>R conseguida:</b> <span id="ovR">—</span><br><br>
+      Has hecho tu trabajo. El mercado seguirá mañana.<br>
+      <b>Seguir operando ahora es perseguir dinero extra, no hacer tu trabajo.</b><br><br>
+      Sal a pasear al perro, disfruta del día. 🐕☀️
+    </div>
+    <button class="ov-close" onclick="cerrarObjetivoOverlay()">ENTENDIDO — CIERRO PANTALLAS</button>
+    <button class="ov-dismiss" onclick="cerrarObjetivoOverlay()">ignorar y seguir operando (bajo tu responsabilidad)</button>
+  </div>
+</div>
+
+<!-- ── OVERLAY: AFTER-HOURS ───────────────────────────────────────────────── -->
+<div id="afterHoursOverlay" onclick="if(event.target===this)cerrarAfterHoursOverlay()">
+  <div class="ov-box after">
+    <div class="ov-emoji" id="ahEmoji">🐕</div>
+    <div class="ov-title" id="ahTitle">SACA AL PERRO</div>
+    <div class="ov-sub" id="ahTime">Son las 14:30 (Madrid). Tu jornada laboral terminó a las 14:00.</div>
+    <div class="ov-msg" style="margin-top:16px;" id="ahMsg">—</div>
+    <button class="ov-close" onclick="cerrarAfterHoursOverlay()">SÍ, VOY A DESCONECTAR</button>
+    <button class="ov-dismiss" onclick="cerrarAfterHoursOverlay()">Cerrar — seguiré un poco más</button>
+  </div>
+</div>
 
 </body>
 </html>
