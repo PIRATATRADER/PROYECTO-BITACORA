@@ -494,7 +494,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="color:var(--text)">Start of Day</th>
           <th style="color:var(--red)">Max Loss</th>
           <th style="color:#ff8a8a">Risk Trade</th>
-          <th style="color:#6effa3">TARGET 1%</th>
+          <th style="color:#ff6b6b" title="3% del Start of Day — máx. pérdida por ticker (redondeado a $25)">Loss Ticker</th>
           <th style="color:#6effa3">TARGET 3%</th>
           <th style="text-align:center;color:var(--gold)">Setup</th>
           <th style="text-align:center;color:#ffc107">P</th>
@@ -502,10 +502,11 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="text-align:center;color:#00b0ff">A</th>
           <th>Shares</th>
           <th style="color:#ff6b9d">HTB</th>
+          <th style="color:#39c0ff" title="PNL solo del pre-market">PM PNL</th>
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
-          <th style="text-align:center;color:#00e676;min-width:50px;" title="Objetivo: PNL ≥ 3R + HTB + 1% SOD">OBJ</th>
+          <th style="text-align:center;color:#00e676;min-width:50px;" title="Objetivo: PM PNL (o PNL Day si no hay PM) ≥ 3R + HTB">OBJ</th>
           <th style="text-align:center;color:#a855f7;min-width:70px;">INFORME</th>
           <th style="text-align:center;color:#5bc0c4;min-width:90px;">ANÁLISIS</th>
           <th style="text-align:center;color:#7c6af7;min-width:140px;">PNL</th>
@@ -912,7 +913,7 @@ function renderMain() {
     // Check if this day is a holiday
     const hol = HOLIDAYS[d];
     if (hol) {
-      const colCount = 19; // total columns in table
+      const colCount = 20; // total columns in table
       rows += `<tr class="tr-holiday">
         <td>${d}</td>
         <td colspan="${colCount - 1}" style="text-align:left;padding-left:12px">
@@ -939,9 +940,11 @@ function renderMain() {
     const rNum = (pnl!==null&&c.rt) ? (pnl/c.rt) : null;
     if(rNum!==null){ rSum+=rNum; rCount++; }
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
-    // OBJ: PNL >= 3×RT + HTB + 1% SOD
-    const objTarget = (sod && c.rt) ? (3 * c.rt + (htb||0) + sod * 0.01) : null;
-    const objMet = (pnl !== null && objTarget !== null) ? (pnl >= objTarget) : null;
+    // OBJ: PM PNL (o PNL Day si no hay PM) >= 3R + HTB
+    const pnlPM = pd(row.pnlPremarket);
+    const pnlForObj = pnlPM !== null ? pnlPM : pnl;
+    const objTarget = (sod && c.rt) ? (3 * c.rt + (htb||0)) : null;
+    const objMet = (pnlForObj !== null && objTarget !== null) ? (pnlForObj >= objTarget) : null;
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
 
     // JUNIO (mes 6): Sin coloreado especial
@@ -951,9 +954,9 @@ function renderMain() {
     rows+=`<tr${rowClass ? ` class="${rowClass}"` : ''}${rowStyle ? ` style="${rowStyle}"` : ''}>
       <td>${d}</td>
       <td class="ed" data-k="${k}" data-f="startOfDay">${sod?fd(sod):''}</td>
-      <td class="cr">${c.ml?fd(c.ml):''}</td>
-      <td class="crs">${c.rt?fd(c.rt):''}</td>
-      <td class="${c.t1?'cgl':''}">${c.t1?fd(c.t1):''}</td>
+      <td class="cr">${c.ml?fd(Math.round(c.ml/25)*25):''}</td>
+      <td class="crs">${c.rt?fd(Math.round(c.rt/25)*25):''}</td>
+      <td style="color:#ff6b6b;font-weight:600;">${sod?fd(Math.round(sod*0.03/25)*25):''}</td>
       <td class="${c.t3?'cgl':''}">${c.t3?fd(c.t3):''}</td>
       <td class="cgo" style="text-align:center">${c.sb?fd(c.sb):''}</td>
       <td style="text-align:center;cursor:pointer;color:#ff9500;font-weight:bold;" class="setup-checkbox" data-k="${k}" data-type="p" title="P">${row.chk_p ? '☑' : '☐'}</td>
@@ -961,6 +964,7 @@ function renderMain() {
       <td style="text-align:center;cursor:pointer;color:#00b0ff;font-weight:bold;" class="setup-checkbox" data-k="${k}" data-type="a" title="A">${row.chk_a ? '☑' : '☐'}</td>
       <td class="ed" data-k="${k}" data-f="shares">${row.shares||''}</td>
       <td class="ed cpink" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
+      <td class="ed" data-k="${k}" data-f="pnlPremarket" style="color:#39c0ff">${pd(row.pnlPremarket)!==null?fd(pd(row.pnlPremarket)):''}</td>
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
@@ -996,10 +1000,12 @@ function renderMain() {
     if (row.chk_mkt) countMKT++;
     if (row.chk_a) countA++;
     const _pnl = pd(row.pnlDay), _sod = pd(row.startOfDay), _htb = pd(row.htb)||0;
+    const _pnlPM = pd(row.pnlPremarket);
+    const _pnlForObj = _pnlPM !== null ? _pnlPM : _pnl;
     const _c = calc(_sod, d);
-    if (_pnl !== null && _sod && _c.rt) {
+    if (_pnlForObj !== null && _sod && _c.rt) {
       countObjDays++;
-      if (_pnl >= 3 * _c.rt + _htb + _sod * 0.01) countObjMet++;
+      if (_pnlForObj >= 3 * _c.rt + _htb) countObjMet++;
     }
   });
   
@@ -1013,9 +1019,9 @@ function renderMain() {
   rows+=`<tr class="tr-total">
     <td>TOTAL MES</td>
     <td>${avgSOD?fd(avgSOD):''}</td>
-    <td class="cr">${avgC.ml?fd(avgC.ml):''}</td>
-    <td class="crs">${avgC.rt?fd(avgC.rt):''}</td>
-    <td class="cgl">${avgC.t1?fd(avgC.t1):''}</td>
+    <td class="cr">${avgC.ml?fd(Math.round(avgC.ml/25)*25):''}</td>
+    <td class="crs">${avgC.rt?fd(Math.round(avgC.rt/25)*25):''}</td>
+    <td style="color:#ff6b6b;font-weight:600;">${avgSOD?fd(Math.round(avgSOD*0.03/25)*25):''}</td>
     <td class="cgl">${avgC.t3?fd(avgC.t3):''}</td>
     <td class="cgo" style="text-align:center" title="Promedio Setup">${avgC.sb?fd(avgC.sb):''}</td>
     <td style="text-align:center;color:#ff9500;font-weight:bold;">${countP}</td>
@@ -1023,6 +1029,7 @@ function renderMain() {
     <td style="text-align:center;color:#00b0ff;font-weight:bold;">${countA}</td>
     <td>${shTotal>0?shTotal.toLocaleString('en-US'):''}</td>
     <td class="cpink">${htbTotal>0?fd(htbTotal):''}</td>
+    <td></td>
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
@@ -3391,7 +3398,387 @@ const INFORME_02JUN_HTML = `
   </div>
 </div>`;
 
+const INFORME_03JUN_HTML = `
+<div class="i03j" style="--g:#1fd682;--r:#ff4d5e;--gold:#f5b942;--short:#ff8a3d;--long:#39c0ff;--mut:#7d8f95;--dim:#54656b;--ln:#1d2a30;--pan:#0d1316;color:#dfe7e9;font-family:'DM Mono',ui-monospace,monospace;max-width:1040px;margin:0 auto;line-height:1.55;">
+  <style>
+    .i03j h2.s{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#dfe7e9;margin:30px 0 14px;display:flex;align-items:baseline;gap:12px}
+    .i03j .num{font-size:11px;color:var(--g);border:1px solid #0f7a4c;border-radius:6px;padding:2px 7px}
+    .i03j .kp{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#162227;border:1px solid var(--ln);border-radius:12px;overflow:hidden;margin:14px 0 8px}
+    .i03j .kp>div{background:var(--pan);padding:13px 14px}
+    .i03j .kp .l{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+    .i03j .kp .v{font-size:18px;font-weight:700}
+    .i03j .kp .v small{font-size:10px;color:var(--mut)}
+    .i03j .pos{color:var(--g)} .i03j .neg{color:var(--r)} .i03j .amb{color:var(--gold)}
+    .i03j .ov{background:var(--pan);border:1px solid var(--ln);border-left:3px solid var(--g);border-radius:12px;padding:18px 20px;font-size:13px;color:#c6d2d5}
+    .i03j .ov b{color:#dfe7e9}
+    .i03j .ov-r{background:var(--pan);border:1px solid var(--ln);border-left:3px solid var(--r);border-radius:12px;padding:18px 20px;font-size:13px;color:#c6d2d5}
+    .i03j .ov-r b{color:#dfe7e9}
+    .i03j table{width:100%;border-collapse:collapse;font-size:12.5px}
+    .i03j th{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:left;padding:9px 10px;border-bottom:1px solid var(--ln);font-weight:500}
+    .i03j th.r,.i03j td.r{text-align:right}
+    .i03j td{padding:7px 10px;border-bottom:1px solid #162227}
+    .i03j .tk{font-weight:700;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px}
+    .i03j .pill{font-size:9px;padding:2px 6px;border-radius:5px}
+    .i03j .pill.s{color:var(--short);background:rgba(255,138,61,.1);border:1px solid rgba(255,138,61,.3)}
+    .i03j .pill.m{color:var(--long);background:rgba(57,192,255,.1);border:1px solid rgba(57,192,255,.3)}
+    .i03j .gr{font-weight:800;font-size:12px;padding:2px 7px;border-radius:6px}
+    .i03j .ap{color:#04140c;background:var(--g)} .i03j .a{color:var(--g);border:1px solid #0f7a4c} .i03j .b{color:var(--gold);border:1px solid rgba(245,185,66,.35)} .i03j .c{color:var(--mut);border:1px solid var(--ln)} .i03j .d{color:var(--r);border:1px solid #7a1f2c}
+    .i03j .sum td{border-top:2px solid var(--ln);font-weight:800;background:rgba(31,214,130,.05)}
+    .i03j .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}
+    .i03j .sc{background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:16px 18px}
+    .i03j .big{font-size:26px;font-weight:800}
+    .i03j .meter{height:7px;border-radius:6px;background:var(--ln);margin:12px 0 6px;overflow:hidden}
+    .i03j .meter i{display:block;height:100%}
+    .i03j .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+    .i03j .kf{border-radius:12px;padding:16px 18px;border:1px solid var(--ln)}
+    .i03j .keep{border-left:3px solid var(--g)} .i03j .fix{border-left:3px solid var(--r)}
+    .i03j .kf h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+    .i03j .keep h3{color:var(--g)} .i03j .fix h3{color:var(--r)}
+    .i03j .it{margin-bottom:12px} .i03j .it .t{font-weight:600;color:#dfe7e9;margin-bottom:3px}
+    .i03j .it .x{color:var(--mut);font-size:12px} .i03j .ev{color:var(--gold)}
+    .i03j .cc{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:22px 24px;font-size:13.5px;color:#c6d2d5}
+    .i03j .cc p{margin-bottom:12px} .i03j .hl{color:var(--gold)} .i03j .cc .rule{color:#dfe7e9;font-weight:600}
+    .i03j .alert{background:rgba(255,77,94,.08);border:1px solid rgba(255,77,94,.3);border-left:3px solid var(--r);border-radius:12px;padding:14px 18px;margin:8px 0;font-size:12.5px;color:#c6d2d5}
+    .i03j .alert b{color:#ff8a8a}
+    .i03j .warn{background:rgba(245,185,66,.08);border:1px solid rgba(245,185,66,.3);border-left:3px solid var(--gold);border-radius:12px;padding:14px 18px;margin:8px 0;font-size:12.5px;color:#c6d2d5}
+    .i03j .warn b{color:var(--gold)}
+    .i03j .decision{background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);border-left:3px solid #a855f7;border-radius:12px;padding:14px 18px;margin:8px 0;font-size:12.5px;color:#c6d2d5}
+    .i03j .decision b{color:#c084fc}
+    .i03j .bar-row{margin-bottom:10px}
+    .i03j .bar-row .bar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px}
+    .i03j .bar-row .bar-track{height:6px;background:var(--ln);border-radius:4px;overflow:hidden}
+    .i03j .bar-row .bar-fill{height:100%;border-radius:4px}
+  </style>
+
+  <!-- HEADER -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--ln);padding-bottom:16px;">
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:#a855f7;">PIRATA · INFORME 03 JUN</div>
+      <div style="font-size:10px;letter-spacing:2px;color:var(--mut);">TRADELY · 22 POSICIONES · 16 TICKERS · PREMARKET RECORD: +$763</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:30px;font-weight:800;color:var(--r);">-$622.34</div>
+      <div style="font-size:9px;letter-spacing:2px;color:var(--dim);">NETO ESTIMADO -$721.00 · -4.46R</div>
+    </div>
+  </div>
+
+  <!-- KP GRID -->
+  <div class="kp">
+    <div><div class="l">Realizado bruto</div><div class="v neg">-$622.34</div></div>
+    <div><div class="l">HTB (borrow)</div><div class="v neg">-$98.66</div></div>
+    <div><div class="l">Neto estimado</div><div class="v neg">-$721.00</div></div>
+    <div><div class="l">R · WR</div><div class="v neg">-4.46R <small>59%</small></div></div>
+    <div><div class="l">Posiciones</div><div class="v amb">22</div></div>
+    <div><div class="l">Tickers</div><div class="v amb">16</div></div>
+  </div>
+
+  <div class="alert"><b>MARKET DESTRUYO EL PREMARKET:</b> Premarket <b class="pos">+$763</b> (record personal). Market session: <b>-$1,385</b>. El 71% de las operaciones fueron ganadoras pero las perdedoras triplicaron en tamano a las ganadoras. SDOT solo costo <b>-$783.57</b>.</div>
+
+  <!-- 00 DESCRIPCION GENERAL -->
+  <h2 class="s"><span class="num">00</span> Descripcion general</h2>
+  <div class="ov-r">
+    Dos dias completamente distintos en uno. El <b>pre-market fue el mejor de toda la historia: +$763</b>, cerrando todas las posiciones correctamente. El <b>market fue catastrofico: -$1,385</b>, convirtiendo un dia record en el peor resultado de la semana. El problema no fue la seleccion de tickers (B+ segun Tradely), sino la gestion del riesgo: <b>las posiciones perdedoras se dejaron correr 2h 16min de media</b> mientras las ganadoras se cerraron en 5min 18s. SDOT (margin) acumulo -$530.95 solo, FOFO -$323.95. Resultado neto: <b>-$721.00</b>.
+  </div>
+
+  <!-- FASES DEL DIA -->
+  <h2 class="s"><span class="num">01</span> Fases del dia</h2>
+  <div class="split">
+    <div class="sc">
+      <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">PRE-MARKET</div>
+      <div class="big pos">+$763</div>
+      <div style="font-size:11px;color:var(--mut);margin-top:6px">RECORD PERSONAL · Todas las posiciones cerradas. Ejecucion perfecta. 13 winners en tickers de impulso.</div>
+    </div>
+    <div class="sc">
+      <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px">MARKET (OPEN - 17:00)</div>
+      <div class="big neg">-$1,385</div>
+      <div style="font-size:11px;color:var(--mut);margin-top:6px">SDOT -$783.57 · FOFO -$323.95 · LASE -$143.85. Posiciones M abiertas sin control de tiempo.</div>
+    </div>
+  </div>
+
+  <!-- TABLA DE OPERACIONES -->
+  <h2 class="s"><span class="num">02</span> Todas las operaciones</h2>
+  <div style="background:var(--pan);border:1px solid var(--ln);border-radius:12px;overflow:hidden">
+    <table>
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Tipo</th>
+          <th class="r">Realizado</th>
+          <th class="r">R</th>
+          <th>Calidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="tk">XOS</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$170.89</td><td class="r pos">1.22R</td><td><span class="gr a">A</span></td></tr>
+        <tr><td class="tk">WCT</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$137.62</td><td class="r pos">0.99R</td><td><span class="gr a">A</span></td></tr>
+        <tr><td class="tk">HUBC</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$125.73</td><td class="r pos">0.90R</td><td><span class="gr a">A</span></td></tr>
+        <tr><td class="tk">TOPS</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$85.48</td><td class="r pos">0.61R</td><td><span class="gr b">B</span></td></tr>
+        <tr><td class="tk">KUST</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$72.97</td><td class="r pos">0.52R</td><td><span class="gr a">A</span></td></tr>
+        <tr><td class="tk">LASE</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$72.77</td><td class="r pos">0.52R</td><td><span class="gr b">B</span></td></tr>
+        <tr><td class="tk">CHSN</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$70.61</td><td class="r pos">0.51R</td><td><span class="gr a">A</span></td></tr>
+        <tr><td class="tk">BNRG</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$65.13</td><td class="r pos">0.47R</td><td><span class="gr a">A</span></td></tr>
+        <tr><td class="tk">CISS</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$54.33</td><td class="r pos">0.39R</td><td><span class="gr b">B</span></td></tr>
+        <tr><td class="tk">BMGL</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$46.44</td><td class="r pos">0.33R</td><td><span class="gr b">B</span></td></tr>
+        <tr><td class="tk">PBK</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$31.05</td><td class="r pos">0.22R</td><td><span class="gr b">B</span></td></tr>
+        <tr><td class="tk">DBGI</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$30.92</td><td class="r pos">0.22R</td><td><span class="gr b">B</span></td></tr>
+        <tr><td class="tk">DEVS</td><td><span class="pill s">SHORT</span></td><td class="r pos">+$27.73</td><td class="r pos">0.20R</td><td><span class="gr b">B</span></td></tr>
+        <tr style="background:rgba(255,77,94,.04)"><td class="tk">FNGR</td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$38.63</td><td class="r neg">-0.28R</td><td><span class="gr d">D</span></td></tr>
+        <tr style="background:rgba(255,77,94,.04)"><td class="tk">BMGL</td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$80.77</td><td class="r neg">-0.58R</td><td><span class="gr d">D</span></td></tr>
+        <tr style="background:rgba(255,77,94,.04)"><td class="tk">XOS</td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$62.81</td><td class="r neg">-0.45R</td><td><span class="gr d">D</span></td></tr>
+        <tr style="background:rgba(255,77,94,.04)"><td class="tk">FNGR</td><td><span class="pill s">SHORT</span></td><td class="r neg">-$87.47</td><td class="r neg">-0.63R</td><td><span class="gr d">D</span></td></tr>
+        <tr style="background:rgba(255,77,94,.04)"><td class="tk">WCT</td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$92.57</td><td class="r neg">-0.66R</td><td><span class="gr d">D</span></td></tr>
+        <tr style="background:rgba(255,77,94,.06)"><td class="tk">LASE</td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$143.85</td><td class="r neg">-1.03R</td><td><span class="gr d">D</span></td></tr>
+        <tr style="background:rgba(255,77,94,.08)"><td class="tk">SDOT</td><td><span class="pill s">SHORT</span></td><td class="r neg">-$252.62</td><td class="r neg">-1.81R</td><td><span class="gr d">D</span></td></tr>
+        <tr style="background:rgba(255,77,94,.08)"><td class="tk">FOFO</td><td><span class="pill s">SHORT</span></td><td class="r neg">-$323.95</td><td class="r neg">-2.32R</td><td><span class="gr d">D</span></td></tr>
+        <tr style="background:rgba(255,77,94,.12)"><td class="tk">SDOT</td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$530.95</td><td class="r neg">-3.80R</td><td><span class="gr d">D</span></td></tr>
+        <tr class="sum"><td colspan="2">TOTAL (22 pos)</td><td class="r neg">-$622.34</td><td class="r neg">-4.46R</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ANALISIS TRADELY -->
+  <h2 class="s"><span class="num">03</span> Analisis Tradely</h2>
+  <div class="split">
+    <div class="sc">
+      <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:12px">DURACION MEDIA</div>
+      <div class="bar-row">
+        <div class="bar-label"><span style="color:var(--g)">Ganadoras</span><span style="color:var(--g)">5min 18s</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:8%;background:var(--g)"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span style="color:var(--r)">Perdedoras</span><span style="color:var(--r)">2h 16min</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--r)"></div></div>
+      </div>
+      <div style="font-size:11px;color:var(--mut);margin-top:10px">Las perdedoras duraron <b style="color:var(--r)">26x mas</b> que las ganadoras. El problema no es el timing de entrada sino <b style="color:#dfe7e9">no cortar las perdidas</b>.</div>
+    </div>
+    <div class="sc">
+      <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:12px">CALIFICACIONES TRADELY</div>
+      <div class="bar-row">
+        <div class="bar-label"><span>Seleccion tickers</span><span style="color:var(--g)">B+</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:75%;background:var(--g)"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span>SDOT config</span><span style="color:var(--r)">B-</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:45%;background:var(--gold)"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span>FOFO / FNGR (micro cap)</span><span style="color:var(--r)">D</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:15%;background:var(--r)"></div></div>
+      </div>
+      <div style="font-size:11px;color:var(--mut);margin-top:10px">80% tickers correctos. El 20% (FOFO+FNGR) costo <b style="color:var(--r)">-$457</b>. Evitar micro-cap (&lt;$500M).</div>
+    </div>
+  </div>
+
+  <div class="warn"><b>REGLA CRITICA (Tradely):</b> Cortar posiciones perdedoras a los <b>15 minutos</b>. Sin excepciones. Configurar temporizador. Las 3 mayores perdidas (-$1,425 total) llevaban mas de 4 dias de duracion media.</div>
+
+  <!-- DECISIONES DEL TRADER -->
+  <h2 class="s"><span class="num">04</span> Decisiones del trader</h2>
+  <div class="decision"><b>NUEVO MARCO OPERATIVO (desde manana 04 Jun):</b> Operar como Charlie, no como Edu. El pre-market demuestra que la metodologia funciona. El market session destruye el trabajo del pre-market.</div>
+
+  <div class="twocol">
+    <div class="kf fix">
+      <h3>REGLAS NUEVAS</h3>
+      <div class="it"><div class="t">Limite market: $500 maximo</div><div class="x">Si el market va bien hasta $500, seguir. Si no, cerrar.</div></div>
+      <div class="it"><div class="t">Stop diario: 3R + HTB + 1% comision</div><div class="x">Cuando se alcance ese objetivo, terminar. Es un trabajo con horario.</div></div>
+      <div class="it"><div class="t">Horario: 10:00 - 14:00</div><div class="x">Posible power hour y after, pero no obligatorio. Premarket es la prioridad.</div></div>
+      <div class="it"><div class="t">Cortar perdedoras: 15 minutos max</div><div class="x">Temporizador obligatorio en cada posicion abierta.</div></div>
+    </div>
+    <div class="kf keep">
+      <h3>SEGUIR HACIENDO</h3>
+      <div class="it"><div class="t">Pre-market: ejecutar igual</div><div class="x">+$763 es record personal. La ejecucion fue perfecta. No cambiar nada.</div></div>
+      <div class="it"><div class="t">Shorts en impulso de sector</div><div class="x">XOS, HUBC, KUST, WCT, TOPS funcionaron muy bien.</div></div>
+      <div class="it"><div class="t">Cerrar todas las posiciones PM</div><div class="x">El pre-market termino con 0 posiciones abiertas. Correcto.</div></div>
+      <div class="it"><div class="t ev">Evitar FOFO / FNGR (micro-cap)</div><div class="x">Capitalizacion &lt;$500M = demasiado riesgo de manipulacion.</div></div>
+    </div>
+  </div>
+
+  <!-- RESUMEN FINAL -->
+  <h2 class="s"><span class="num">05</span> Lo unico que debes recordar</h2>
+  <div class="cc">
+    <p><span class="rule">El problema no es tu porcentaje de aciertos, sino el tamano de tus perdidas.</span> Ganaste el 59% de las posiciones pero perdiste <b>-$1,385</b> en el market. Tu pre-market de <b class="hl">+$763 fue un record absoluto</b>. Eso confirma que el sistema funciona.</p>
+    <p>La solucion no es dejar de hacer market: es poner un <b class="hl">limite de $500</b> y respetar el <b class="hl">corte de 15 minutos</b> en cada perdedora. SDOT abierto 2+ horas es inaceptable. FOFO en micro-cap es inaceptable.</p>
+    <p><span class="rule">Opera como Charlie:</span> pre-market solido, market controlado con limite, y para cuando hayas hecho 3R + costes. Eso es un trabajo, no un casino.</p>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:28px;padding-top:16px;border-top:1px solid var(--ln);display:flex;justify-content:space-between;font-size:10px;color:var(--dim);letter-spacing:1px">
+    <span>PIRATA TRADER · BITACORA 13.0</span>
+    <span>03-06-2026</span>
+  </div>
+</div>`;
+
 // ── REGISTRO DE INFORMES SEMBRABLES (por fecha YYYY-MM-DD) ────────────────────
+const INFORME_04JUN_HTML = `
+<div class="i04j" style="--g:#1fd682;--r:#ff4d5e;--gold:#f5b942;--short:#ff8a3d;--long:#39c0ff;--mut:#7d8f95;--dim:#54656b;--ln:#1d2a30;--pan:#0d1316;color:#dfe7e9;font-family:'DM Mono',ui-monospace,monospace;max-width:1040px;margin:0 auto;line-height:1.55;">
+  <style>
+    .i04j h2.s{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#dfe7e9;margin:30px 0 14px;display:flex;align-items:baseline;gap:12px}
+    .i04j .num{font-size:11px;color:var(--g);border:1px solid #0f7a4c;border-radius:6px;padding:2px 7px}
+    .i04j .kp{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#162227;border:1px solid var(--ln);border-radius:12px;overflow:hidden;margin:14px 0 8px}
+    .i04j .kp>div{background:var(--pan);padding:13px 14px}
+    .i04j .kp .l{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+    .i04j .kp .v{font-size:18px;font-weight:700}
+    .i04j .kp .v small{font-size:10px;color:var(--mut)}
+    .i04j .pos{color:var(--g)} .i04j .neg{color:var(--r)} .i04j .amb{color:var(--gold)}
+    .i04j .ov{background:var(--pan);border:1px solid var(--ln);border-left:3px solid var(--g);border-radius:12px;padding:18px 20px;font-size:13px;color:#c6d2d5}
+    .i04j .ov b{color:#dfe7e9}
+    .i04j table{width:100%;border-collapse:collapse;font-size:12.5px}
+    .i04j th{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);text-align:left;padding:9px 10px;border-bottom:1px solid var(--ln);font-weight:500}
+    .i04j th.r,.i04j td.r{text-align:right}
+    .i04j td{padding:7px 10px;border-bottom:1px solid #162227}
+    .i04j .tk{font-weight:700;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px}
+    .i04j .pill{font-size:9px;padding:2px 6px;border-radius:5px}
+    .i04j .pill.s{color:var(--short);background:rgba(255,138,61,.1);border:1px solid rgba(255,138,61,.3)}
+    .i04j .pill.m{color:var(--long);background:rgba(57,192,255,.1);border:1px solid rgba(57,192,255,.3)}
+    .i04j .gr{font-weight:800;font-size:12px;padding:2px 7px;border-radius:6px}
+    .i04j .ap{color:#04140c;background:var(--g)} .i04j .a{color:var(--g);border:1px solid #0f7a4c} .i04j .b{color:var(--gold);border:1px solid rgba(245,185,66,.35)} .i04j .c{color:var(--mut);border:1px solid var(--ln)} .i04j .d{color:var(--r);border:1px solid #7a1f2c}
+    .i04j .sum td{border-top:2px solid var(--ln);font-weight:800;background:rgba(31,214,130,.05)}
+    .i04j .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}
+    .i04j .sc{background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:16px 18px}
+    .i04j .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+    .i04j .kf{border-radius:12px;padding:16px 18px;border:1px solid var(--ln)}
+    .i04j .keep{border-left:3px solid var(--g)} .i04j .fix{border-left:3px solid var(--r)}
+    .i04j .kf h3{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+    .i04j .keep h3{color:var(--g)} .i04j .fix h3{color:var(--r)}
+    .i04j .it{margin-bottom:12px} .i04j .it .t{font-weight:600;color:#dfe7e9;margin-bottom:3px}
+    .i04j .it .x{color:var(--mut);font-size:12px} .i04j .ev{color:var(--gold)}
+    .i04j .cc{background:var(--pan);border:1px solid var(--ln);border-radius:14px;padding:22px 24px;font-size:13.5px;color:#c6d2d5}
+    .i04j .cc p{margin-bottom:12px} .i04j .hl{color:var(--gold)} .i04j .cc .rule{color:#dfe7e9;font-weight:600}
+    .i04j .alert{background:rgba(255,77,94,.08);border:1px solid rgba(255,77,94,.3);border-left:3px solid var(--r);border-radius:12px;padding:14px 18px;margin:8px 0;font-size:12.5px;color:#c6d2d5}
+    .i04j .alert b{color:#ff8a8a}
+    .i04j .badge-r{display:inline-block;background:rgba(255,77,94,.12);border:1px solid #7a1f2c;border-radius:6px;padding:2px 8px;font-size:10px;color:var(--r);margin-left:6px}
+    .i04j .badge-o{display:inline-block;background:rgba(245,185,66,.12);border:1px solid rgba(245,185,66,.35);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--gold);margin-left:6px}
+  </style>
+
+  <!-- HEADER -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--ln);padding-bottom:16px;">
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:#a855f7;">PIRATA · INFORME 04 JUN</div>
+      <div style="font-size:10px;letter-spacing:2px;color:var(--mut);">TRADELY · 47 POSICIONES · 35 TICKERS · STI: -$3,327 CATASTROFE · RECUPERACION TOTAL</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:30px;font-weight:800;color:var(--g);">+$555.96</div>
+      <div style="font-size:9px;letter-spacing:2px;color:var(--dim);">NETO ESTIMADO ~+$436.54 · 4.24R · HTB $119.42</div>
+    </div>
+  </div>
+
+  <!-- KP GRID -->
+  <div class="kp">
+    <div><div class="l">Realizado bruto</div><div class="v pos">+$555.96</div></div>
+    <div><div class="l">HTB (borrow)</div><div class="v neg">-$119.42</div></div>
+    <div><div class="l">Neto estimado</div><div class="v pos">+$436.54</div></div>
+    <div><div class="l">R · WR</div><div class="v">4.24R <small>72%</small></div></div>
+    <div><div class="l">Shares</div><div class="v amb">83,432</div></div>
+    <div><div class="l">Tickers</div><div class="v amb">35</div></div>
+  </div>
+
+  <div class="alert"><b>&#x1F6A8; ALERTA ROJA — STI:</b> Una sola posicion genero <b>-$3,327.41 (-25.4R) Short</b> + recuperacion parcial +$231.42 Margin = <b>perdida neta STI: -$3,095.99</b>. El dia fue VERDE gracias a INDP (+$1,058) y 30+ tickers ganadores. Sin esa recuperacion, este habria sido el peor dia del ano.</div>
+
+  <!-- 00 DESCRIPCION GENERAL -->
+  <h2 class="s"><span class="num">00</span> Descripcion general</h2>
+  <div class="ov">
+    Dia tecnicamente verde pero emocionalmente el mas peligroso del ano. <b>Premarket bien iniciado</b> hasta que STI, con noticia de baterias espaciales (+500%), se convirtio en un agujero negro de <b>-$3,650 drawdown maximo unrealizado</b>. En lugar de cortar con ~$300 de perdida inicial, se mantuvo la posicion y se escalo el riesgo desde un bar: $1,750 &#x2192; $2,250 &#x2192; $3,500, con position size subido a $5,000 para STI. La recuperacion posterior &mdash; <b>INDP +$1,058, BBCP +$318, WXM +$264, CDTG +$260, BGMS +$249</b> &mdash; convirtio el desastre en +$555.96 bruto. Tradely lo resume: <b>Las ganancias de hoy enmascararon fallas fundamentales.</b>
+  </div>
+
+  <!-- 01 POSICIONES CLAVE -->
+  <h2 class="s"><span class="num">01</span> Posiciones clave</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th><th>Tipo</th><th class="r">Realizado</th><th class="r">R</th><th>Nota</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="tk">INDP</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$1,058.02</td><td class="r pos">+8.08R</td><td style="font-size:11px;color:var(--mut)">Salvo el dia. 7 ops, 80% efect. Mejor trade del ano.</td></tr>
+      <tr><td><span class="tk">BBCP</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$318.48</td><td class="r pos">+2.43R</td><td style="font-size:11px;color:var(--mut)">Parabolica limpia.</td></tr>
+      <tr><td><span class="tk">WXM</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$264.48</td><td class="r pos">+2.02R</td><td style="font-size:11px;color:var(--mut)">Apretn fin sesion. Ejecucion A (Tradely).</td></tr>
+      <tr><td><span class="tk">CDTG</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$259.72</td><td class="r pos">+1.98R</td><td style="font-size:11px;color:var(--mut)">Rango apertura corto. Solido.</td></tr>
+      <tr><td><span class="tk">BGMS</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$248.75</td><td class="r pos">+1.9R</td><td style="font-size:11px;color:var(--mut)">Impulso limpio. A.</td></tr>
+      <tr><td><span class="tk">EDHL</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$249.29</td><td class="r pos">+1.9R</td><td style="font-size:11px;color:var(--mut)">Multiples movimientos pequenos. B+ Tradely.</td></tr>
+      <tr><td><span class="tk">RMSG</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$203.58</td><td class="r pos">+1.55R</td><td style="font-size:11px;color:var(--mut)">Impulso de sector. A.</td></tr>
+      <tr><td><span class="tk">RYDE</span></td><td><span class="pill s">SHORT</span></td><td class="r pos">+$158.83</td><td class="r pos">+1.21R</td><td style="font-size:11px;color:var(--mut)">Impulso brecha rapida. Ejecucion perfecta (Tradely).</td></tr>
+      <tr><td><span class="tk">STI</span><span class="badge-o">MARGIN</span></td><td><span class="pill m">MARGIN</span></td><td class="r pos">+$231.42</td><td class="r pos">+1.77R</td><td style="font-size:11px;color:var(--mut)">Recuperacion parcial. No compensa la Short.</td></tr>
+      <tr style="background:rgba(255,77,94,.08)"><td><span class="tk">STI</span><span class="badge-r">-25.4R</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$3,327.41</td><td class="r neg">-25.4R</td><td style="font-size:11px;color:#ff8a8a">CATASTROFE. Noticia +500%. Stop ignorado. Riesgo escalado desde bar.</td></tr>
+      <tr style="background:rgba(255,77,94,.05)"><td><span class="tk">BAOS</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$267.41</td><td class="r neg">-2.04R</td><td style="font-size:11px;color:var(--mut)">4 perdidas consecutivas. D (Tradely). Lista negra.</td></tr>
+      <tr style="background:rgba(255,77,94,.04)"><td><span class="tk">INDP</span></td><td><span class="pill m">MARGIN</span></td><td class="r neg">-$146.56</td><td class="r neg">-1.12R</td><td style="font-size:11px;color:var(--mut)">Contraparte del corto ganador. Acepto.</td></tr>
+      <tr style="background:rgba(255,77,94,.04)"><td><span class="tk">LASE</span></td><td><span class="pill s">SHORT</span></td><td class="r neg">-$124.00</td><td class="r neg">-0.95R</td><td style="font-size:11px;color:var(--mut)">Ya perdedor el 03 Jun. Patron repetido.</td></tr>
+      <tr class="sum">
+        <td colspan="2">RESUMEN DIA</td>
+        <td class="r pos">+$555.96</td>
+        <td class="r pos">+4.24R</td>
+        <td style="font-size:11px;color:var(--mut)">83,432 shares · HTB $119.42 · Neto +$436.54</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 02 LA ESPIRAL DE STI -->
+  <h2 class="s"><span class="num">02</span> La espiral de STI &mdash; Reconstruccion del error</h2>
+  <div class="alert">
+    <b>Linea de tiempo:</b><br>
+    &#x2022; STI noticia baterias espaciales +500% &#x2192; perdida inicial ~$300 &#x2192; <b>NO se corto</b><br>
+    &#x2022; Fue a comer con hermana y abuela &#x2192; STI siguio subiendo sin stop<br>
+    &#x2022; Desde el bar (movil): riesgo $1,750 &#x2192; $2,250 &#x2192; $3,500<br>
+    &#x2022; Position size subido a $5,000 para STI (inapropiado para el tamano de cuenta)<br>
+    &#x2022; Drawdown maximo unrealizado: <b>-$3,650</b><br>
+    &#x2022; Cerveza con mujer, reset emocional &#x2192; INDP, BBCP, WXM &#x2192; recuperacion total<br>
+    &#x2022; Cierre: <b>+$555.96 bruto</b> (rescatado por INDP +$1,058 y mercado favorable)<br><br>
+    <b>Diagnostico:</b> El resultado fue verde por suerte de mercado. INDP aparecio cuando lo necesitabas. El dia que no aparezca, pierdes +$4,000.
+  </div>
+
+  <!-- 03 CONFIGURACIONES -->
+  <h2 class="s"><span class="num">03</span> Configuraciones (Tradely)</h2>
+  <div class="split">
+    <div class="sc">
+      <table>
+        <thead><tr><th>Configuracion</th><th class="r">Usos</th><th class="r">WR</th><th class="r">P&amp;L prom</th><th class="r">Cal</th></tr></thead>
+        <tbody>
+          <tr><td>Rango apertura corto (ORS)</td><td class="r">8</td><td class="r">75%</td><td class="r pos">+$89</td><td class="r"><span class="gr b">B+</span></td></tr>
+          <tr><td>Continuacion impulso media jornada</td><td class="r">12</td><td class="r">67%</td><td class="r pos">+$52</td><td class="r"><span class="gr c">C+</span></td></tr>
+          <tr><td>Desvanecimiento / inversion brecha</td><td class="r">5</td><td class="r">40%</td><td class="r neg">-$47</td><td class="r"><span class="gr d">D</span></td></tr>
+          <tr><td>Rebote cuero cabelludo largo</td><td class="r">7</td><td class="r">71%</td><td class="r pos">+$38</td><td class="r"><span class="gr c">C+</span></td></tr>
+          <tr><td>Apretn final de sesion</td><td class="r">6</td><td class="r">100%</td><td class="r pos">+$116</td><td class="r"><span class="gr a">A</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="sc">
+      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Seleccion de simbolos</div>
+      <div style="font-size:42px;font-weight:800;color:var(--gold);margin-bottom:8px">C</div>
+      <div style="font-size:12px;color:#c6d2d5;line-height:1.7">
+        80% tickers correctos. STI y BAOS (20%) costaron la ganancia estructural del dia.<br><br>
+        <span style="color:#ff8a8a">&#x26D4; STI: beta extrema, manipulacion biotec. NO es tu patron.</span><br>
+        <span style="color:#ff8a8a">&#x26D4; BAOS: 4 perdidas consecutivas. Lista negra.</span><br>
+        <span style="color:var(--g)">&#x2713; INDP, RYDE, WXM: perfil ideal. Cerrarte a estos.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 CONSERVAR / CORREGIR -->
+  <h2 class="s"><span class="num">04</span> Conservar / Corregir</h2>
+  <div class="twocol">
+    <div class="kf keep">
+      <h3>&#x2713; Conservar</h3>
+      <div class="it"><div class="t">La recuperacion tecnica bajo presion maxima</div><div class="x">De -$3,650 a +$555 en una sesion. <span class="ev">INDP, BBCP, WXM, CDTG, RYDE ejecutados perfectamente</span> cuando la cabeza estaba quemada. Eso es edge real e inamovible.</div></div>
+      <div class="it"><div class="t">Apretn de fin de sesion: 6/6 (100% WR)</div><div class="x">+$116 promedio, cero fallos. <span class="ev">Esta configuracion funciona. Prioridad maxima en el after y fin de sesion.</span></div></div>
+      <div class="it"><div class="t">Reset emocional — cerveza con la mujer</div><div class="x">Parar, contar lo que paso, despejar la cabeza. <span class="ev">Ese instinto de resetear fue lo que permitio ejecutar limpio en la recuperacion.</span></div></div>
+    </div>
+    <div class="kf fix">
+      <h3>&#x2717; Corregir</h3>
+      <div class="it"><div class="t">Accion con noticia +100%: stop en 2 min / max $300</div><div class="x">STI: noticia baterias espaciales. Stop obligatorio = <span class="ev">2 minutos, $300 maximo.</span> Sin escalar. Sin "me la devuelve". Corta, apaga DAS, come tranquilo.</div></div>
+      <div class="it"><div class="t">CERO operaciones desde movil / bar</div><div class="x">Las decisiones $1,750&#x2192;$2,250&#x2192;$3,500 se tomaron fuera de casa, estado emocional. <span class="ev">Regla absoluta: decision de riesgo solo en el escritorio.</span></div></div>
+      <div class="it"><div class="t">BAOS: 2 perdidas = lista negra del dia</div><div class="x">No 4. <b>Dos.</b> Despues de 2 perdidas en el mismo ticker ese dia, <span class="ev">bloqueado para el resto de la sesion.</span></div></div>
+      <div class="it"><div class="t">Position size: maximo $300 por trade</div><div class="x">$5,000 de position size no corresponde a esta cuenta ahora mismo. <span class="ev">Vuelta a $300. Sin excepciones hasta nueva orden explcita.</span></div></div>
+    </div>
+  </div>
+
+  <!-- CIERRE -->
+  <div class="cc" style="margin-top:22px;">
+    <p><span class="rule">Este es tu mejor dia y tu peor dia. Las dos cosas a la vez.</span> El P&amp;L dice +$436 neto. El proceso dice que debias haber terminado en -$3,000+. La diferencia la puso el mercado &mdash; INDP hizo el movimiento exacto que necesitabas, en el momento exacto. No siempre ocurre eso.</p>
+    <p><b class="hl">La pregunta que importa: que pasa el dia que STI sigue subiendo y INDP no aparece?</b> Ese dia pierdes $4,000 o mas. Y llega exactamente si no cambias el proceso.</p>
+    <p><span class="rule">La regla que nace hoy:</span> Una accion con noticia +100% en contra tiene stop de 2 minutos y perdida maxima $300. Punto. Sin debatirlo. Corta, cierra el DAS, ve a comer con tu familia <b>tranquilo</b> &mdash; no con el telefono bajo la mesa subiendo el riesgo.</p>
+    <p>Tu instinto de parar, resetear y volver frio es el de un trader profesional. <span class="hl">Aplicalo ANTES del desastre, no despues. Ese es el unico cambio real que necesitas hacer.</span></p>
+  </div>
+`;
+
+
 // Para añadir un día nuevo: define su constante y añádela aquí. seedInformes()
 // los vuelca en D[k].informeIA si no existen y persiste en Firestore.
 const INFORMES_SEED = {
@@ -3399,6 +3786,8 @@ const INFORMES_SEED = {
   '2026-05-28': INFORME_28MAY_HTML,
   '2026-06-01': INFORME_01JUN_HTML,
   '2026-06-02': INFORME_02JUN_HTML,
+  '2026-06-03': INFORME_03JUN_HTML,
+  '2026-06-04': INFORME_04JUN_HTML,
 };
 
 function seedInformes() {
@@ -9519,6 +9908,8 @@ const AFTER_MSGS = [
 ];
 let afterMsgIdx = 0;
 let afterHoursIntervalId = null;
+let afterHoursDismissCount = 0;
+let afterHoursSilencedDay = null;
 
 function getMadridMinutes() {
   const str = new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -9529,6 +9920,9 @@ function getMadridMinutes() {
 function showAfterHoursReminder() {
   const mins = getMadridMinutes();
   if (mins < 14 * 60 || mins >= 22 * 60) return; // solo entre 14:00 y 22:00
+  // Silenciado si ya cerró 3 veces hoy
+  const todayStr = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' });
+  if (afterHoursSilencedDay === todayStr) return;
   const m = AFTER_MSGS[afterMsgIdx % AFTER_MSGS.length];
   afterMsgIdx++;
   const ov = document.getElementById('afterHoursOverlay');
@@ -9540,8 +9934,15 @@ function showAfterHoursReminder() {
   ov.classList.add('show');
 }
 
-function cerrarAfterHoursOverlay() {
+function cerrarAfterHoursOverlay(confirmed) {
   document.getElementById('afterHoursOverlay').classList.remove('show');
+  if (confirmed) {
+    afterHoursDismissCount++;
+    if (afterHoursDismissCount >= 3) {
+      afterHoursSilencedDay = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' });
+      showToast('🔕 Sin más avisos hasta mañana. ¡Disfruta!');
+    }
+  }
 }
 
 function startAfterHoursWatcher() {
@@ -9588,8 +9989,8 @@ document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
     <div class="ov-title" id="ahTitle">SACA AL PERRO</div>
     <div class="ov-sub" id="ahTime">Son las 14:30 (Madrid). Tu jornada laboral terminó a las 14:00.</div>
     <div class="ov-msg" style="margin-top:16px;" id="ahMsg">—</div>
-    <button class="ov-close" onclick="cerrarAfterHoursOverlay()">SÍ, VOY A DESCONECTAR</button>
-    <button class="ov-dismiss" onclick="cerrarAfterHoursOverlay()">Cerrar — seguiré un poco más</button>
+    <button class="ov-close" onclick="cerrarAfterHoursOverlay(true)">SÍ, VOY A DESCONECTAR</button>
+    <button class="ov-dismiss" onclick="cerrarAfterHoursOverlay(false)">Cerrar — seguiré un poco más</button>
   </div>
 </div>
 
