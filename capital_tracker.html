@@ -148,6 +148,17 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .prog-fill{height:100%;border-radius:4px;transition:width .8s ease;}
 /* Bottom */
 .bot{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* Session stats */
+.sess-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;}
+.sess-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;}
+.sess-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--gold));}
+.sess-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;}
+.sess-total{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;line-height:1;margin-bottom:6px;}
+.sess-sub{display:flex;gap:12px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);}
+.sess-sub span{color:var(--text);}
+.sess-bar-wrap{margin-top:10px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+.sess-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
 .bc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;overflow:hidden;}
 .bc-t{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;}
 .srows{display:flex;flex-direction:column;gap:7px;}
@@ -502,7 +513,8 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="text-align:center;color:#00b0ff">A</th>
           <th>Shares</th>
           <th style="color:#ff6b9d">HTB</th>
-          <th style="color:#39c0ff" title="PNL solo del pre-market">PM PNL</th>
+          <th style="color:#39c0ff" title="PNL pre-market">PNL PM</th>
+          <th style="color:#ff8a3d" title="PNL Regular Hours (mercado abierto)">PNL RH</th>
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
@@ -514,6 +526,28 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
         </tr></thead>
         <tbody id="mb"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Sesiones: PM / RH / AF -->
+  <div class="sess-grid" id="sessGrid">
+    <div class="sess-card" style="--ac:#39c0ff">
+      <div class="sess-title">🌅 Pre-Market · PNL PM</div>
+      <div class="sess-total" id="sessPM" style="color:#39c0ff">—</div>
+      <div class="sess-sub" id="sessPMsub">sin datos</div>
+      <div class="sess-bar-wrap"><div class="sess-bar-fill" id="sessPMbar" style="background:#39c0ff;width:0%"></div></div>
+    </div>
+    <div class="sess-card" style="--ac:#ff8a3d">
+      <div class="sess-title">📈 Regular Hours · RH − PM</div>
+      <div class="sess-total" id="sessRH" style="color:#ff8a3d">—</div>
+      <div class="sess-sub" id="sessRHsub">sin datos</div>
+      <div class="sess-bar-wrap"><div class="sess-bar-fill" id="sessRHbar" style="background:#ff8a3d;width:0%"></div></div>
+    </div>
+    <div class="sess-card" style="--ac:var(--gold)">
+      <div class="sess-title">🌙 After Hours · AF − RH</div>
+      <div class="sess-total" id="sessAF" style="color:var(--gold)">—</div>
+      <div class="sess-sub" id="sessAFsub">sin datos</div>
+      <div class="sess-bar-wrap"><div class="sess-bar-fill" id="sessAFbar" style="background:var(--gold);width:0%"></div></div>
     </div>
   </div>
 
@@ -908,12 +942,13 @@ function renderMain() {
   let sodSum=0, sodCount=0;
   let rSum=0, rCount=0;
   let scoreSum=0, scoreCount=0;
+  let pmTotal=0, pmCount=0, rhTotal=0, rhCount=0, afTotal=0, afCount=0;
 
   m.days.forEach(d => {
     // Check if this day is a holiday
     const hol = HOLIDAYS[d];
     if (hol) {
-      const colCount = 20; // total columns in table
+      const colCount = 21; // total columns in table
       rows += `<tr class="tr-holiday">
         <td>${d}</td>
         <td colspan="${colCount - 1}" style="text-align:left;padding-left:12px">
@@ -932,6 +967,14 @@ function renderMain() {
     const sh=pd(row.shares); if(sh) shTotal+=sh;
     const htb=pd(row.htb);   if(htb) htbTotal+=htb;
     if(sod){ sodSum+=sod; sodCount++; }
+    const _pm=pd(row.pnlPremarket);
+    const _rh=pd(row.pnlRH);
+    if(_pm!==null){pmTotal+=_pm; pmCount++;}
+    // RH neto = acumulado RH − PM
+    if(_rh!==null&&_pm!==null){rhTotal+=(_rh-_pm); rhCount++;}
+    else if(_rh!==null){rhTotal+=_rh; rhCount++;}
+    // AF neto = PNL Day − RH
+    if(pnl!==null&&_rh!==null){afTotal+=(pnl-_rh); afCount++;}
 
     // % Day = PNL / SOD  (automatic)
     const pctD = (pnl!==null&&sod) ? ((pnl/sod)*100).toFixed(2)+'%' : '';
@@ -955,16 +998,17 @@ function renderMain() {
       <td>${d}</td>
       <td class="ed" data-k="${k}" data-f="startOfDay">${sod?fd(sod):''}</td>
       <td class="cr">${c.ml?fd(Math.round(c.ml/25)*25):''}</td>
-      <td class="crs">${c.rt?fd(Math.round(c.rt/25)*25):''}</td>
+      <td class="crs">${c.rt?fd(Math.round(c.rt/5)*5):''}</td>
       <td style="color:#ff6b6b;font-weight:600;">${sod?fd(Math.round(sod*0.03/25)*25):''}</td>
-      <td class="${c.t3?'cgl':''}">${c.t3?fd(c.t3):''}</td>
-      <td class="cgo" style="text-align:center">${c.sb?fd(c.sb):''}</td>
+      <td class="${c.t3?'cgl':''}">${c.t3?fd(Math.round(c.t3/5)*5):''}</td>
+      <td class="cgo" style="text-align:center">${c.sb?fd(Math.round(c.sb/25)*25):''}</td>
       <td style="text-align:center;cursor:pointer;color:#ff9500;font-weight:bold;" class="setup-checkbox" data-k="${k}" data-type="p" title="P">${row.chk_p ? '☑' : '☐'}</td>
       <td style="text-align:center;cursor:pointer;color:#00e676;font-weight:bold;" class="setup-checkbox" data-k="${k}" data-type="mkt" title="MKT">${row.chk_mkt ? '☑' : '☐'}</td>
       <td style="text-align:center;cursor:pointer;color:#00b0ff;font-weight:bold;" class="setup-checkbox" data-k="${k}" data-type="a" title="A">${row.chk_a ? '☑' : '☐'}</td>
       <td class="ed" data-k="${k}" data-f="shares">${row.shares||''}</td>
       <td class="ed cpink" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
       <td class="ed" data-k="${k}" data-f="pnlPremarket" style="color:#39c0ff">${pd(row.pnlPremarket)!==null?fd(pd(row.pnlPremarket)):''}</td>
+      <td class="ed" data-k="${k}" data-f="pnlRH" style="color:${pd(row.pnlRH)!==null?(pd(row.pnlRH)>=0?'#ff8a3d':'var(--red)'):'var(--muted2)'}">${pd(row.pnlRH)!==null?fd(pd(row.pnlRH)):''}</td>
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
@@ -1020,16 +1064,17 @@ function renderMain() {
     <td>TOTAL MES</td>
     <td>${avgSOD?fd(avgSOD):''}</td>
     <td class="cr">${avgC.ml?fd(Math.round(avgC.ml/25)*25):''}</td>
-    <td class="crs">${avgC.rt?fd(Math.round(avgC.rt/25)*25):''}</td>
+    <td class="crs">${avgC.rt?fd(Math.round(avgC.rt/5)*5):''}</td>
     <td style="color:#ff6b6b;font-weight:600;">${avgSOD?fd(Math.round(avgSOD*0.03/25)*25):''}</td>
-    <td class="cgl">${avgC.t3?fd(avgC.t3):''}</td>
-    <td class="cgo" style="text-align:center" title="Promedio Setup">${avgC.sb?fd(avgC.sb):''}</td>
+    <td class="cgl">${avgC.t3?fd(Math.round(avgC.t3/5)*5):''}</td>
+    <td class="cgo" style="text-align:center" title="Promedio Setup">${avgC.sb?fd(Math.round(avgC.sb/25)*25):''}</td>
     <td style="text-align:center;color:#ff9500;font-weight:bold;">${countP}</td>
     <td style="text-align:center;color:#00e676;font-weight:bold;">${countMKT}</td>
     <td style="text-align:center;color:#00b0ff;font-weight:bold;">${countA}</td>
     <td>${shTotal>0?shTotal.toLocaleString('en-US'):''}</td>
     <td class="cpink">${htbTotal>0?fd(htbTotal):''}</td>
-    <td></td>
+    <td style="color:${pmTotal>=0?'#39c0ff':'var(--red)'};">${pmCount?fd(pmTotal):''}</td>
+    <td style="color:${rhTotal>=0?'#ff8a3d':'var(--red)'};">${rhCount?fd(rhTotal):''}</td>
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
@@ -1073,6 +1118,42 @@ function renderMain() {
         .sort((a,b)=>b.p-a.p).slice(0,5)
         .map(x=>`<div class="sr"><span class="sr-l">${x.d}</span><span class="sr-v ${x.p>=0?'cg':'cr'}">${fd(x.p)}</span></div>`).join('')
     : '<span class="cm" style="font-size:12px">Sin datos</span>';
+
+  // ── Session stats cards ──────────────────────────────────────────────────
+  function sessColor(v){ return v>0?'var(--green)':v<0?'var(--red)':'var(--muted2)'; }
+  function sessColorPM(v){ return v>0?'#39c0ff':v<0?'var(--red)':'var(--muted2)'; }
+  function sessColorAF(v){ return v>0?'var(--gold)':v<0?'var(--red)':'var(--muted2)'; }
+
+  // Barra de porcentaje relativa al mayor absoluto
+  const maxAbs = Math.max(Math.abs(pmTotal), Math.abs(rhTotal), Math.abs(afTotal)) || 1;
+  function barPct(v){ return Math.round(Math.abs(v)/maxAbs*100); }
+
+  // PM
+  document.getElementById('sessPM').textContent  = pmCount ? fd(pmTotal) : '—';
+  document.getElementById('sessPM').style.color  = pmCount ? sessColorPM(pmTotal) : 'var(--muted2)';
+  document.getElementById('sessPMsub').innerHTML = pmCount
+    ? `<span>${pmCount} días</span> · avg <span>${fd(pmTotal/pmCount)}</span>`
+    : 'sin datos';
+  document.getElementById('sessPMbar').style.width = pmCount ? barPct(pmTotal)+'%' : '0%';
+  document.getElementById('sessPMbar').style.background = pmTotal>=0 ? '#39c0ff' : 'var(--red)';
+
+  // RH
+  document.getElementById('sessRH').textContent  = rhCount ? fd(rhTotal) : '—';
+  document.getElementById('sessRH').style.color  = rhCount ? sessColor(rhTotal) : 'var(--muted2)';
+  document.getElementById('sessRHsub').innerHTML = rhCount
+    ? `<span>${rhCount} días</span> · avg <span>${fd(rhTotal/rhCount)}</span>`
+    : 'sin datos';
+  document.getElementById('sessRHbar').style.width = rhCount ? barPct(rhTotal)+'%' : '0%';
+  document.getElementById('sessRHbar').style.background = rhTotal>=0 ? '#ff8a3d' : 'var(--red)';
+
+  // AF
+  document.getElementById('sessAF').textContent  = afCount ? fd(afTotal) : '—';
+  document.getElementById('sessAF').style.color  = afCount ? sessColorAF(afTotal) : 'var(--muted2)';
+  document.getElementById('sessAFsub').innerHTML = afCount
+    ? `<span>${afCount} días</span> · avg <span>${fd(afTotal/afCount)}</span>`
+    : 'sin datos';
+  document.getElementById('sessAFbar').style.width = afCount ? barPct(afTotal)+'%' : '0%';
+  document.getElementById('sessAFbar').style.background = afTotal>=0 ? 'var(--gold)' : 'var(--red)';
 
   attachEd();
   attachSetupCheckboxes();
