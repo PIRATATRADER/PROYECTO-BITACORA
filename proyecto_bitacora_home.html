@@ -267,6 +267,7 @@ body::before {
 .card-pirata-scan  { --card-accent: #ffa726; } /* Naranja */
 .card-trades    { --card-accent: #00e5ff; } /* Cyan brillante */
 .card-stocks    { --card-accent: #1dd1a1; } /* Teal esmeralda */
+.card-executions { --card-accent: #ff8a3d; } /* Naranja executions */
 
 .card-icon {
   font-size: 24px;
@@ -441,6 +442,22 @@ body::before {
         <div class="card-arrow">Abrir SAGE →</div>
       </div>
 
+      <!-- TARJETA: JOURNAL DAS -->
+      <div class="mode-card card-journal-das" onclick="window.location.href='pirata_journal_das.html'" style="cursor:pointer;--card-accent:#22d3ee;border-color:#22d3ee30;">
+        <div class="card-icon">📓</div>
+        <div>
+          <div class="card-label">Journal</div>
+          <div class="card-title" style="color:#22d3ee;">JOURNAL DAS</div>
+        </div>
+        <div class="card-desc">Suelta tu Excel de DAS cada día: calcula el P&L solo y guarda todo como journal con stats acumuladas.</div>
+        <div class="card-stats">
+          <div class="card-stat"><div class="card-stat-val" id="jdNet" style="color:#22d3ee">—</div><div class="card-stat-label">Neto</div></div>
+          <div class="card-stat"><div class="card-stat-val" id="jdDias" style="color:#f5b41a">—</div><div class="card-stat-label">Días</div></div>
+          <div class="card-stat"><div class="card-stat-val" id="jdWin" style="color:#00e676">—</div><div class="card-stat-label">Win rate</div></div>
+        </div>
+        <div class="card-arrow" style="color:#22d3ee;">Abrir Journal →</div>
+      </div>
+
       <!-- TARJETA: TRADING DISCRECIONAL -->
       <div class="mode-card card-discrecional" onclick="window.location.href='trading_discrecional.html'" style="cursor:pointer;">
         <div class="card-icon">🎯</div>
@@ -573,16 +590,30 @@ body::before {
       <div class="mode-card card-trades" onclick="window.location.href='trades_import.html'" style="cursor:pointer;">
         <div class="card-icon">🤖</div>
         <div>
-          <div class="card-label">AI-Powered</div>
+          <div class="card-label">Cloud Import</div>
           <div class="card-title" style="color:#00e5ff;">TRADES</div>
         </div>
-        <div class="card-desc">Importa trades desde imágenes usando Claude AI. Detección automática de datos y autocompletado inteligente.</div>
+        <div class="card-desc">Importa trades desde capturas con backend seguro, guardado centralizado y flujo listo para móvil, tablet y PC.</div>
         <div class="card-stats">
           <div class="card-stat"><div class="card-stat-val" style="color:#00e5ff;">📸</div><div class="card-stat-label">Imagen</div></div>
-          <div class="card-stat"><div class="card-stat-val" style="color:#00e5ff;">AI</div><div class="card-stat-label">Claude</div></div>
-          <div class="card-stat"><div class="card-stat-val" style="color:#00e5ff;">Auto</div><div class="card-stat-label">Import</div></div>
+          <div class="card-stat"><div class="card-stat-val" style="color:#00e5ff;">Cloud</div><div class="card-stat-label">Backend</div></div>
+          <div class="card-stat"><div class="card-stat-val" style="color:#00e5ff;">Sync</div><div class="card-stat-label">Multidevice</div></div>
         </div>
         <div class="card-arrow" style="color:#00e5ff;">Importar trades →</div>
+      </div>
+      <div class="mode-card card-executions" onclick="window.location.href='executions_import.html'" style="cursor:pointer;">
+        <div class="card-icon">ðŸ§¾</div>
+        <div>
+          <div class="card-label">Broker File</div>
+          <div class="card-title" style="color:#ff8a3d;">EXECUTIONS XLS</div>
+        </div>
+        <div class="card-desc">Importa el archivo diario de ejecuciones del broker para separar PNL por premarket, market y after, medir fees y reconstruir trades cerrados.</div>
+        <div class="card-stats">
+          <div class="card-stat"><div class="card-stat-val" id="execDays" style="color:#ff8a3d">â€”</div><div class="card-stat-label">Sesiones</div></div>
+          <div class="card-stat"><div class="card-stat-val" id="execNet" style="color:#ff8a3d">â€”</div><div class="card-stat-label">Net Total</div></div>
+          <div class="card-stat"><div class="card-stat-val" id="execPre" style="color:#ff8a3d">â€”</div><div class="card-stat-label">Premarket</div></div>
+        </div>
+        <div class="card-arrow" style="color:#ff8a3d;">Importar ejecuciones â†’</div>
       </div>
     </div>
 
@@ -693,6 +724,19 @@ function renderSageStats(D) {
   document.getElementById("sageWR").textContent = wr;
 }
 
+function renderExecutionsStats(rows) {
+  const totalDays = rows.length;
+  const totalNet = rows.reduce((sum, row) => sum + Number(row.totalNet || 0), 0);
+  const totalPre = rows.reduce((sum, row) => sum + Number(row.premarketNet || 0), 0);
+  const netEl = document.getElementById("execNet");
+  const preEl = document.getElementById("execPre");
+  document.getElementById("execDays").textContent = totalDays || "â€”";
+  netEl.textContent = totalDays ? fmtPNL(totalNet) : "â€”";
+  preEl.textContent = totalDays ? fmtPNL(totalPre) : "â€”";
+  netEl.style.color = totalNet >= 0 ? "var(--green)" : "var(--red)";
+  preEl.style.color = totalPre >= 0 ? "var(--green)" : "var(--red)";
+}
+
 function renderProfitsStats(yearDocs) {
   const yearStats = [];
   for (const { year, doc } of yearDocs) {
@@ -760,6 +804,13 @@ async function loadAllStats() {
     });
     renderCardStats("discrecional", calcStats(t));
   } catch(e) { console.error("Error trading_discrecional:", e); }
+
+  try {
+    const snap = await db.collection("executions_daily_stats").get();
+    const rows = [];
+    snap.forEach(doc => rows.push(doc.data()));
+    renderExecutionsStats(rows);
+  } catch(e) { console.error("Error executions_daily_stats:", e); }
 }
 
 loadAllStats();
@@ -776,6 +827,20 @@ db.collection("capital_sage").doc("main_data").onSnapshot(snap => {
   if (snap.exists && snap.data().data) { try { renderSageStats(JSON.parse(snap.data().data)); } catch(e) {} }
 }, err => console.warn("onSnapshot capital_sage:", err));
 
+
+function renderJournalDasStats(docs) {
+  let net = 0, trades = 0, wins = 0;
+  docs.forEach(D => { net += D.net || 0; trades += D.trades || 0; wins += D.wins || 0; });
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  const fmt = n => { const k = Math.round(n); return (k < 0 ? "-$" : "$") + Math.abs(k).toLocaleString("en-US"); };
+  set('jdNet', docs.length ? fmt(net) : '—');
+  set('jdDias', docs.length || '—');
+  set('jdWin', trades ? Math.round(wins / trades * 100) + '%' : '—');
+}
+db.collection("journal_das").onSnapshot(snap => {
+  const docs = []; snap.forEach(d => docs.push(d.data())); renderJournalDasStats(docs);
+}, err => console.warn("onSnapshot journal_das:", err));
+
 db.collection("trading_discrecional").onSnapshot(snap => {
   const t = [];
   snap.forEach(doc => {
@@ -784,6 +849,12 @@ db.collection("trading_discrecional").onSnapshot(snap => {
   });
   renderCardStats("discrecional", calcStats(t));
 }, err => console.warn("onSnapshot trading_discrecional:", err));
+
+db.collection("executions_daily_stats").onSnapshot(snap => {
+  const rows = [];
+  snap.forEach(doc => rows.push(doc.data()));
+  renderExecutionsStats(rows);
+}, err => console.warn("onSnapshot executions_daily_stats:", err));
 
 const profitsCache = {};
 [2024, 2025, 2026].forEach(year => {

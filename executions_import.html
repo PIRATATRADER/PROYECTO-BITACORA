@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executions Import</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0a0c0f; --bg2:#111318; --bg3:#181c24; --border:#1e2530; --green:#00e676; --red:#ff3d57; --orange:#ff8a3d; --text:#e8eaf0; --muted:#4a5568; --muted2:#7a8599; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size:40px 40px; opacity:.35; pointer-events:none; }
+  .container { position:relative; z-index:1; max-width:1500px; margin:0 auto; padding:24px 32px 40px; }
+  header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; border-bottom:1px solid var(--border); padding-bottom:20px; margin-bottom:28px; }
+  h1 { font-family:'Bebas Neue',sans-serif; font-size:54px; letter-spacing:3px; line-height:1; }
+  .sub { margin-top:6px; color:var(--muted2); font-family:'DM Mono', monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; }
+  .back-btn { background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:10px 18px; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600; }
+  .card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:22px; margin-bottom:20px; }
+  .section-title { font-family:'DM Mono', monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted2); margin-bottom:16px; }
+  .upload-grid { display:grid; grid-template-columns:220px 1fr auto auto; gap:12px; align-items:center; }
+  input, button { width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg3); color:var(--text); font:inherit; }
+  button { width:auto; cursor:pointer; font-weight:600; }
+  .btn-primary { background:var(--orange); color:#140a03; border-color:transparent; }
+  .status { margin-top:14px; color:var(--muted2); font-size:14px; }
+  .kpis { display:grid; grid-template-columns:repeat(6,1fr); gap:14px; }
+  .kpi { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .kpi-label { font-family:'DM Mono', monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+  .kpi-value { margin-top:10px; font-family:'Bebas Neue',sans-serif; font-size:34px; letter-spacing:1px; }
+  .good { color:var(--green); }
+  .bad { color:var(--red); }
+  .grid { display:grid; grid-template-columns:1.2fr .8fr; gap:20px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; vertical-align:top; font-size:13px; }
+  th { font-family:'DM Mono', monospace; font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); }
+  .muted { color:var(--muted2); }
+  .pill { display:inline-block; padding:5px 9px; border-radius:999px; background:rgba(255,138,61,.12); color:var(--orange); font-family:'DM Mono', monospace; font-size:11px; margin:0 8px 8px 0; }
+  @media (max-width:1100px) { .upload-grid, .grid { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2,1fr); } .container { padding:16px; } table { display:block; overflow-x:auto; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>EXECUTIONS IMPORT</h1>
+      <div class="sub">xls diario · premarket · market · after · pnl neto · fees · trades cerrados</div>
+    </div>
+    <a class="back-btn" href="proyecto_bitacora_home.html">← Volver al Home</a>
+  </header>
+
+  <div class="card">
+    <div class="section-title">Importar archivo diario</div>
+    <div class="upload-grid">
+      <input type="date" id="tradeDate">
+      <input type="file" id="xlsFile" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <button class="btn-primary" id="processBtn">Procesar XLS</button>
+      <button id="saveBtn">Guardar resumen</button>
+    </div>
+    <div class="status" id="statusText">Selecciona tu archivo diario del broker. La app separará lo ganado en premarket, market y after, y te sacará fees y trades cerrados.</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Resumen del día</div>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-label">Trades cerrados</div><div class="kpi-value" id="kpiTrades">—</div></div>
+      <div class="kpi"><div class="kpi-label">PNL Neto</div><div class="kpi-value" id="kpiNet">—</div></div>
+      <div class="kpi"><div class="kpi-label">Premarket</div><div class="kpi-value" id="kpiPre">—</div></div>
+      <div class="kpi"><div class="kpi-label">Market</div><div class="kpi-value" id="kpiMarket">—</div></div>
+      <div class="kpi"><div class="kpi-label">After</div><div class="kpi-value" id="kpiAfter">—</div></div>
+      <div class="kpi"><div class="kpi-label">Fees</div><div class="kpi-value bad" id="kpiFees">—</div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="section-title">Trades reconstruidos</div>
+      <table>
+        <thead><tr><th>Cuenta</th><th>Symbol</th><th>Side</th><th>In</th><th>Out</th><th>Qty</th><th>Entry</th><th>Exit</th><th>Session</th><th>Net</th></tr></thead>
+        <tbody id="tradesBody"></tbody>
+      </table>
+    </div>
+    <div>
+      <div class="card">
+        <div class="section-title">Radar rápido</div>
+        <div id="sessionPills"></div>
+        <div class="muted" id="summaryText">Todavía no hay archivo procesado.</div>
+      </div>
+      <div class="card">
+        <div class="section-title">Top tickers</div>
+        <table>
+          <thead><tr><th>Ticker</th><th>Trades</th><th>PNL</th></tr></thead>
+          <tbody id="tickersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = { apiKey:"AIzaSyDVR0xHEt5AIUPANlnfNok3dFqBVQb7jT0", authDomain:"proyecto-bitacora-fead3.firebaseapp.com", projectId:"proyecto-bitacora-fead3", storageBucket:"proyecto-bitacora-fead3.firebasestorage.app", messagingSenderId:"907354671911", appId:"1:907354671911:web:68000bcbaa989d25db7702" };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const state = { executions: [], trades: [], summary: null, fileName: "" };
+document.getElementById("tradeDate").value = new Date().toISOString().slice(0, 10);
+document.getElementById("processBtn").addEventListener("click", processFile);
+document.getElementById("saveBtn").addEventListener("click", saveSummary);
+
+function fmtMoney(value) { const n = Number(value || 0); return `${n >= 0 ? "+" : "-"}$${Math.abs(n).toFixed(2)}`; }
+function fmtNum(value) { return Number(value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 }); }
+function toNumber(value) { const n = Number(value || 0); return Number.isFinite(n) ? n : 0; }
+function parseEtDate(value) { const raw = String(value || "").trim(); const match = raw.match(/^(\d{2})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/); if (!match) return null; const [, mm, dd, yy, hh, mi, ss] = match; return new Date(Date.UTC(2000 + Number(yy), Number(mm) - 1, Number(dd), Number(hh), Number(mi), Number(ss || 0))); }
+function sessionOf(date) { if (!date) return "unknown"; const minutes = date.getUTCHours() * 60 + date.getUTCMinutes(); if (minutes >= 240 && minutes < 570) return "premarket"; if (minutes >= 570 && minutes < 960) return "market"; if (minutes >= 960 && minutes <= 1200) return "after"; return "other"; }
+function rowFee(row) { return ["Comm","Ecn Fee","SEC","TAF","NSCC","Clr","CAT","Misc"].reduce((sum, key) => sum + toNumber(row[key]), 0); }
+function normalizeExecution(row) { const timestamp = parseEtDate(row["Date/Time"]); const qty = Math.abs(toNumber(row["Qty"])); return { timestamp, tradeDate: timestamp ? timestamp.toISOString().slice(0, 10) : document.getElementById("tradeDate").value, account: String(row["Account"] || "").trim(), side: String(row["B/S"] || "").trim().toUpperCase(), qty, symbol: String(row["Symbol"] || "").trim().toUpperCase(), price: toNumber(row["Price"]), fee: rowFee(row), session: sessionOf(timestamp) }; }
+function buildTradeRecord(groupKey, row, closeTime, closeSession) { return { tradeKey: `${groupKey}_${row.openTime ? row.openTime.getTime() : Date.now()}_${Math.random().toString(16).slice(2,8)}`, tradeDate: row.tradeDate, account: row.account, symbol: row.symbol, side: row.initialSide, qty: row.closedQty, openTime: row.openTime ? row.openTime.toISOString() : "", closeTime: closeTime ? closeTime.toISOString() : "", entryPrice: row.entryShares ? row.entryValue / row.entryShares : 0, exitPrice: row.exitShares ? row.exitValue / row.exitShares : 0, grossPnl: row.realizedPnl, totalFees: row.totalFees, netPnl: row.realizedPnl - row.totalFees, entrySession: row.entrySession, closeSession, rMultiple: null }; }
+function reconstructTrades(executions) { const byGroup = new Map(); const trades = []; const ordered = [...executions].sort((a, b) => a.timestamp - b.timestamp); function createState(fill) { return { tradeDate: fill.tradeDate, account: fill.account, symbol: fill.symbol, positionQty: 0, avgPrice: 0, openTime: null, entrySession: "", initialSide: "", realizedPnl: 0, totalFees: 0, entryValue: 0, exitValue: 0, entryShares: 0, exitShares: 0, closedQty: 0 }; } for (const fill of ordered) { if (!fill.symbol || !fill.qty || !fill.timestamp) continue; const key = `${fill.tradeDate}|${fill.account}|${fill.symbol}`; let row = byGroup.get(key); if (!row) { row = createState(fill); byGroup.set(key, row); } let remaining = fill.qty; const isBuy = fill.side === "B"; const direction = isBuy ? 1 : -1; while (remaining > 0) { if (row.positionQty === 0 || Math.sign(row.positionQty) === direction) { if (row.positionQty === 0) { row.openTime = fill.timestamp; row.entrySession = fill.session; row.initialSide = isBuy ? "Long" : "Short"; } const currentAbs = Math.abs(row.positionQty); const newAbs = currentAbs + remaining; row.avgPrice = newAbs ? ((row.avgPrice * currentAbs) + (fill.price * remaining)) / newAbs : fill.price; row.positionQty += direction * remaining; row.totalFees += fill.fee; row.entryValue += fill.price * remaining; row.entryShares += remaining; remaining = 0; } else { const closable = Math.min(Math.abs(row.positionQty), remaining); row.realizedPnl += row.positionQty > 0 ? (fill.price - row.avgPrice) * closable : (row.avgPrice - fill.price) * closable; row.totalFees += fill.fee * (closable / fill.qty); row.exitValue += fill.price * closable; row.exitShares += closable; row.closedQty += closable; row.positionQty += direction * closable; remaining -= closable; if (row.positionQty === 0) { trades.push(buildTradeRecord(key, row, fill.timestamp, fill.session)); row = createState(fill); byGroup.set(key, row); } } } } return trades; }
+function summarizeTrades(trades) { const sessions = { premarket: 0, market: 0, after: 0, other: 0 }; const wins = trades.filter(t => t.netPnl > 0).length; const totalNet = trades.reduce((sum, t) => sum + t.netPnl, 0); const totalFees = trades.reduce((sum, t) => sum + t.totalFees, 0); const byTicker = {}; trades.forEach(trade => { sessions[trade.closeSession] = (sessions[trade.closeSession] || 0) + trade.netPnl; if (!byTicker[trade.symbol]) byTicker[trade.symbol] = { symbol: trade.symbol, count: 0, netPnl: 0 }; byTicker[trade.symbol].count += 1; byTicker[trade.symbol].netPnl += trade.netPnl; }); return { tradeCount: trades.length, winRate: trades.length ? (wins / trades.length) * 100 : 0, totalNet, totalFees, sessionPnl: sessions, topTickers: Object.values(byTicker).sort((a, b) => b.netPnl - a.netPnl).slice(0, 12) }; }
+function render() { if (!state.summary) return; const summary = state.summary; document.getElementById("kpiTrades").textContent = fmtNum(summary.tradeCount); const netEl = document.getElementById("kpiNet"); const preEl = document.getElementById("kpiPre"); const marketEl = document.getElementById("kpiMarket"); const afterEl = document.getElementById("kpiAfter"); netEl.textContent = fmtMoney(summary.totalNet); preEl.textContent = fmtMoney(summary.sessionPnl.premarket || 0); marketEl.textContent = fmtMoney(summary.sessionPnl.market || 0); afterEl.textContent = fmtMoney(summary.sessionPnl.after || 0); document.getElementById("kpiFees").textContent = fmtMoney(-summary.totalFees); netEl.className = `kpi-value ${summary.totalNet >= 0 ? "good" : "bad"}`; preEl.className = `kpi-value ${(summary.sessionPnl.premarket || 0) >= 0 ? "good" : "bad"}`; marketEl.className = `kpi-value ${(summary.sessionPnl.market || 0) >= 0 ? "good" : "bad"}`; afterEl.className = `kpi-value ${(summary.sessionPnl.after || 0) >= 0 ? "good" : "bad"}`; document.getElementById("sessionPills").innerHTML = [`Premarket · ${fmtMoney(summary.sessionPnl.premarket || 0)}`, `Market · ${fmtMoney(summary.sessionPnl.market || 0)}`, `After · ${fmtMoney(summary.sessionPnl.after || 0)}`, `Win Rate · ${summary.winRate.toFixed(1)}%`].map(text => `<span class="pill">${text}</span>`).join(""); document.getElementById("summaryText").textContent = `Trades reconstruidos: ${summary.tradeCount}. PNL neto: ${fmtMoney(summary.totalNet)}. Fees: ${fmtMoney(-summary.totalFees)}. Ya queda preparada la base para seguir metiendo R, setups y estadísticas más profundas.`; document.getElementById("tradesBody").innerHTML = state.trades.slice(0, 150).map(trade => `<tr><td>${trade.account || "—"}</td><td><strong>${trade.symbol}</strong></td><td>${trade.side}</td><td class="muted">${trade.openTime ? trade.openTime.slice(11, 19) : "—"}</td><td class="muted">${trade.closeTime ? trade.closeTime.slice(11, 19) : "—"}</td><td>${fmtNum(trade.qty)}</td><td>${trade.entryPrice.toFixed(4)}</td><td>${trade.exitPrice.toFixed(4)}</td><td>${trade.closeSession}</td><td class="${trade.netPnl >= 0 ? "good" : "bad"}">${fmtMoney(trade.netPnl)}</td></tr>`).join(""); document.getElementById("tickersBody").innerHTML = summary.topTickers.map(item => `<tr><td><strong>${item.symbol}</strong></td><td>${item.count}</td><td class="${item.netPnl >= 0 ? "good" : "bad"}">${fmtMoney(item.netPnl)}</td></tr>`).join(""); }
+async function processFile() { const file = document.getElementById("xlsFile").files[0]; if (!file) { document.getElementById("statusText").textContent = "Selecciona primero un archivo .xls o .xlsx."; return; } try { document.getElementById("statusText").textContent = "Leyendo archivo y reconstruyendo trades..."; state.fileName = file.name; const buffer = await file.arrayBuffer(); const workbook = XLSX.read(buffer, { type: "array", cellDates: false }); const sheet = workbook.Sheets[workbook.SheetNames[0]]; const rows = XLSX.utils.sheet_to_json(sheet, { defval: null }); state.executions = rows.map(normalizeExecution).filter(row => row.symbol && row.qty > 0); state.trades = reconstructTrades(state.executions); state.summary = summarizeTrades(state.trades); render(); document.getElementById("statusText").textContent = `Archivo procesado: ${file.name}. Ejecuciones: ${state.executions.length}. Trades cerrados: ${state.trades.length}.`; } catch (error) { document.getElementById("statusText").textContent = "Error procesando el archivo: " + error.message; } }
+async function saveSummary() { if (!state.summary) { document.getElementById("statusText").textContent = "Primero procesa un archivo."; return; } const tradeDate = document.getElementById("tradeDate").value; const summaryDoc = { tradeDate, sourceFile: state.fileName, importedAt: new Date().toISOString(), executionsCount: state.executions.length, tradeCount: state.summary.tradeCount, totalNet: state.summary.totalNet, totalFees: state.summary.totalFees, winRate: state.summary.winRate, premarketNet: state.summary.sessionPnl.premarket || 0, marketNet: state.summary.sessionPnl.market || 0, afterNet: state.summary.sessionPnl.after || 0, otherNet: state.summary.sessionPnl.other || 0, topTickers: state.summary.topTickers.slice(0, 8) }; try { await db.collection("executions_daily_stats").doc(tradeDate).set(summaryDoc, { merge: true }); document.getElementById("statusText").textContent = `Resumen guardado en executions_daily_stats/${tradeDate}.`; } catch (error) { document.getElementById("statusText").textContent = "Error guardando el resumen: " + error.message; } }
+</script>
+</body>
+</html>

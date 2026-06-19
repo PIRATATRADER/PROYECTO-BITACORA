@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GESTOR R · Regla Pirata</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c0f; --bg2:#111318; --bg3:#181c24; --border:#1e2530;
+  --gold:#f5a623; --green:#00e676; --yellow:#ffd600; --cyan:#00b0ff;
+  --red:#ff3d57; --blue:#448aff; --text:#e8eaf0; --muted:#4a5568; --muted2:#7a8599;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;
+  padding:22px 20px 60px;min-height:100vh;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:44px 44px;background-position:center;
+}
+.wrap{max-width:1180px;margin:0 auto;}
+.back{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;
+  color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);
+  border-radius:8px;background:transparent;transition:all .15s;margin-bottom:18px;}
+.back:hover{color:var(--text);border-color:var(--muted2);background:var(--bg3);}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;
+  padding-bottom:18px;border-bottom:1px solid var(--border);gap:16px;flex-wrap:wrap;}
+.logo h1{font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:3px;line-height:.9;}
+.logo h1 span{color:var(--red);}
+.logo p{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:3px;text-transform:uppercase;margin-top:6px;}
+.savechip{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted);}
+
+.sect-l{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--muted2);margin:30px 0 12px;display:flex;align-items:center;gap:10px;}
+.sect-l::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── Config / readout ── */
+.config{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+.fld{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:13px 15px;}
+.fld label{display:block;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted2);margin-bottom:8px;}
+.fld input,.fld select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  color:var(--text);font-family:'DM Mono',monospace;font-size:16px;padding:8px 10px;outline:none;}
+.fld input:focus,.fld select:focus{border-color:var(--gold);}
+.step{display:flex;align-items:center;gap:8px;}
+.step button{width:32px;height:32px;border-radius:7px;border:1px solid var(--border);background:var(--bg);
+  color:var(--text);font-size:18px;cursor:pointer;line-height:1;transition:all .12s;}
+.step button:hover{border-color:var(--gold);color:var(--gold);}
+.step .v{flex:1;text-align:center;font-family:'DM Mono',monospace;font-size:17px;}
+
+.readouts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+.ro{position:relative;overflow:hidden;background:var(--bg2);border:1px solid var(--border);
+  border-radius:13px;padding:20px;text-align:center;}
+.ro::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--gold));}
+.ro .l{font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:7px;}
+.ro .n{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:1px;line-height:1;}
+.ro .sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:6px;}
+.ro.r1 .n{color:var(--gold);} .ro.r1::before{background:var(--gold);}
+.ro.r2 .n{color:var(--red);}  .ro.r2::before{background:var(--red);}
+
+/* ── Sesión ── */
+.sess-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.sess-bar input{flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-family:'DM Mono',monospace;font-size:14px;padding:10px 12px;outline:none;text-transform:uppercase;}
+.sess-bar input:focus{border-color:var(--gold);}
+.btn{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;padding:10px 16px;border-radius:8px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;transition:all .14s;white-space:nowrap;}
+.btn:hover{border-color:var(--gold);color:var(--gold);}
+.btn.primary{background:#f5a62315;border-color:var(--gold);color:var(--gold);}
+.btn.ghost{color:var(--muted2);}
+.btn.danger:hover{border-color:var(--red);color:var(--red);}
+.sess-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);letter-spacing:1px;}
+
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:13px;}
+.tk{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:15px 16px;position:relative;
+  transition:border-color .2s,box-shadow .2s;}
+.tk.aviso{border-color:#ffd60055;box-shadow:0 0 0 1px #ffd60022;}
+.tk.block{border-color:var(--red);box-shadow:0 0 22px -8px var(--red);}
+.tk-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.tk-name{font-family:'Bebas Neue',sans-serif;font-size:27px;letter-spacing:1.5px;}
+.tk-x{cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:2px 5px;border-radius:5px;}
+.tk-x:hover{color:var(--red);background:var(--bg3);}
+.tk-status{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:3px 9px;border-radius:20px;font-weight:500;}
+.st-act{background:#00e67615;color:var(--green);}
+.st-avi{background:#ffd60018;color:var(--yellow);}
+.st-blk{background:#ff3d5720;color:var(--red);}
+
+.tk-row{display:flex;align-items:center;justify-content:space-between;margin:9px 0;}
+.tk-row .lbl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);}
+.dots{display:flex;gap:5px;}
+.dot{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--muted);transition:all .15s;}
+.dot.on{background:var(--red);border-color:var(--red);box-shadow:0 0 8px -2px var(--red);}
+.ctrl{display:flex;align-items:center;gap:7px;}
+.ctrl button{width:27px;height:27px;border-radius:6px;border:1px solid var(--border);background:var(--bg);
+  color:var(--text);font-size:15px;cursor:pointer;line-height:1;}
+.ctrl button:hover{border-color:var(--gold);color:var(--gold);}
+.ctrl .rv{font-family:'DM Mono',monospace;font-size:15px;min-width:46px;text-align:center;color:var(--red);font-weight:500;}
+.tk-risk{margin-top:11px;padding-top:11px;border-top:1px solid var(--border);
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);display:flex;justify-content:space-between;}
+.tk-risk b{color:var(--red);font-weight:500;}
+.empty{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);padding:26px 4px;text-align:center;
+  border:1px dashed var(--border);border-radius:12px;}
+
+/* ── Registro / estudio ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:8px;}
+.kpi{position:relative;overflow:hidden;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:15px 16px;text-align:center;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--gold));}
+.kpi .l{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:7px;}
+.kpi .n{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;}
+.kpi .s{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:5px;}
+.gbar{height:9px;border-radius:6px;background:var(--bg3);overflow:hidden;display:flex;margin:14px 0 6px;border:1px solid var(--border);}
+.gbar .gb-b{background:var(--green);} .gbar .gb-a{background:var(--red);}
+.gbar-lbl{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);}
+.note{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);margin-top:10px;line-height:1.6;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;}
+.note b{color:var(--text);}
+
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;}
+th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);
+  text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);}
+td{padding:10px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;}
+tr:hover td{background:var(--bg2);}
+.badge{font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border-radius:20px;letter-spacing:.5px;}
+.bA{background:#ff3d5720;color:var(--red);} .bB{background:#00e67618;color:var(--green);}
+.row-x{cursor:pointer;color:var(--muted);}
+.row-x:hover{color:var(--red);}
+
+/* ── Modal A/B ── */
+.modal-bg{position:fixed;inset:0;background:rgba(5,7,10,.82);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.modal-bg.on{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--red);border-radius:16px;padding:24px;max-width:430px;width:100%;
+  box-shadow:0 0 50px -16px var(--red);}
+.modal h3{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;margin-bottom:5px;}
+.modal h3 span{color:var(--red);}
+.modal p{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);margin-bottom:18px;line-height:1.6;}
+.ab{display:flex;flex-direction:column;gap:10px;}
+.ab button{text-align:left;padding:14px 16px;border-radius:11px;border:1px solid var(--border);background:var(--bg);
+  color:var(--text);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;}
+.ab button:hover{transform:translateX(3px);}
+.ab .t{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;font-weight:600;margin-bottom:3px;}
+.ab .d{font-size:12px;color:var(--muted2);}
+.ab .a-opt:hover{border-color:var(--red);} .ab .a-opt .t{color:var(--red);}
+.ab .b-opt:hover{border-color:var(--green);} .ab .b-opt .t{color:var(--green);}
+.modal-skip{margin-top:14px;text-align:center;}
+.modal-skip span{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:1px;}
+.modal-skip span:hover{color:var(--muted2);}
+
+@media(max-width:560px){
+  .logo h1{font-size:38px;} .readouts{grid-template-columns:1fr;} .ro .n{font-size:36px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="proyecto_bitacora_home.html">← Inicio</a>
+
+  <header>
+    <div class="logo">
+      <h1>GESTOR <span>R</span></h1>
+      <p>Regla Pirata · Max Loss por ticker</p>
+    </div>
+    <div class="savechip" id="saveChip">—</div>
+  </header>
+
+  <!-- CONFIG -->
+  <div class="sect-l">Config · cuánto R meter</div>
+  <div class="config">
+    <div class="fld">
+      <label>Capital (SOD)</label>
+      <input id="cSod" type="text" inputmode="numeric" placeholder="ej. 18.000" value="">
+    </div>
+    <div class="fld">
+      <label>1R = % del capital</label>
+      <select id="cPct">
+        <option value="0.5">0.5%</option>
+        <option value="1" selected>1%</option>
+        <option value="1.5">1.5%</option>
+        <option value="2">2%</option>
+      </select>
+    </div>
+    <div class="fld">
+      <label>Max Loss / ticker (R)</label>
+      <div class="step">
+        <button onclick="bump('maxR',-0.5)">−</button>
+        <span class="v" id="vMaxR">2R</span>
+        <button onclick="bump('maxR',0.5)">+</button>
+      </div>
+    </div>
+    <div class="fld">
+      <label>Strikes para bloquear</label>
+      <div class="step">
+        <button onclick="bump('strikes',-1)">−</button>
+        <span class="v" id="vStrikes">3</span>
+        <button onclick="bump('strikes',1)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="readouts">
+    <div class="ro r1"><div class="l">1R</div><div class="n" id="oneR">—</div><div class="sub">riesgo base por trade</div></div>
+    <div class="ro r2"><div class="l">Max Loss por ticker</div><div class="n" id="maxLoss">—</div><div class="sub" id="maxLossSub">= 2R · corta aquí, sin excepciones</div></div>
+  </div>
+
+  <!-- SESIÓN -->
+  <div class="sect-l">Sesión hoy · strikes en vivo</div>
+  <div class="sess-bar">
+    <input id="tkInput" placeholder="TICKER (ej. STI)" onkeydown="if(event.key==='Enter')addTicker()">
+    <button class="btn primary" onclick="addTicker()">+ Añadir</button>
+    <span class="sess-date" id="sessDate"></span>
+    <button class="btn ghost danger" onclick="newSession()" style="margin-left:auto">Nueva sesión</button>
+  </div>
+  <div id="tgrid" class="tgrid"></div>
+
+  <!-- REGISTRO -->
+  <div class="sect-l">Registro 2R · estudio</div>
+  <div class="stats" id="stats"></div>
+  <div id="studyBody"></div>
+  <div id="logWrap"></div>
+</div>
+
+<!-- Modal A/B -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>¿Qué hizo <span id="mTk">XXX</span> después?</h3>
+    <p>Te saltó el límite de <b id="mR">2R</b>. Anótalo para medir si la regla te compensa.</p>
+    <div class="ab">
+      <button class="a-opt" onclick="logResult('A')">
+        <div class="t">A · SE HUNDIÓ — yo tenía razón</div>
+        <div class="d">El stop me sacó antes del movimiento bueno.</div>
+      </button>
+      <button class="b-opt" onclick="logResult('B')">
+        <div class="t">B · SIGUIÓ — me salvó</div>
+        <div class="d">Habría perdido más (−4R, −5R…). El límite funcionó.</div>
+      </button>
+    </div>
+    <div class="modal-skip"><span onclick="closeModal()">Saltar por ahora</span></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+/* ===== Firebase (mismo proyecto que la suite) ===== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDVR0xHEt5AIUPANlnfNok3dFqBVQb7jT0",
+  authDomain: "proyecto-bitacora-fead3.firebaseapp.com",
+  projectId: "proyecto-bitacora-fead3",
+  storageBucket: "proyecto-bitacora-fead3.firebasestorage.app",
+  messagingSenderId: "907354671911",
+  appId: "1:907354671911:web:68000bcbaa989d25db7702"
+};
+let DOC=null;
+try{ firebase.initializeApp(firebaseConfig); DOC=firebase.firestore().collection("r_manager").doc("main_data"); }
+catch(e){ console.warn("Firebase no disponible:",e); }
+
+const SK='pirata_gestor_r';
+
+/* ===== Estado ===== */
+let S = {
+  config:{ sod:'', pct:1, maxR:2, strikes:3 },
+  session:{ date:todayStr(), tickers:[] },
+  log:[]
+};
+let pendingTicker=null;   // ticker esperando registro A/B
+let skipSnap=false;
+
+function todayStr(){ const d=new Date(); return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function fd(n){ return '$'+Math.round(n).toLocaleString('es-ES'); }
+function pInt(v){ const n=parseFloat(String(v).replace(/[^0-9.,-]/g,'').replace(/\./g,'').replace(',','.')); return isNaN(n)?0:n; }
+
+/* ===== Persistencia ===== */
+let saveT=null;
+function save(){
+  try{ localStorage.setItem(SK, JSON.stringify(S)); }catch(e){}
+  chip('Guardando…');
+  clearTimeout(saveT);
+  saveT=setTimeout(()=>{
+    if(!DOC){ chip('Local'); return; }
+    skipSnap=true;
+    DOC.set({ data: JSON.stringify(S), updated: Date.now() },{merge:true})
+      .then(()=>chip('Guardado ✓'))
+      .catch(err=>{ console.warn(err); chip('Local (sin nube)'); });
+  },350);
+}
+function chip(t){ document.getElementById('saveChip').textContent=t; }
+
+function load(){
+  let local=null;
+  try{ local=JSON.parse(localStorage.getItem(SK)||'null'); }catch(e){}
+  if(local) S=merge(local);
+  renderAll();
+  if(DOC){
+    DOC.get().then(snap=>{
+      if(snap.exists && snap.data().data){
+        try{ S=merge(JSON.parse(snap.data().data)); renderAll(); }catch(e){}
+      }
+      DOC.onSnapshot(s=>{
+        if(skipSnap){ skipSnap=false; return; }
+        if(s.exists && s.data().data){
+          try{ S=merge(JSON.parse(s.data().data)); renderAll(); }catch(e){}
+        }
+      });
+    }).catch(err=>console.warn(err));
+  }
+}
+function merge(o){
+  return {
+    config:Object.assign({sod:'',pct:1,maxR:2,strikes:3}, o.config||{}),
+    session:Object.assign({date:todayStr(),tickers:[]}, o.session||{}),
+    log:Array.isArray(o.log)?o.log:[]
+  };
+}
+
+/* ===== Cálculo R ===== */
+function oneR(){ return pInt(S.config.sod) * (parseFloat(S.config.pct)/100); }
+function maxLoss(){ return oneR() * S.config.maxR; }
+
+/* ===== Config handlers ===== */
+function bump(key,delta){
+  if(key==='maxR'){ S.config.maxR=Math.max(0.5, Math.round((S.config.maxR+delta)*10)/10); }
+  if(key==='strikes'){ S.config.strikes=Math.max(1, S.config.strikes+delta); }
+  renderConfig(); renderSession(); save();
+}
+
+/* ===== Sesión ===== */
+function addTicker(){
+  const inp=document.getElementById('tkInput');
+  const name=(inp.value||'').trim().toUpperCase();
+  if(!name) return;
+  if(S.session.date!==todayStr()) newSession(true);
+  if(!S.session.tickers.some(t=>t.name===name))
+    S.session.tickers.unshift({ name, strikes:0, rLost:0, logged:false });
+  inp.value=''; renderSession(); save();
+}
+function removeTicker(name){ S.session.tickers=S.session.tickers.filter(t=>t.name!==name); renderSession(); save(); }
+function newSession(silent){
+  if(!silent && S.session.tickers.length && !confirm('¿Vaciar la sesión de hoy? El registro 2R se conserva.')) return;
+  S.session={ date:todayStr(), tickers:[] }; renderSession(); if(!silent) save();
+}
+function tkStatus(t){
+  if(t.rLost>=S.config.maxR || t.strikes>=S.config.strikes) return 'block';
+  if(t.rLost>=S.config.maxR-0.5 || t.strikes>=S.config.strikes-1) return 'aviso';
+  return 'act';
+}
+function strike(name,delta){
+  const t=S.session.tickers.find(x=>x.name===name); if(!t) return;
+  t.strikes=Math.max(0,t.strikes+delta);
+  checkBlock(t); renderSession(); save();
+}
+function bumpR(name,delta){
+  const t=S.session.tickers.find(x=>x.name===name); if(!t) return;
+  t.rLost=Math.max(0, Math.round((t.rLost+delta)*10)/10);
+  checkBlock(t); renderSession(); save();
+}
+function checkBlock(t){
+  // Dispara registro A/B solo cuando cruza el límite de R (2R)
+  if(t.rLost>=S.config.maxR && !t.logged){ openModal(t); }
+}
+
+/* ===== Modal A/B ===== */
+function openModal(t){
+  pendingTicker=t.name;
+  document.getElementById('mTk').textContent=t.name;
+  document.getElementById('mR').textContent=fmtR(S.config.maxR);
+  document.getElementById('modal').classList.add('on');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('on'); pendingTicker=null; }
+function logResult(res){
+  const t=S.session.tickers.find(x=>x.name===pendingTicker);
+  if(t){
+    t.logged=true;
+    S.log.unshift({ date:todayStr(), ticker:t.name, rLost:t.rLost, result:res });
+  }
+  closeModal(); renderSession(); renderStudy(); save();
+}
+function delLog(i){ S.log.splice(i,1); renderStudy(); save(); }
+
+/* ===== Render ===== */
+function fmtR(n){ return (Number.isInteger(n)?n:n.toFixed(1))+'R'; }
+
+function renderConfig(){
+  document.getElementById('cSod').value=S.config.sod||'';
+  document.getElementById('cPct').value=S.config.pct;
+  document.getElementById('vMaxR').textContent=fmtR(S.config.maxR);
+  document.getElementById('vStrikes').textContent=S.config.strikes;
+  const r=oneR();
+  document.getElementById('oneR').textContent = r>0?fd(r):'—';
+  document.getElementById('maxLoss').textContent = r>0?'−'+fd(maxLoss()):'—';
+  document.getElementById('maxLossSub').textContent = '= '+fmtR(S.config.maxR)+' · corta aquí, sin excepciones';
+}
+
+function renderSession(){
+  document.getElementById('sessDate').textContent='· '+S.session.date;
+  const g=document.getElementById('tgrid');
+  if(!S.session.tickers.length){
+    g.innerHTML='<div class="empty">Sin tickers en la sesión. Añade los que estés operando para vigilar strikes y el límite de '+fmtR(S.config.maxR)+'.</div>';
+    return;
+  }
+  const r=oneR();
+  g.innerHTML=S.session.tickers.map(t=>{
+    const st=tkStatus(t);
+    const cls=st==='block'?'block':st==='aviso'?'aviso':'';
+    const badge=st==='block'?'<span class="tk-status st-blk">🚫 BLOQUEADO</span>'
+              :st==='aviso'?'<span class="tk-status st-avi">⚠ AVISO</span>'
+              :'<span class="tk-status st-act">● ACTIVO</span>';
+    let dots='';
+    for(let i=0;i<S.config.strikes;i++) dots+='<div class="dot'+(i<t.strikes?' on':'')+'"></div>';
+    const dollars=r>0?('−'+fd(t.rLost*r)):'—';
+    const reason=st==='block'
+      ? (t.strikes>=S.config.strikes?'3 strikes → fuera el resto del día':'tocó '+fmtR(S.config.maxR)+' → no entres más')
+      : 'riesgo vivo';
+    return `<div class="tk ${cls}">
+      <div class="tk-top">
+        <div class="tk-name">${t.name}</div>
+        <div style="display:flex;align-items:center;gap:9px">${badge}<span class="tk-x" onclick="removeTicker('${t.name}')">✕</span></div>
+      </div>
+      <div class="tk-row">
+        <span class="lbl">Strikes ${t.strikes}/${S.config.strikes}</span>
+        <div class="ctrl"><div class="dots">${dots}</div>
+          <button onclick="strike('${t.name}',-1)">−</button>
+          <button onclick="strike('${t.name}',1)">+</button></div>
+      </div>
+      <div class="tk-row">
+        <span class="lbl">Pérdida acum.</span>
+        <div class="ctrl">
+          <button onclick="bumpR('${t.name}',-0.5)">−</button>
+          <span class="rv">−${fmtR(t.rLost)}</span>
+          <button onclick="bumpR('${t.name}',0.5)">+</button></div>
+      </div>
+      <div class="tk-risk"><span>${reason}</span><b>${dollars}</b></div>
+    </div>`;
+  }).join('');
+}
+
+function renderStudy(){
+  const n=S.log.length;
+  const nA=S.log.filter(x=>x.result==='A').length;
+  const nB=S.log.filter(x=>x.result==='B').length;
+  const decided=nA+nB;
+  const pB=decided?Math.round(nB/decided*100):0;
+  const pA=decided?100-pB:0;
+  const days=new Set(S.log.map(x=>x.date)).size;
+  const r=oneR();
+  const saved=r>0?nB*(maxLoss())*1.5:0; // estimación grosera de lo ahorrado vs dejar correr
+
+  document.getElementById('stats').innerHTML=`
+    <div class="kpi" style="--ac:var(--gold)"><div class="l">Eventos 2R</div><div class="n" style="color:var(--gold)">${n}</div><div class="s">veces saltó el límite</div></div>
+    <div class="kpi" style="--ac:var(--green)"><div class="l">Me salvó (B)</div><div class="n" style="color:var(--green)">${pB}%</div><div class="s">${nB} de ${decided||0}</div></div>
+    <div class="kpi" style="--ac:var(--red)"><div class="l">Me sacó antes (A)</div><div class="n" style="color:var(--red)">${pA}%</div><div class="s">${nA} de ${decided||0}</div></div>
+    <div class="kpi" style="--ac:var(--blue)"><div class="l">Día del estudio</div><div class="n" style="color:var(--blue)">${days}<span style="font-size:18px;color:var(--muted2)">/20</span></div><div class="s">días con eventos</div></div>`;
+
+  let study='';
+  if(decided){
+    study=`<div class="gbar">
+        <div class="gb-b" style="width:${pB}%"></div><div class="gb-a" style="width:${pA}%"></div>
+      </div>
+      <div class="gbar-lbl"><span style="color:var(--green)">🛡 Me salvó ${pB}%</span><span style="color:var(--red)">${pA}% me sacó ❌</span></div>`;
+    const verdict = pB>=70
+      ? `<b style="color:var(--green)">La regla compensa.</b> El límite de ${fmtR(S.config.maxR)} te está salvando ${pB}% de las veces (la apuesta era 70-80%). Mantenlo.`
+      : decided<8
+      ? `Aún hay pocos datos (${decided}). Sigue anotando hasta tener ~20 para que el % sea fiable.`
+      : `<b style="color:var(--yellow)">Ojo:</b> solo te salva el ${pB}% (por debajo del 70-80% esperado). Quizá ${fmtR(S.config.maxR)} es muy ajustado para tu operativa — prueba a subirlo 0.5R y compara.`;
+    study+=`<div class="note">${verdict}</div>`;
+  }
+  document.getElementById('studyBody').innerHTML=study;
+
+  if(!n){
+    document.getElementById('logWrap').innerHTML='<div class="empty" style="margin-top:14px">Sin eventos todavía. Cuando un ticker toque '+fmtR(S.config.maxR)+', te preguntaré qué hizo después (A/B) y lo registraré aquí.</div>';
+    return;
+  }
+  document.getElementById('logWrap').innerHTML=`<table>
+    <thead><tr><th>Fecha</th><th>Ticker</th><th>−R</th><th>Resultado</th><th></th></tr></thead>
+    <tbody>${S.log.map((x,i)=>`<tr>
+      <td style="color:var(--muted2)">${x.date}</td>
+      <td style="color:var(--text)">${x.ticker}</td>
+      <td style="color:var(--red)">−${fmtR(x.rLost)}</td>
+      <td>${x.result==='B'?'<span class="badge bB">🛡 Me salvó</span>':'<span class="badge bA">❌ Me sacó</span>'}</td>
+      <td><span class="row-x" onclick="delLog(${i})">✕</span></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function renderAll(){ renderConfig(); renderSession(); renderStudy(); }
+
+/* ===== Inputs ===== */
+document.getElementById('cSod').addEventListener('input',e=>{ S.config.sod=e.target.value; renderConfig(); renderSession(); save(); });
+document.getElementById('cPct').addEventListener('change',e=>{ S.config.pct=parseFloat(e.target.value); renderConfig(); renderSession(); save(); });
+
+load();
+</script>
+</body>
+</html>
