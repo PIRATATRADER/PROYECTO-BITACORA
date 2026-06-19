@@ -447,6 +447,26 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
   <div class="kpi" style="--ac:#ffd60a"><div class="kpi-l">Racha Actual</div><div class="kpi-v" id="kStreak" style="font-size:18px;">—</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:3px;" id="kStreakSub"></div></div>
 </div>
 
+<div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted2);margin:4px 0 10px;display:flex;align-items:center;gap:9px;">📊 Proceso · desde trades reales (Journal DAS)<span id="procEmpty" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0;text-transform:none;color:var(--muted);"></span></div>
+<div class="kpis" id="procKpis"></div>
+
+<!-- ── PUENTE JOURNAL DAS ── -->
+<div class="card" id="bridgePanel" style="width:100%;margin-bottom:16px;padding:18px 20px;position:relative;overflow:hidden;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;">🔗 PUENTE JOURNAL DAS</span>
+      <span id="bridgeChip" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted2);">conectando…</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <label style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bridgeOverwrite"> sobrescribir manuales</label>
+      <button id="bridgeFill" onclick="fillFromDAS()" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border-radius:7px;border:1px solid var(--cyan);background:#22d3ee15;color:var(--cyan);cursor:pointer;">⚡ Rellenar PNL desde DAS</button>
+    </div>
+  </div>
+  <div id="bridgeKpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
+  <div id="bridgeNote" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:10px;line-height:1.6;"></div>
+  <details style="margin-top:12px;"><summary style="cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);letter-spacing:1px;">Reconciliación · PNL manual vs DAS por día ▾</summary><div id="bridgeRecon" style="overflow:auto;margin-top:10px;"></div></details>
+</div>
+
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
   <div class="tabs" id="tabs" style="margin-bottom:0;flex:1;"></div>
   <button id="btnCalendar" onclick="showCalendar()" style="
@@ -6005,7 +6025,100 @@ function renderRPerSymbol(monthIdx) {
   `;
 }
 
-function renderAll(){ renderMain(); renderObj(); renderYear(); initTradeImgs(); initPdfs(); showLossReminder(); }
+/* ── PUENTE JOURNAL DAS → CAPITAL ZIMTRA ───────────────────────── */
+let JDAS = {};
+function startBridgeSync(){
+  if (typeof db === 'undefined' || !db) return;
+  try{
+    db.collection('journal_das').onSnapshot(
+      function(snap){ JDAS = {}; snap.forEach(function(d){ JDAS[d.id] = d.data(); }); renderBridge(); },
+      function(err){ console.warn('journal_das sync:', err); var c=document.getElementById('bridgeChip'); if(c){ c.textContent='sin conexión'; } }
+    );
+  }catch(e){ console.warn('startBridgeSync', e); }
+}
+function _bfmt(n){ if(n==null||isNaN(n)) return '—'; return (n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('en-US'); }
+function _bfmt2(n){ if(n==null||isNaN(n)) return '—'; return (n<0?'-$':'$')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _pf(p){ return p==null?'—':p===Infinity?'∞':p.toFixed(2); }
+function bridgeStats(){
+  var dts = Object.keys(JDAS).sort();
+  var net=0,gross=0,cost=0,longNet=0,shortNet=0,wins=0,trades=0,grossWin=0,grossLoss=0,nWin=0,nLoss=0,rSum=0,rN=0;
+  dts.forEach(function(dt){
+    var X=JDAS[dt];
+    net+=X.net||0; gross+=X.gross||0; cost+=X.cost||0; longNet+=X.longNet||0; shortNet+=X.shortNet||0;
+    var sod=pd((D[dt]||{}).startOfDay); var r1=sod?sod*0.01:0;
+    (X.symbols||[]).forEach(function(sb){
+      trades++;
+      if(sb.net>0){ wins++; nWin++; grossWin+=sb.net; } else if(sb.net<0){ nLoss++; grossLoss+=sb.net; }
+      if(r1>0){ rSum+=sb.net/r1; rN++; }
+    });
+  });
+  return { dts:dts, net:net, gross:gross, cost:cost, longNet:longNet, shortNet:shortNet, trades:trades,
+    winRate: trades? wins/trades*100 : null,
+    pf: grossLoss<0 ? grossWin/Math.abs(grossLoss) : (grossWin>0?Infinity:null),
+    avgWin: nWin? grossWin/nWin : null, avgLoss: nLoss? grossLoss/nLoss : null,
+    wl: (nWin&&nLoss&&grossLoss)? (grossWin/nWin)/Math.abs(grossLoss/nLoss) : null,
+    exp$: trades? net/trades : null, expR: rN? rSum/rN : null };
+}
+function _bkpi(l,v,ac){ return '<div class="kpi" style="--ac:'+(ac||'var(--cyan)')+';padding:11px 13px;"><div class="kpi-l">'+l+'</div><div class="kpi-v" style="font-size:20px;">'+v+'</div></div>'; }
+function _bkpiBig(l,v,ac,sub){ return '<div class="kpi" style="--ac:'+(ac||'var(--cyan)')+'"><div class="kpi-l">'+l+'</div><div class="kpi-v">'+v+'</div>'+(sub?'<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted2);margin-top:3px;">'+sub+'</div>':'')+'</div>'; }
+function _kc(n){ return n==null?'':(n>0?'kg':n<0?'kr':''); }
+function renderBridge(){
+  var panel=document.getElementById('bridgePanel'); if(!panel) return;
+  var dts=Object.keys(JDAS).sort(); var chip=document.getElementById('bridgeChip');
+  if(chip){ chip.textContent = dts.length ? (dts.length+' días DAS sincronizados') : 'sin datos DAS aún';
+    chip.style.color = dts.length?'var(--green)':'var(--muted2)'; chip.style.borderColor = dts.length?'#00e67644':'var(--border)'; }
+  var S=bridgeStats();
+  var _wlSub = (S.avgWin!=null&&S.avgLoss!=null)? ('W '+_bfmt(S.avgWin)+' / L '+_bfmt(S.avgLoss)) : '';
+  var procEl=document.getElementById('procKpis');
+  if(procEl) procEl.innerHTML = [
+    _bkpiBig('Win Rate', S.winRate==null?'—':'<span class="'+(S.winRate>=50?'kg':'kr')+'">'+S.winRate.toFixed(1)+'%</span>','var(--cyan)', S.trades?S.trades+' trades':''),
+    _bkpiBig('Profit Factor', '<span class="'+(S.pf!=null&&S.pf>=1?'kg':S.pf!=null?'kr':'')+'">'+_pf(S.pf)+'</span>','var(--gold)'),
+    _bkpiBig('Expectancy', S.exp$==null?'—':'<span class="'+_kc(S.exp$)+'">'+_bfmt2(S.exp$)+'</span>','var(--cyan)', 'por trade'),
+    _bkpiBig('Expectancy R', S.expR==null?'—':'<span class="'+_kc(S.expR)+'">'+(S.expR>=0?'+':'')+S.expR.toFixed(2)+'R</span>','var(--gold)'),
+    _bkpiBig('Avg Winner', S.avgWin==null?'—':'<span class="kg">'+_bfmt2(S.avgWin)+'</span>','var(--green)'),
+    _bkpiBig('Avg Loser', S.avgLoss==null?'—':'<span class="kr">'+_bfmt2(S.avgLoss)+'</span>','var(--red)'),
+    _bkpiBig('Ratio W/L', S.wl==null?'—':'<span class="'+(S.wl>=1?'kg':'kr')+'">'+S.wl.toFixed(2)+'</span>','#a855f7', _wlSub)
+  ].join('');
+  var _emptyEl=document.getElementById('procEmpty'); if(_emptyEl) _emptyEl.textContent = S.trades? '' : '· sin datos DAS todavía (sube tu Excel en el Journal DAS)';
+  document.getElementById('bridgeKpis').innerHTML = [
+    _bkpi('Long', '<span class="'+_kc(S.longNet)+'">'+_bfmt(S.longNet)+'</span>','var(--green)'),
+    _bkpi('Short', '<span class="'+_kc(S.shortNet)+'">'+_bfmt(S.shortNet)+'</span>','var(--red)'),
+    _bkpi('Net DAS', '<span class="'+_kc(S.net)+'">'+_bfmt(S.net)+'</span>','var(--cyan)'),
+    _bkpi('Costes DAS', _bfmt(S.cost),'var(--muted2)'),
+    _bkpi('Trades', S.trades,'var(--blue)')
+  ].join('');
+  document.getElementById('bridgeNote').innerHTML = 'KPIs calculados desde tus trades reales del Journal DAS (unidad = símbolo-día). El PNL DAS es <b>neto de comisiones y ECN</b>, sin HTB (el HTB no viene en el export de ejecuciones; se mantiene manual).';
+  var rows=dts.slice().reverse().map(function(dt){
+    var manual=pd((D[dt]||{}).pnlDay), das=JDAS[dt].net;
+    var diff=(manual!=null)?(manual-das):null;
+    var estado = manual==null?'<span style="color:var(--muted2)">vacío</span>'
+      : Math.abs(diff)<0.5?'<span style="color:var(--green)">✓ coincide</span>'
+      : '<span style="color:var(--gold)">Δ '+_bfmt2(diff)+'</span>';
+    return '<tr><td style="padding:6px 10px;font-family:\'DM Mono\',monospace;font-size:11px;">'+dt+'</td>'+
+      '<td style="padding:6px 10px;text-align:right;font-family:\'DM Mono\',monospace;font-size:11px;">'+(manual==null?'—':_bfmt2(manual))+'</td>'+
+      '<td style="padding:6px 10px;text-align:right;font-family:\'DM Mono\',monospace;font-size:11px;" class="'+_kc(das)+'">'+_bfmt2(das)+'</td>'+
+      '<td style="padding:6px 10px;text-align:right;font-family:\'DM Mono\',monospace;font-size:11px;">'+estado+'</td></tr>';
+  }).join('');
+  document.getElementById('bridgeRecon').innerHTML = dts.length ?
+    '<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:1px solid var(--border);">'+
+    '<th style="text-align:left;padding:6px 10px;font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:1px;color:var(--muted2);">FECHA</th>'+
+    '<th style="text-align:right;padding:6px 10px;font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:1px;color:var(--muted2);">PNL MANUAL</th>'+
+    '<th style="text-align:right;padding:6px 10px;font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:1px;color:var(--muted2);">PNL DAS (neto)</th>'+
+    '<th style="text-align:right;padding:6px 10px;font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:1px;color:var(--muted2);">ESTADO</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table>'
+    : '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);padding:14px;">Aún no hay días en el Journal DAS. Sube tu Excel en el Journal DAS y aparecerán aquí.</div>';
+}
+function fillFromDAS(){
+  var dts=Object.keys(JDAS);
+  if(!dts.length){ showToast('No hay datos del Journal DAS'); return; }
+  var ow=!!((document.getElementById('bridgeOverwrite')||{}).checked);
+  var targets=dts.filter(function(dt){ var cur=pd((D[dt]||{}).pnlDay); return ow || cur==null; });
+  if(!targets.length){ showToast('Nada que rellenar (marca «sobrescribir» para pisar manuales)'); return; }
+  if(!confirm('Se rellenará el PNL Day de '+targets.length+' día(s) con el neto del Journal DAS'+(ow?' (SOBRESCRIBIENDO manuales)':'')+'. ¿Continuar?')) return;
+  targets.forEach(function(dt){ if(!D[dt]) D[dt]={}; D[dt].pnlDay=String(Math.round(JDAS[dt].net*100)/100); });
+  save(); renderAll(); showToast('✓ '+targets.length+' día(s) rellenados desde DAS');
+}
+function renderAll(){ renderMain(); renderObj(); renderYear(); initTradeImgs(); initPdfs(); showLossReminder(); renderBridge(); }
 function showLossReminder(){ const el=document.getElementById('lossTickerReminder'); if(el) el.style.display=(new Date().getDay()===1)?'block':'none'; }
 
 let _tradeModalKey = null;
@@ -7638,6 +7751,7 @@ function renderLongSide(monthIdx) {
   renderAll();
   // Activar sincronización en tiempo real entre dispositivos
   startRealtimeSync();
+  startBridgeSync();
 })();
 </script>
 
