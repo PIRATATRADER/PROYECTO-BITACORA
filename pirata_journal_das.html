@@ -4,217 +4,110 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pirata Journal · DAS</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0a0d12;--bg2:#11151c;--bg3:#171c25;--bg4:#1c2330;--border:#1d2530;--border2:#2a3340;
-  --text:#e6e9f0;--muted:#5a6678;--muted2:#8a96aa;--green:#00e676;--red:#ff3d57;--blue:#3da9ff;
-  --neon:#22d3ee;--purple:#a855f7;--gold:#f5b41a;--orange:#ff8a3d;
-}
+:root{--bg:#0a0d12;--bg2:#11151c;--bg3:#171c25;--border:#1d2530;--border2:#2a3340;
+  --text:#e6e9f0;--muted:#5a6678;--muted2:#8a96aa;--green:#00e676;--red:#ff3d57;--blue:#3da9ff;--neon:#22d3ee;--purple:#a855f7;--gold:#f5b41a;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'DM Sans',-apple-system,Segoe UI,Roboto,sans-serif;
-  font-size:14px;
-  line-height:1.5;
-  min-height:100vh;
-  padding:18px 16px 70px;
-  background-image:
-    radial-gradient(circle at 15% -10%,rgba(61,169,255,.08),transparent 42%),
-    radial-gradient(circle at 95% 0%,rgba(168,85,247,.07),transparent 38%),
-    linear-gradient(180deg,rgba(255,255,255,.02),transparent 280px);
-}
-.wrap{max-width:1240px;margin:0 auto;}
-.mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
-.pos{color:var(--green);}
-.neg{color:var(--red);}
-.mut{color:var(--muted2);}
-header{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-  padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:20px;
-}
-.brand{display:flex;align-items:center;gap:11px;}
-.brand .m{font-size:27px;}
-.brand h1{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;line-height:.9;}
-.brand h1 b{color:var(--gold);}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;padding:18px 16px 70px;
+  background-image:radial-gradient(circle at 15% -10%,rgba(61,169,255,.06),transparent 42%),radial-gradient(circle at 95% 0%,rgba(168,85,247,.05),transparent 38%);}
+.wrap{max-width:1180px;margin:0 auto;}
+.back{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;transition:all .15s;margin-bottom:16px;}
+.back:hover{color:var(--text);border-color:var(--muted2);background:var(--bg3);}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;}.pos{color:var(--green);}.neg{color:var(--red);}.mut{color:var(--muted2);}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.brand{display:flex;align-items:center;gap:11px;}.brand .m{font-size:27px;}
+.brand h1{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:.9;}.brand h1 b{color:var(--gold);}
 .brand p{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-top:3px;}
 .chip{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;padding:5px 11px;border-radius:20px;border:1px solid var(--border2);}
-.chip.on{color:var(--green);border-color:#00e67644;background:#00e67610;}
-.chip.off{color:var(--gold);border-color:#f5b41a44;background:#f5b41a10;}
-.sec{
-  font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;
-  color:var(--muted2);margin:24px 0 12px;display:flex;align-items:center;gap:10px;
-}
-.sec::after{content:"";flex:1;height:1px;background:var(--border);}
-.drop{
-  border:2px dashed var(--border2);border-radius:16px;padding:34px 18px;text-align:center;cursor:pointer;
-  background:var(--bg2);transition:all .18s;
-}
-.drop:hover,.drop.drag{border-color:var(--blue);background:#3da9ff0c;}
-.drop .ic{font-size:38px;margin-bottom:10px;}
-.drop h3{font-size:16px;margin-bottom:5px;}
-.drop p{color:var(--muted2);font-size:12.5px;}
-.drop input{display:none;}
-.prev,.panel{
-  background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:16px;
-}
-.prev{margin-top:12px;}
-.prev h4,.panel h4{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:10px;}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-.spacer{flex:1;}
+.chip.on{color:var(--green);border-color:#00e67644;background:#00e67610;}.chip.off{color:var(--gold);border-color:#f5b41a44;background:#f5b41a10;}
+.sec{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted2);margin:24px 0 12px;display:flex;align-items:center;gap:10px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+.drop{border:2px dashed var(--border2);border-radius:16px;padding:34px 18px;text-align:center;cursor:pointer;background:var(--bg2);transition:all .18s;}
+.drop:hover,.drop.drag{border-color:var(--blue);background:#3da9ff0c;}.drop .ic{font-size:38px;margin-bottom:10px;}
+.drop h3{font-size:16px;margin-bottom:5px;}.drop p{color:var(--muted2);font-size:12.5px;}.drop input{display:none;}
+.prev{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:16px;margin-top:12px;}
+.prev h4{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:10px;}
+.daychips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0;}
+.dchip{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--bg);}
+.dchip.new{border-color:var(--green);color:var(--green);}.dchip.upd{border-color:var(--gold);color:var(--gold);}
+.btn{font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.5px;padding:11px 18px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;transition:all .14s;white-space:nowrap;}
+.btn:hover{border-color:var(--muted2);}.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn.green{background:#00e67615;border-color:var(--green);color:var(--green);}.btn.green:hover{background:#00e67625;}
+.btn.ghost{background:transparent;color:var(--muted2);}.btn.red{background:#ff3d5712;border-color:var(--red);color:var(--red);}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}.spacer{flex:1;}
 .f{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;}
 .f label{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted2);margin-bottom:7px;}
 .f input{width:140px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:15px;padding:8px 10px;outline:none;}
 .f input:focus{border-color:var(--blue);}
-.daychips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0;}
-.dchip{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--bg);}
-.dchip.new{border-color:var(--green);color:var(--green);}
-.dchip.upd{border-color:var(--gold);color:var(--gold);}
-.btn{
-  font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.5px;padding:11px 18px;border-radius:9px;
-  border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;transition:all .14s;white-space:nowrap;
-}
-.btn:hover{border-color:var(--muted2);}
-.btn:disabled{opacity:.4;cursor:not-allowed;}
-.btn.green{background:#00e67615;border-color:var(--green);color:var(--green);}
-.btn.green:hover{background:#00e67625;}
-.btn.ghost{background:transparent;color:var(--muted2);}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:11px;}
-.kpi{
-  position:relative;overflow:hidden;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;
-}
-.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--blue));opacity:.85;}
+.kpi{position:relative;overflow:hidden;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--blue));opacity:.85;}
 .kpi .l{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted2);margin-bottom:7px;}
-.kpi .v{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;}
-.kpi .sx{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted2);margin-top:5px;}
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.stats-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:12px;}
-@media(max-width:900px){.charts,.stats-grid{grid-template-columns:1fr;}}
-.chart-card,.table-card{
-  background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:14px;
-}
-.chart-card h4,.table-card h4{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;}
+.kpi .v{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;}.kpi .sx{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted2);margin-top:5px;}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;}@media(max-width:760px){.charts{grid-template-columns:1fr;}}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:14px;}
+.chart-card h4{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;}
 .chart-box{position:relative;height:250px;}
 .tbl-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;}
 table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}
-th{
-  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);
-  text-align:left;padding:10px 12px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;top:0;
-}
+th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);text-align:left;padding:10px 12px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;top:0;}
 td{padding:9px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;}
-tr:hover td{background:var(--bg2);}
-th.r,td.r{text-align:right;}
+tr:hover td{background:var(--bg2);}th.r,td.r{text-align:right;}
 .grade{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:600;}
-.gA{background:#00e67620;color:var(--green);}
-.gB{background:#3da9ff20;color:var(--blue);}
-.gC{background:#f5b41a20;color:var(--gold);}
-.gD{background:#ff3d5720;color:var(--red);}
+.gA{background:#00e67620;color:var(--green);}.gB{background:#3da9ff20;color:var(--blue);}.gC{background:#f5b41a20;color:var(--gold);}.gD{background:#ff3d5720;color:var(--red);}
 .pill{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:20px;}
-.pill.long{background:#00e67615;color:var(--green);}
-.pill.short{background:#ff3d5715;color:var(--red);}
-.pill.pre{background:#3da9ff18;color:var(--blue);}
-.pill.reg{background:#00e67618;color:var(--green);}
-.pill.aft{background:#ff8a3d18;color:var(--orange);}
-.pill.ovn{background:#a855f718;color:var(--purple);}
-.del{cursor:pointer;color:var(--muted);}
-.del:hover{color:var(--red);}
+.pill.long{background:#00e67615;color:var(--green);}.pill.short{background:#ff3d5715;color:var(--red);}
+.del{cursor:pointer;color:var(--muted);}.del:hover{color:var(--red);}
 .empty{padding:42px 16px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;}
-.mini-note{
-  margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);
-  display:flex;gap:10px;flex-wrap:wrap;
-}
-.insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
-.insight{
-  background:linear-gradient(180deg,rgba(255,255,255,.02),transparent),var(--bg2);
-  border:1px solid var(--border);border-radius:13px;padding:15px;
-}
-.insight h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;}
-.insight .big{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;}
-.insight p{font-size:13px;color:var(--text);}
-.toast{
-  position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);
-  border:1px solid var(--border2);border-radius:11px;padding:12px 20px;font-family:'JetBrains Mono',monospace;
-  font-size:12.5px;box-shadow:0 12px 40px -10px #000;transition:transform .3s;z-index:90;max-width:90vw;
-}
-.toast.show{transform:translateX(-50%) translateY(0);}
-.toast.ok{border-color:var(--green);}
-.toast.err{border-color:var(--red);}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border2);border-radius:11px;padding:12px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;box-shadow:0 12px 40px -10px #000;transition:transform .3s;z-index:90;max-width:90vw;}
+.toast.show{transform:translateX(-50%) translateY(0);}.toast.ok{border-color:var(--green);}.toast.err{border-color:var(--red);}
 .foot{margin-top:28px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <a class="back" href="proyecto_bitacora_home.html">← Inicio</a>
   <header>
-    <div class="brand">
-      <div class="m">☠</div>
-      <div>
-        <h1>PIRATA <b>JOURNAL</b> · DAS</h1>
-        <p>suelta tu excel diario · stats automaticas por sesiones</p>
-      </div>
-    </div>
-    <div class="row">
-      <span class="chip off" id="chip">● conectando...</span>
-      <span class="mono mut" id="count" style="font-size:11px;">0 dias</span>
-    </div>
+    <div class="brand"><div class="m">☠️</div><div><h1>PIRATA <b>JOURNAL</b> · DAS</h1><p>suelta tu Excel diario · stats automáticas</p></div></div>
+    <div class="row"><span class="chip off" id="chip">● conectando…</span><span class="mono mut" id="count" style="font-size:11px;">0 días</span></div>
   </header>
 
-  <div class="sec">Importar ejecuciones del dia</div>
+  <div class="sec">Importar ejecuciones del día</div>
   <label class="drop" id="drop">
     <input type="file" id="fileInput" accept=".xls,.xlsx,.csv">
-    <div class="ic">📥</div>
-    <h3>Suelta aqui tu Excel de DAS</h3>
-    <p>Cada dia arrastras el export de ejecuciones y el journal te separa premarket, market, after y consistencia.</p>
+    <div class="ic">📥</div><h3>Suelta aquí tu Excel de DAS</h3>
+    <p>Cada día arrastras el export de ejecuciones · calcula el P&L solo (no necesita columna de P&L)</p>
   </label>
   <div class="prev" id="prev" style="display:none;"></div>
 
-  <div class="sec">Cuenta y riesgo</div>
+  <div class="sec">Cuenta &amp; riesgo</div>
   <div class="row">
     <div class="f"><label>Cuenta ($)</label><input id="cfgAcc" inputmode="numeric" placeholder="25000"></div>
     <div class="f"><label>Risk/Trade (%)</label><input id="cfgRisk" type="number" step="0.1" value="1" style="width:110px"></div>
-    <div class="f"><label>1R</label><div class="mono" id="oneR" style="font-size:18px;color:var(--gold);padding:5px 0;">-</div></div>
-    <div class="f"><label>Target diario</label><div class="mono" id="tgt" style="font-size:18px;color:var(--green);padding:5px 0;">-</div></div>
+    <div class="f"><label>1R</label><div class="mono" id="oneR" style="font-size:18px;color:var(--gold);padding:5px 0;">—</div></div>
+    <div class="f"><label>Target diario</label><div class="mono" id="tgt" style="font-size:18px;color:var(--green);padding:5px 0;">—</div></div>
   </div>
 
   <div class="sec">Resumen del journal</div>
   <div class="kpis" id="kpis"></div>
 
-  <div class="sec">Insights rapidos</div>
-  <div class="insights" id="insights"></div>
-
-  <div class="sec">Graficas</div>
+  <div class="sec">Gráficas</div>
   <div class="charts">
-    <div class="chart-card" style="grid-column:1/-1;"><h4>Equity curve · neto acumulado por dia</h4><div class="chart-box"><canvas id="cEq"></canvas></div></div>
-    <div class="chart-card"><h4>P&L neto por dia</h4><div class="chart-box"><canvas id="cDay"></canvas></div></div>
-    <div class="chart-card"><h4>Drawdown desde maximo</h4><div class="chart-box"><canvas id="cDd"></canvas></div></div>
+    <div class="chart-card" style="grid-column:1/-1;"><h4>Equity curve · neto acumulado por día</h4><div class="chart-box"><canvas id="cEq"></canvas></div></div>
+    <div class="chart-card"><h4>P&L neto por día</h4><div class="chart-box"><canvas id="cDay"></canvas></div></div>
     <div class="chart-card"><h4>Long vs Short</h4><div class="chart-box"><canvas id="cSd"></canvas></div></div>
-    <div class="chart-card"><h4>Premarket / Market / After</h4><div class="chart-box"><canvas id="cSess"></canvas></div></div>
-    <div class="chart-card"><h4>Rendimiento por dia de semana</h4><div class="chart-box"><canvas id="cWeek"></canvas></div></div>
-    <div class="chart-card"><h4>Mejores / peores simbolos</h4><div class="chart-box"><canvas id="cSym"></canvas></div></div>
-    <div class="chart-card"><h4>Costes: comision vs ECN</h4><div class="chart-box"><canvas id="cCost"></canvas></div></div>
+    <div class="chart-card"><h4>Mejores / peores símbolos</h4><div class="chart-box"><canvas id="cSym"></canvas></div></div>
+    <div class="chart-card"><h4>Costes (comisión vs rebate ECN)</h4><div class="chart-box"><canvas id="cCost"></canvas></div></div>
   </div>
 
-  <div class="sec">Sesion y consistencia</div>
-  <div class="stats-grid">
-    <div class="table-card">
-      <h4>Resumen por sesion</h4>
-      <div class="tbl-wrap"><table id="sessionTbl"></table></div>
-      <div class="mini-note" id="sessionNote"></div>
-    </div>
-    <div class="table-card">
-      <h4>Resumen por dia de semana</h4>
-      <div class="tbl-wrap"><table id="weekdayTbl"></table></div>
-      <div class="mini-note" id="weekdayNote"></div>
-    </div>
-  </div>
-
-  <div class="sec">Journal por dia <span class="mut mono" style="font-size:10px;text-transform:none;letter-spacing:0;">- cada fila es un dia guardado</span></div>
+  <div class="sec">Journal por día <span class="mut mono" style="font-size:10px;text-transform:none;letter-spacing:0;">— cada fila es un día guardado</span></div>
   <div class="tbl-wrap"><table id="dayTbl"></table></div>
 
-  <div class="sec">Por simbolo acumulado</div>
+  <div class="sec">Por símbolo (acumulado)</div>
   <div class="tbl-wrap"><table id="symTbl"></table></div>
 
-  <div class="foot">Pirata Journal DAS · cashflow neto por simbolo-dia · guardado en Firebase para sincronizar entre dispositivos</div>
+  <div class="foot">Pirata Journal DAS · P&L = cashflow neto por símbolo-día · guardado en tu Firebase, sincroniza entre dispositivos</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -223,167 +116,73 @@ th.r,td.r{text-align:right;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-const firebaseConfig={apiKey:"AIzaSyDVR0xHEt5AIUPANlnfNok3dFqBVQb7jT0",authDomain:"proyecto-bitacora-fead3.firebaseapp.com",projectId:"proyecto-bitacora-fead3",storageBucket:"proyecto-bitacora-fead3.firebasestorage.app",messagingSenderId:"907354671911",appId:"1:907354671911:web:68000bcbaa989d25db7702"};
+/* ===== Firebase (tu proyecto — ya configurado) ===== */
+const firebaseConfig={apiKey:"AIzaSyDVR0xHEt5AIUPANlnfNok3dFqBVQb7jT0",authDomain:"proyecto-bitacora-fead3.firebaseapp.com",
+  projectId:"proyecto-bitacora-fead3",storageBucket:"proyecto-bitacora-fead3.firebasestorage.app",messagingSenderId:"907354671911",appId:"1:907354671911:web:68000bcbaa989d25db7702"};
 let db=null,online=false;
 try{ firebase.initializeApp(firebaseConfig); db=firebase.firestore(); online=true; }catch(e){ console.warn(e); }
 const COL="journal_das", CFGDOC="journal_das_config";
-const SESSION_META={
-  premarket:{label:"Premarket",pill:"pre",color:"#3da9ff"},
-  market:{label:"Market",pill:"reg",color:"#00e676"},
-  after:{label:"After",pill:"aft",color:"#ff8a3d"},
-  overnight:{label:"Overnight",pill:"ovn",color:"#a855f7"}
-};
-const WEEK_LABELS=["Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"];
 
+/* ===== Estado ===== */
 let DAYS={}, CFG={account:0,riskPct:1}, CHARTS={}, PENDING=null;
-const $=s=>document.querySelector(s);
-const num=v=>{ if(v===""||v==null)return 0; const n=+v; return isNaN(n)?0:n; };
-const money=n=>(n==null||isNaN(n))?"-":(n<0?"-$":"$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
-const moneyK=n=>(n==null||isNaN(n))?"-":(n<0?"-$":"$")+Math.abs(Math.round(n)).toLocaleString("en-US");
-const pct=n=>(n==null||isNaN(n))?"-":n.toFixed(1)+"%";
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const num=v=>{ if(v===''||v==null)return 0; const n=+v; return isNaN(n)?0:n; };
+const money=n=>(n==null||isNaN(n))?"—":(n<0?"-$":"$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const moneyK=n=>(n==null||isNaN(n))?"—":(n<0?"-$":"$")+Math.abs(Math.round(n)).toLocaleString("en-US");
+const pct=n=>(n==null||isNaN(n))?"—":n.toFixed(1)+"%";
 const clsn=n=>n>0?"pos":n<0?"neg":"";
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function toast(m,k){ const t=$("#toast"); t.textContent=m; t.className="toast show "+(k||""); clearTimeout(t._t); t._t=setTimeout(()=>t.className="toast",3400); }
 function oneR(){ return (CFG.account>0&&CFG.riskPct>0)?CFG.account*CFG.riskPct/100:0; }
-function blankSessions(){ return {premarket:0,market:0,after:0,overnight:0}; }
-function blankCounts(){ return {premarket:0,market:0,after:0,overnight:0}; }
-function blankSessionRows(){
-  return {
-    premarket:{net:0,gross:0,cost:0,trades:0,wins:0,fills:0},
-    market:{net:0,gross:0,cost:0,trades:0,wins:0,fills:0},
-    after:{net:0,gross:0,cost:0,trades:0,wins:0,fills:0},
-    overnight:{net:0,gross:0,cost:0,trades:0,wins:0,fills:0}
-  };
-}
+
+/* ===== Parseo DAS + motor (cashflow por símbolo-día) ===== */
 function parseDAS(buf){
   const u8=new Uint8Array(buf);
-  if(u8[28]===0xFF&&u8[29]===0xFE){ u8[28]=0xFE; u8[29]=0xFF; }
+  if(u8[28]===0xFF&&u8[29]===0xFE){ u8[28]=0xFE; u8[29]=0xFF; }   // parche byte-order DAS
   const wb=XLSX.read(u8,{type:"array"});
   return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:"",raw:true});
 }
-function parseDateTime(dtRaw){
-  const parts=String(dtRaw||"").trim().split(/\s+/);
-  if(parts.length<2)return null;
-  const d=parts[0].split("/");
-  if(d.length<3)return null;
-  const t=parts[1].split(":");
-  const hh=+t[0]||0, mm=+t[1]||0;
-  return {
-    date:"20"+d[2]+"-"+d[0].padStart(2,"0")+"-"+d[1].padStart(2,"0"),
-    minutes:hh*60+mm
-  };
-}
-function classifySession(minutes){
-  if(minutes>=240&&minutes<570)return "premarket";
-  if(minutes>=570&&minutes<960)return "market";
-  if(minutes>=960&&minutes<=1200)return "after";
-  return "overnight";
-}
-function dominantSession(map){
-  let best="market", bestVal=-1;
-  Object.keys(map).forEach(key=>{
-    const val=Math.abs(map[key]);
-    if(val>bestVal){ bestVal=val; best=key; }
-  });
-  return best;
-}
 const COSTC=["Comm","Ecn Fee","SEC","TAF","NSCC","Clr","CAT","Misc"];
+function _entrySession(t){ var p=String(t||"").split(":"); var sec=(+p[0]||0)*3600+(+p[1]||0)*60+(+(p[2]||0)); if(sec<9*3600+30*60)return "Premarket"; if(sec<11*3600)return "Open 9:30-11"; if(sec<14*3600)return "Mediodía 11-14"; if(sec<16*3600)return "Tarde 14-16"; return "After 16+"; }
 function computeDays(rows){
-  const grp={};
-  const dayRaw={};
+  const grp={};                       // sym|date
   let account="";
   for(const r of rows){
-    const dt=parseDateTime(r["Date/Time"]); if(!dt) continue;
+    const dtRaw=String(r["Date/Time"]||"").trim(); if(!dtRaw) continue;
+    const [d,t]=dtRaw.split(/\s+/); const p=d.split("/"); if(p.length<3) continue;
+    const date="20"+p[2]+"-"+p[0].padStart(2,"0")+"-"+p[1].padStart(2,"0");
     const sym=String(r["Symbol"]||"").trim(); if(!sym) continue;
-    const side=String(r["B/S"]||"").trim();
-    const qty=num(r["Qty"]);
-    const price=num(r["Price"]);
-    const session=classifySession(dt.minutes);
+    const side=String(r["B/S"]||"").trim(); const qty=num(r["Qty"]); const price=num(r["Price"]);
     account=account||String(r["Account"]||"").trim();
-    const gross=((side==="S"||side==="T")?qty*price:-qty*price);
-    let cost=0; for(const cc of COSTC){ cost+=num(r[cc]); }
-    const key=sym+"|"+dt.date;
-    const g=grp[key]||(grp[key]={
-      sym,date:dt.date,gross:0,cost:0,fills:0,short:false,ecn:0,comm:0,
-      sessionGross:blankSessions(),sessionCost:blankSessions(),sessionFills:blankCounts()
-    });
-    g.gross+=gross;
-    g.cost+=cost;
-    g.comm+=num(r["Comm"]);
-    g.ecn+=num(r["Ecn Fee"]);
-    g.fills++;
-    g.sessionGross[session]+=gross;
-    g.sessionCost[session]+=cost;
-    g.sessionFills[session]++;
-    if(side==="T") g.short=true;
-
-    const D=dayRaw[dt.date]||(dayRaw[dt.date]={
-      sessions:blankSessionRows(),fills:0,comm:0,ecn:0
-    });
-    D.fills++;
-    D.comm+=num(r["Comm"]);
-    D.ecn+=num(r["Ecn Fee"]);
-    D.sessions[session].gross+=gross;
-    D.sessions[session].cost+=cost;
-    D.sessions[session].net+=gross-cost;
-    D.sessions[session].fills++;
+    const k=sym+"|"+date; const g=grp[k]||(grp[k]={sym,date,gross:0,cost:0,fills:0,short:false,ecn:0,comm:0,entry:(t||"99:99:99")});
+    if(t && t<g.entry) g.entry=t;
+    g.gross += (side==="S"||side==="T")? qty*price : -qty*price;
+    let c=0; for(const cc of COSTC){ c+=num(r[cc]); } g.cost+=c;
+    g.comm+=num(r["Comm"]); g.ecn+=num(r["Ecn Fee"]);
+    g.fills++; if(side==="T") g.short=true;
   }
-
+  // agrupar por día
   const days={};
-  for(const key in grp){
-    const g=grp[key];
-    const net=g.gross-g.cost;
-    const dom=dominantSession(g.sessionGross);
-    const D=days[g.date]||(days[g.date]={
-      date:g.date,account,gross:0,cost:0,net:0,trades:0,wins:0,longNet:0,shortNet:0,fills:0,comm:0,ecn:0,
-      sessions:blankSessionRows(),symbols:[],sessionMix:blankCounts(),bestSymbol:null,worstSymbol:null
-    });
-    D.gross+=g.gross;
-    D.cost+=g.cost;
-    D.net+=net;
-    D.trades++;
-    if(net>0)D.wins++;
+  for(const k in grp){ const g=grp[k]; const net=g.gross-g.cost;
+    const D=days[g.date]||(days[g.date]={date:g.date,account,gross:0,cost:0,net:0,trades:0,wins:0,longNet:0,shortNet:0,fills:0,comm:0,ecn:0,symbols:[],byHour:{},bySession:{}});
+    D.gross+=g.gross; D.cost+=g.cost; D.net+=net; D.trades++; if(net>0)D.wins++;
+    D.fills+=g.fills; D.comm+=g.comm; D.ecn+=g.ecn;
     if(g.short)D.shortNet+=net; else D.longNet+=net;
-    D.sessionMix[dom]++;
-    D.symbols.push({
-      sym:g.sym,net:+net.toFixed(2),trades:1,short:g.short,dominantSession:dom,
-      fills:g.fills,sessionNet:{
-        premarket:+(g.sessionGross.premarket-g.sessionCost.premarket).toFixed(2),
-        market:+(g.sessionGross.market-g.sessionCost.market).toFixed(2),
-        after:+(g.sessionGross.after-g.sessionCost.after).toFixed(2),
-        overnight:+(g.sessionGross.overnight-g.sessionCost.overnight).toFixed(2)
-      }
-    });
+    D.symbols.push({sym:g.sym,net:+net.toFixed(2),trades:1,short:g.short});
+    var hh=(g.entry&&g.entry!=="99:99:99")?g.entry.slice(0,2):"--";
+    var hb=D.byHour[hh]||(D.byHour[hh]={net:0,trades:0,wins:0});
+    hb.net+=net; hb.trades++; if(net>0)hb.wins++;
+    var ss=(g.entry&&g.entry!=="99:99:99")?_entrySession(g.entry):"--";
+    var sb=D.bySession[ss]||(D.bySession[ss]={net:0,trades:0,wins:0});
+    sb.net+=net; sb.trades++; if(net>0)sb.wins++;
   }
-
-  for(const dt in days){
-    const D=days[dt];
-    const raw=dayRaw[dt]||{sessions:blankSessionRows(),fills:0,comm:0,ecn:0};
-    D.fills=raw.fills;
-    D.comm=raw.comm;
-    D.ecn=raw.ecn;
-    D.sessions=raw.sessions;
-    Object.keys(D.sessions).forEach(key=>{
-      const S=D.sessions[key];
-      S.net=+S.net.toFixed(2);
-      S.gross=+S.gross.toFixed(2);
-      S.cost=+S.cost.toFixed(2);
-    });
-    D.gross=+D.gross.toFixed(2);
-    D.cost=+D.cost.toFixed(2);
-    D.net=+D.net.toFixed(2);
-    D.longNet=+D.longNet.toFixed(2);
-    D.shortNet=+D.shortNet.toFixed(2);
-    D.comm=+D.comm.toFixed(2);
-    D.ecn=+D.ecn.toFixed(2);
-    D.symbols.sort((a,b)=>b.net-a.net);
-    D.bestSymbol=D.symbols[0]||null;
-    D.worstSymbol=D.symbols[D.symbols.length-1]||null;
-    D.importedAt=Date.now();
-  }
+  for(const dt in days){ const D=days[dt]; D.gross=+D.gross.toFixed(2);D.cost=+D.cost.toFixed(2);D.net=+D.net.toFixed(2);
+    D.longNet=+D.longNet.toFixed(2);D.shortNet=+D.shortNet.toFixed(2);D.comm=+D.comm.toFixed(2);D.ecn=+D.ecn.toFixed(2);
+    D.symbols.sort((a,b)=>b.net-a.net); for(var h in D.byHour){ D.byHour[h].net=+D.byHour[h].net.toFixed(2); } for(var ss in D.bySession){ D.bySession[ss].net=+D.bySession[ss].net.toFixed(2); } D.importedAt=Date.now(); }
   return days;
 }
 
+/* ===== Importar ===== */
 function setupDrop(){
   const drop=$("#drop"),inp=$("#fileInput");
   ["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("drag");}));
@@ -393,459 +192,159 @@ function setupDrop(){
 }
 function readFile(file){
   const r=new FileReader();
-  r.onload=e=>{
-    try{
-      const rows=parseDAS(e.target.result);
-      if(!rows.length){ toast("El archivo no tiene filas","err"); return; }
-      if(!("Date/Time" in rows[0])||!("Symbol" in rows[0])||!("B/S" in rows[0])){
-        toast("No parece un export de DAS: faltan columnas Date/Time, Symbol o B/S","err");
-        return;
-      }
-      PENDING=computeDays(rows);
-      showPreview(rows.length);
-    }catch(err){
-      console.error(err);
-      toast("No se pudo leer el archivo","err");
-    }
-  };
+  r.onload=e=>{ try{
+    const rows=parseDAS(e.target.result);
+    if(!rows.length){ toast("El archivo no tiene filas","err"); return; }
+    if(!("Date/Time"in rows[0])||!("Symbol"in rows[0])||!("B/S"in rows[0])){
+      toast("No parece un export de DAS (faltan columnas Date/Time, Symbol, B/S)","err"); return; }
+    PENDING=computeDays(rows);
+    showPreview(rows.length);
+  }catch(err){ console.error(err); toast("No se pudo leer el archivo","err"); } };
   r.readAsArrayBuffer(file);
 }
 function showPreview(nfills){
   const dts=Object.keys(PENDING).sort();
-  let totNet=0, totTrades=0;
-  dts.forEach(d=>{ totNet+=PENDING[d].net; totTrades+=PENDING[d].trades; });
-  const chips=dts.map(d=>{
-    const isNew=!DAYS[d];
-    return `<span class="dchip ${isNew?"new":"upd"}">${d} · ${moneyK(PENDING[d].net)} ${isNew?"(nuevo)":"(actualiza)"}</span>`;
-  }).join("");
+  let totNet=0,totTrades=0; dts.forEach(d=>{totNet+=PENDING[d].net;totTrades+=PENDING[d].trades;});
+  const chips=dts.map(d=>{ const isNew=!DAYS[d]; return `<span class="dchip ${isNew?'new':'upd'}">${d} · ${moneyK(PENDING[d].net)} ${isNew?'(nuevo)':'(actualiza)'}</span>`; }).join("");
   $("#prev").style.display="block";
   $("#prev").innerHTML=`<h4>Listo para guardar</h4>
-    <div class="row mut mono" style="font-size:12px;">${nfills.toLocaleString("en-US")} fills · ${dts.length} dia(s) · ${totTrades} trades · neto <b class="${clsn(totNet)}">${money(totNet)}</b></div>
+    <div class="row mut mono" style="font-size:12px;">${nfills.toLocaleString("en-US")} fills · ${dts.length} día(s) · ${totTrades} trades · neto <b class="${clsn(totNet)}">${money(totNet)}</b></div>
     <div class="daychips">${chips}</div>
-    <div class="row" style="margin-top:6px;">
-      <button class="btn green" id="saveDays">Guardar en el journal</button>
-      <button class="btn ghost" id="cancelImp">Cancelar</button>
-    </div>`;
+    <div class="row" style="margin-top:6px;"><button class="btn green" id="saveDays">💾 Guardar en el journal</button><button class="btn ghost" id="cancelImp">Cancelar</button></div>`;
   $("#saveDays").addEventListener("click",saveDays);
-  $("#cancelImp").addEventListener("click",()=>{ PENDING=null; $("#prev").style.display="none"; $("#fileInput").value=""; });
+  $("#cancelImp").addEventListener("click",()=>{PENDING=null;$("#prev").style.display="none";$("#fileInput").value="";});
 }
 async function saveDays(){
   const dts=Object.keys(PENDING);
   dts.forEach(d=>DAYS[d]=PENDING[d]);
-  saveLocal();
-  render();
-  if(online){
-    try{
-      let b=db.batch();
-      dts.forEach(d=>b.set(db.collection(COL).doc(d),PENDING[d]));
-      await b.commit();
-      toast(`Guardados ${dts.length} dia(s)`, "ok");
-    }catch(e){
-      console.warn(e);
-      toast("Guardado local, nube no disponible","err");
-    }
-  }else{
-    toast(`Guardados ${dts.length} dia(s) en local`, "ok");
-  }
-  PENDING=null;
-  $("#prev").style.display="none";
-  $("#fileInput").value="";
+  saveLocal(); render();
+  if(online){ try{ let b=db.batch();
+    dts.forEach(d=>b.set(db.collection(COL).doc(d),PENDING[d]));
+    await b.commit(); toast(`✓ ${dts.length} día(s) guardados en la NUBE`,"ok");
+    const _c=$("#chip"); if(_c){ _c.className="chip on"; _c.textContent="● sincronizado"; }
+  }catch(e){ console.error("Firestore save error:",e); const code=(e&&e.code)?e.code:((e&&e.message)?e.message:"desconocido"); toast("⚠ LA NUBE FALLÓ: "+code+" · revisa las reglas de Firestore","err"); const _c=$("#chip"); if(_c){ _c.className="chip off"; _c.textContent="● nube ERROR: "+code; } } }
+  else toast(`⚠ Guardado SOLO local (Firebase no cargó)`,"err");
+  PENDING=null; $("#prev").style.display="none"; $("#fileInput").value="";
 }
 async function delDay(d){
-  if(!confirm("¿Borrar el dia "+d+" del journal?")) return;
-  delete DAYS[d];
-  saveLocal();
-  render();
+  if(!confirm("¿Borrar el día "+d+" del journal?"))return;
+  delete DAYS[d]; saveLocal(); render();
   if(online){ try{ await db.collection(COL).doc(d).delete(); }catch(e){} }
 }
 
-function saveLocal(){
-  try{
-    localStorage.setItem("pjdas_days",JSON.stringify(DAYS));
-    localStorage.setItem("pjdas_cfg",JSON.stringify(CFG));
-  }catch(e){}
-}
-function hydrateDay(day){
-  const base=day||{};
-  if(!base.sessions){
-    base.sessions=blankSessionRows();
-  }else{
-    Object.keys(blankSessionRows()).forEach(k=>{
-      base.sessions[k]=Object.assign({net:0,gross:0,cost:0,trades:0,wins:0,fills:0},base.sessions[k]||{});
-    });
-  }
-  if(!base.sessionMix) base.sessionMix=blankCounts();
-  if(!Array.isArray(base.symbols)) base.symbols=[];
-  return base;
-}
+/* ===== Persistencia ===== */
+function saveLocal(){ try{ localStorage.setItem("pjdas_days",JSON.stringify(DAYS)); localStorage.setItem("pjdas_cfg",JSON.stringify(CFG)); }catch(e){} }
 function start(){
-  try{
-    const d=JSON.parse(localStorage.getItem("pjdas_days")||"null");
-    if(d){ Object.keys(d).forEach(k=>DAYS[k]=hydrateDay(d[k])); }
-  }catch(e){}
-  try{
-    const c=JSON.parse(localStorage.getItem("pjdas_cfg")||"null");
-    if(c) CFG=Object.assign(CFG,c);
-  }catch(e){}
-  applyCfg();
-  render();
+  try{ const d=JSON.parse(localStorage.getItem("pjdas_days")||"null"); if(d)DAYS=d; }catch(e){}
+  try{ const c=JSON.parse(localStorage.getItem("pjdas_cfg")||"null"); if(c)CFG=Object.assign(CFG,c); }catch(e){}
+  applyCfg(); render();
   if(online){
-    $("#chip").className="chip on";
-    $("#chip").textContent="● sincronizado";
-    db.collection(CFGDOC).doc("main").get().then(s=>{ if(s.exists){ CFG=Object.assign(CFG,s.data()); applyCfg(); render(); } }).catch(()=>{});
-    db.collection(COL).onSnapshot(snap=>{
-      DAYS={};
-      snap.forEach(doc=>DAYS[doc.id]=hydrateDay(doc.data()));
-      saveLocal();
-      render();
-    },err=>{
-      console.warn(err);
-      $("#chip").className="chip off";
-      $("#chip").textContent="● sin conexion";
-    });
-  }else{
-    $("#chip").className="chip off";
-    $("#chip").textContent="● modo local";
-  }
+    $("#chip").className="chip on"; $("#chip").textContent="● sincronizado";
+    db.collection(CFGDOC).doc("main").get().then(s=>{if(s.exists){CFG=Object.assign(CFG,s.data());applyCfg();render();}}).catch(()=>{});
+    db.collection(COL).onSnapshot(snap=>{ DAYS={}; snap.forEach(doc=>DAYS[doc.id]=doc.data()); saveLocal(); render(); },
+      err=>{ console.warn(err); $("#chip").className="chip off"; $("#chip").textContent="● sin conexión"; });
+  } else { $("#chip").className="chip off"; $("#chip").textContent="● modo local"; }
 }
 
-function applyCfg(){
-  $("#cfgAcc").value=CFG.account||"";
-  $("#cfgRisk").value=CFG.riskPct||1;
-  $("#oneR").textContent=oneR()>0?money(oneR()):"-";
-  $("#tgt").textContent=CFG.account>0?money(CFG.account*0.03):"-";
-}
-async function saveCfg(){
-  saveLocal();
-  if(online){ try{ await db.collection(CFGDOC).doc("main").set(CFG,{merge:true}); }catch(e){} }
-}
-$("#cfgAcc").addEventListener("input",e=>{ CFG.account=num(e.target.value)||0; applyCfg(); saveCfg(); render(); });
-$("#cfgRisk").addEventListener("input",e=>{ CFG.riskPct=parseFloat(e.target.value)||0; applyCfg(); saveCfg(); render(); });
+/* ===== Config ===== */
+function applyCfg(){ $("#cfgAcc").value=CFG.account||""; $("#cfgRisk").value=CFG.riskPct||1;
+  $("#oneR").textContent=oneR()>0?money(oneR()):"—"; $("#tgt").textContent=CFG.account>0?money(CFG.account*0.03):"—"; }
+async function saveCfg(){ saveLocal(); if(online){ try{ await db.collection(CFGDOC).doc("main").set(CFG,{merge:true}); }catch(e){} } }
+$("#cfgAcc").addEventListener("input",e=>{CFG.account=num(e.target.value)||0;applyCfg();saveCfg();render();});
+$("#cfgRisk").addEventListener("input",e=>{CFG.riskPct=parseFloat(e.target.value)||0;applyCfg();saveCfg();render();});
 
-function dayGrade(net){
-  const r=oneR();
-  if(r<=0) return null;
-  const R=net/r;
-  if(R>=3) return ["A+","gA"];
-  if(R>=1) return ["A","gA"];
-  if(R>=0.3) return ["B","gB"];
-  if(R>0) return ["C","gC"];
-  return ["D","gD"];
-}
-function pf(v){ return v==null?"-":v===Infinity?"∞":v.toFixed(2); }
-function rr(v){ return v==null?"-":(v>=0?"+":"")+v.toFixed(1)+"R"; }
-function average(arr){ return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null; }
-function weekdayFromDate(dateStr){ return new Date(dateStr+"T00:00:00").getDay(); }
+/* ===== Grado por día (R) ===== */
+function dayGrade(net){ const r=oneR(); if(r<=0) return null; const R=net/r;
+  if(R>=3)return["A+","gA"]; if(R>=1)return["A","gA"]; if(R>=0.3)return["B","gB"]; if(R>0)return["C","gC"]; return["D","gD"]; }
 
+/* ===== Render ===== */
 function aggregate(){
-  const dts=Object.keys(DAYS).sort();
-  let gross=0,cost=0,net=0,trades=0,wins=0,longNet=0,shortNet=0,fills=0,comm=0,ecn=0;
-  let posSum=0,negSum=0,bestDay=null,worstDay=null,greenDays=0,redDays=0,flatDays=0;
-  let currGreen=0,currRed=0,maxGreen=0,maxRed=0,peak=0,maxDrawdown=0;
-  const sym={}, sessionAgg=blankSessionRows(), weekdayAgg={}, eqCurve=[], drawdowns=[];
-
-  dts.forEach(d=>{
-    const D=hydrateDay(DAYS[d]);
-    gross+=D.gross||0; cost+=D.cost||0; net+=D.net||0; trades+=D.trades||0; wins+=D.wins||0;
-    longNet+=D.longNet||0; shortNet+=D.shortNet||0; fills+=D.fills||0; comm+=D.comm||0; ecn+=D.ecn||0;
-    if(D.net>0){ posSum+=D.net; greenDays++; currGreen++; currRed=0; }
-    else if(D.net<0){ negSum+=D.net; redDays++; currRed++; currGreen=0; }
-    else { flatDays++; currGreen=0; currRed=0; }
-    if(currGreen>maxGreen)maxGreen=currGreen;
-    if(currRed>maxRed)maxRed=currRed;
-    if(!bestDay||D.net>bestDay.net) bestDay={date:d,net:D.net};
-    if(!worstDay||D.net<worstDay.net) worstDay={date:d,net:D.net};
-
-    peak=Math.max(peak,net);
-    const dd=net-peak;
-    if(dd<maxDrawdown)maxDrawdown=dd;
-    eqCurve.push(net);
-    drawdowns.push(dd);
-
-    Object.keys(sessionAgg).forEach(key=>{
-      const src=(D.sessions&&D.sessions[key])||{net:0,gross:0,cost:0,fills:0};
-      sessionAgg[key].net+=(src.net||0);
-      sessionAgg[key].gross+=(src.gross||0);
-      sessionAgg[key].cost+=(src.cost||0);
-      sessionAgg[key].fills+=(src.fills||0);
-      sessionAgg[key].trades+=(D.sessionMix&&D.sessionMix[key])||0;
-      if(((D.sessionMix&&D.sessionMix[key])||0)>0 && (src.net||0)>0) sessionAgg[key].wins+=1;
-    });
-
-    const wd=weekdayFromDate(d);
-    const wk=weekdayAgg[wd]||(weekdayAgg[wd]={idx:wd,label:WEEK_LABELS[wd],days:0,green:0,red:0,net:0,trades:0});
-    wk.days++;
-    wk.net+=D.net||0;
-    wk.trades+=D.trades||0;
-    if(D.net>0)wk.green++;
-    if(D.net<0)wk.red++;
-
-    (D.symbols||[]).forEach(s=>{
-      const o=sym[s.sym]||(sym[s.sym]={sym:s.sym,net:0,trades:0,shortCount:0,longCount:0,sessions:blankSessions()});
-      o.net+=s.net||0;
-      o.trades+=s.trades||1;
-      if(s.short)o.shortCount++; else o.longCount++;
-      Object.keys(o.sessions).forEach(key=>o.sessions[key]+=((s.sessionNet&&s.sessionNet[key])||0));
-    });
-  });
-
-  const symArr=Object.values(sym).map(s=>{
-    s.net=+s.net.toFixed(2);
-    s.bias=s.shortCount>s.longCount?"short":"long";
-    s.bestSession=dominantSession(s.sessions);
-    return s;
-  }).sort((a,b)=>b.net-a.net);
-
-  const weekdayArr=Object.values(weekdayAgg).sort((a,b)=>a.idx-b.idx).map(w=>{
-    w.net=+w.net.toFixed(2);
-    w.avg=w.days?w.net/w.days:0;
-    w.winRate=w.days?w.green/w.days*100:null;
-    return w;
-  });
-  const activeWeekdays=weekdayArr.filter(w=>w.days>0);
-
-  const sessionArr=Object.keys(sessionAgg).map(key=>{
-    const s=sessionAgg[key];
-    const tr=s.trades||0;
-    return {
-      key,
-      label:SESSION_META[key].label,
-      net:+s.net.toFixed(2),
-      gross:+s.gross.toFixed(2),
-      cost:+s.cost.toFixed(2),
-      fills:s.fills||0,
-      trades:tr,
-      winRate:tr?s.wins/tr*100:null,
-      avgTrade:tr?s.net/tr:null
-    };
-  });
-  const sessionMain=sessionArr.filter(s=>s.key!=="overnight"&&(Math.abs(s.net)>0||s.fills>0||s.trades>0));
-  const bestSession=sessionMain.slice().sort((a,b)=>b.net-a.net)[0]||sessionArr[0]||null;
-  const worstSession=sessionMain.slice().sort((a,b)=>a.net-b.net)[0]||sessionArr[0]||null;
-  const bestWeekday=activeWeekdays.slice().sort((a,b)=>b.net-a.net)[0]||null;
-  const worstWeekday=activeWeekdays.slice().sort((a,b)=>a.net-b.net)[0]||null;
-
-  const avgDay=dts.length?net/dts.length:null;
-  const avgWin=greenDays?posSum/greenDays:null;
-  const avgLoss=redDays?negSum/redDays:null;
-
-  return {
-    dts,gross,cost,net,trades,wins,longNet,shortNet,fills,comm,ecn,posSum,negSum,greenDays,redDays,flatDays,
-    winRate:trades?wins/trades*100:null,
-    dayWinRate:dts.length?greenDays/dts.length*100:null,
-    pf:negSum<0?posSum/Math.abs(negSum):(posSum>0?Infinity:null),
-    bestDay,worstDay,best:symArr[0],worst:symArr[symArr.length-1],symArr,avgDay,avgWin,avgLoss,
-    maxGreen,maxRed,maxDrawdown:eqCurve.length?maxDrawdown:0,eqCurve,drawdowns,sessionArr,bestSession,worstSession,
-    weekdayArr,bestWeekday,worstWeekday
-  };
+  const dts=Object.keys(DAYS).sort(); let gross=0,cost=0,net=0,trades=0,wins=0,longNet=0,shortNet=0,fills=0,comm=0,ecn=0;
+  const sym={}; let posSum=0,negSum=0,bestDay=null,worstDay=null;
+  dts.forEach(d=>{ const D=DAYS[d]; gross+=D.gross;cost+=D.cost;net+=D.net;trades+=D.trades;wins+=D.wins;
+    longNet+=D.longNet;shortNet+=D.shortNet;fills+=D.fills||0;comm+=D.comm||0;ecn+=D.ecn||0;
+    if(D.net>0)posSum+=D.net; else negSum+=D.net;
+    if(!bestDay||D.net>bestDay.net)bestDay={date:d,net:D.net};
+    if(!worstDay||D.net<worstDay.net)worstDay={date:d,net:D.net};
+    (D.symbols||[]).forEach(s=>{ const o=sym[s.sym]||(sym[s.sym]={sym:s.sym,net:0,trades:0,short:s.short}); o.net+=s.net; o.trades+=s.trades||1; if(s.short)o.short=true; }); });
+  const symArr=Object.values(sym).sort((a,b)=>b.net-a.net);
+  return {dts,gross,cost,net,trades,wins,longNet,shortNet,fills,comm,ecn,
+    winRate:trades?wins/trades*100:null, pf: negSum<0? posSum/Math.abs(negSum):(posSum>0?Infinity:null),
+    bestDay,worstDay, best:symArr[0],worst:symArr[symArr.length-1], symArr,
+    avgDay: dts.length? net/dts.length:null };
 }
-
-function kpi(l,v,sx,ac){
-  return `<div class="kpi" style="--ac:${ac||"var(--blue)"}"><div class="l">${l}</div><div class="v">${v}</div>${sx?`<div class="sx">${sx}</div>`:""}</div>`;
-}
-function insight(title,big,text,color){
-  return `<div class="insight" style="border-color:${color||"var(--border)"}"><h4>${title}</h4><div class="big" style="color:${color||"var(--text)"}">${big}</div><p>${text}</p></div>`;
-}
+function kpi(l,v,sx,ac){ return `<div class="kpi" style="--ac:${ac||'var(--blue)'}"><div class="l">${l}</div><div class="v">${v}</div>${sx?`<div class="sx">${sx}</div>`:""}</div>`; }
+function pf(p){ return p==null?"—":p===Infinity?"∞":p.toFixed(2); }
 
 function render(){
   const A=aggregate();
-  $("#count").textContent=`${A.dts.length} dias`;
+  $("#count").textContent=`${A.dts.length} días`;
   $("#kpis").innerHTML=[
-    kpi("Neto total",`<span class="${clsn(A.net)}">${moneyK(A.net)}</span>`,`${A.dts.length} dias · ${A.trades} trades`,A.net>=0?"var(--green)":"var(--red)"),
-    kpi("Bruto",`<span class="${clsn(A.gross)}">${moneyK(A.gross)}</span>`,"cashflow bruto","var(--blue)"),
-    kpi("Costes",money(A.cost),`ECN ${money(A.ecn)} · comm ${money(A.comm)}`,"var(--muted2)"),
-    kpi("Win rate trade",pct(A.winRate),`${A.wins}/${A.trades}`,"var(--neon)"),
-    kpi("Green days",pct(A.dayWinRate),`${A.greenDays} green · ${A.redDays} red`,"var(--green)"),
-    kpi("Profit factor",pf(A.pf),"consistencia global","var(--gold)"),
-    kpi("Media por dia",A.avgDay==null?"-":`<span class="${clsn(A.avgDay)}">${moneyK(A.avgDay)}</span>`,"","var(--neon)"),
-    kpi("Drawdown max",`<span class="${clsn(A.maxDrawdown)}">${moneyK(A.maxDrawdown)}</span>`,`racha roja max ${A.maxRed} dias`,"var(--red)"),
-    kpi("Premarket",`<span class="${clsn((A.sessionArr.find(s=>s.key==="premarket")||{}).net||0)}">${moneyK((A.sessionArr.find(s=>s.key==="premarket")||{}).net||0)}</span>`,"tu apertura","var(--blue)"),
-    kpi("Market",`<span class="${clsn((A.sessionArr.find(s=>s.key==="market")||{}).net||0)}">${moneyK((A.sessionArr.find(s=>s.key==="market")||{}).net||0)}</span>`,"sesion regular","var(--green)"),
-    kpi("After",`<span class="${clsn((A.sessionArr.find(s=>s.key==="after")||{}).net||0)}">${moneyK((A.sessionArr.find(s=>s.key==="after")||{}).net||0)}</span>`,"extension","var(--orange)"),
-    kpi("Long / Short",`${moneyK(A.longNet)} / ${moneyK(A.shortNet)}`,"para comparar edge","var(--purple)"),
-    kpi("Mejor dia",A.bestDay?`<span class="pos">${moneyK(A.bestDay.net)}</span>`:"-",A.bestDay?A.bestDay.date:"","var(--green)"),
-    kpi("Peor dia",A.worstDay?`<span class="neg">${moneyK(A.worstDay.net)}</span>`:"-",A.worstDay?A.worstDay.date:"","var(--red)"),
-    kpi("Simbolos",A.symArr.length,"operados","var(--purple)"),
-    kpi("Fills",A.fills.toLocaleString("en-US"),"ejecuciones","var(--muted2)")
+    kpi("Neto total",`<span class="${clsn(A.net)}">${moneyK(A.net)}</span>`,`${A.dts.length} días · ${A.trades} trades`,A.net>=0?"var(--green)":"var(--red)"),
+    kpi("Bruto",`<span class="${clsn(A.gross)}">${moneyK(A.gross)}</span>`,"","var(--blue)"),
+    kpi("Costes",money(A.cost),`rebate ECN ${money(A.ecn)}`,"var(--muted2)"),
+    kpi("Win rate",pct(A.winRate),`${A.wins}/${A.trades}`,"var(--neon)"),
+    kpi("Profit factor",pf(A.pf),"","var(--gold)"),
+    kpi("Media/día",A.avgDay==null?"—":`<span class="${clsn(A.avgDay)}">${moneyK(A.avgDay)}</span>`,"","var(--neon)"),
+    kpi("Short",`<span class="${clsn(A.shortNet)}">${moneyK(A.shortNet)}</span>`,"tu edge","var(--red)"),
+    kpi("Long",`<span class="${clsn(A.longNet)}">${moneyK(A.longNet)}</span>`,"","var(--green)"),
+    kpi("Mejor día",A.bestDay?`<span class="pos">${moneyK(A.bestDay.net)}</span>`:"—",A.bestDay?A.bestDay.date:"","var(--green)"),
+    kpi("Peor día",A.worstDay?`<span class="neg">${moneyK(A.worstDay.net)}</span>`:"—",A.worstDay?A.worstDay.date:"","var(--red)"),
+    kpi("Mejor símbolo",A.best?A.best.sym:"—",A.best?`<span class="pos">${moneyK(A.best.net)}</span>`:"","var(--green)"),
+    kpi("Peor símbolo",A.worst?A.worst.sym:"—",A.worst?`<span class="neg">${moneyK(A.worst.net)}</span>`:"","var(--red)"),
+    kpi("Símbolos",A.symArr.length,"operados","var(--purple)"),
+    kpi("Fills",A.fills.toLocaleString("en-US"),"ejecuciones","var(--muted2)"),
   ].join("");
-
-  const bs=A.bestSession?`${A.bestSession.label} ${moneyK(A.bestSession.net)}`:"-";
-  const ws=A.worstSession?`${A.worstSession.label} ${moneyK(A.worstSession.net)}`:"-";
-  const bw=A.bestWeekday?`${A.bestWeekday.label} ${moneyK(A.bestWeekday.net)}`:"-";
-  const ww=A.worstWeekday?`${A.worstWeekday.label} ${moneyK(A.worstWeekday.net)}`:"-";
-  $("#insights").innerHTML=[
-    insight("Mejor ventana",bs,A.bestSession?`Promedio ${money(A.bestSession.avgTrade)} por trade dominante en esa franja.`:"Aun sin datos.",SESSION_META[A.bestSession?A.bestSession.key:"market"].color),
-    insight("Peor ventana",ws,A.worstSession?`Aqui es donde mas se te escapa. Vigilala primero.`:"Aun sin datos.","#ff3d57"),
-    insight("Racha verde",`${A.maxGreen} dias`,A.maxGreen?`Tu mejor secuencia positiva registrada es de ${A.maxGreen} dias.`:"Aun no hay dias verdes.","#00e676"),
-    insight("Dia mas fuerte",bw,A.bestWeekday?`Tu mejor dia de la semana hasta ahora es ${A.bestWeekday.label}.`:"Aun sin datos.","#22d3ee"),
-    insight("Dia mas flojo",ww,A.worstWeekday?`Tu peor dia de la semana hasta ahora es ${A.worstWeekday.label}.`:"Aun sin datos.","#ff8a3d"),
-    insight("Ticker edge",A.best?`${A.best.sym} ${moneyK(A.best.net)}`:"-",A.best?`Tu simbolo mas rentable hoy por hoy es ${A.best.sym}.`:"Aun sin simbolos.","#f5b41a")
-  ].join("");
-
-  renderSessionTbl(A);
-  renderWeekdayTbl(A);
-  renderDayTbl(A);
-  renderSymTbl(A);
-  renderCharts(A);
-}
-function renderSessionTbl(A){
-  const rows=A.sessionArr.filter(s=>s.fills>0||s.trades>0||Math.abs(s.net)>0);
-  $("#sessionTbl").innerHTML=rows.length?(
-    "<thead><tr><th>Sesion</th><th class='r'>Fills</th><th class='r'>Trades</th><th class='r'>Win%</th><th class='r'>Neto</th><th class='r'>Avg trade</th><th class='r'>R</th></tr></thead><tbody>"+
-    rows.map(s=>`<tr>
-      <td><span class="pill ${SESSION_META[s.key].pill}">${s.label}</span></td>
-      <td class="r">${s.fills.toLocaleString("en-US")}</td>
-      <td class="r">${s.trades}</td>
-      <td class="r">${pct(s.winRate)}</td>
-      <td class="r ${clsn(s.net)}"><b>${money(s.net)}</b></td>
-      <td class="r ${clsn(s.avgTrade||0)}">${money(s.avgTrade)}</td>
-      <td class="r">${oneR()>0?rr(s.net/oneR()):"-"}</td>
-    </tr>`).join("")+
-    "</tbody>"
-  ):`<tbody><tr><td colspan="7"><div class="empty">Aun no hay sesiones importadas.</div></td></tr></tbody>`;
-  $("#sessionNote").innerHTML=A.bestSession&&A.worstSession?`<span>Mejor: <b class="${clsn(A.bestSession.net)}">${A.bestSession.label} ${money(A.bestSession.net)}</b></span><span>Peor: <b class="${clsn(A.worstSession.net)}">${A.worstSession.label} ${money(A.worstSession.net)}</b></span>`:"";
-}
-function renderWeekdayTbl(A){
-  const rows=A.weekdayArr.filter(w=>w.days>0);
-  $("#weekdayTbl").innerHTML=rows.length?(
-    "<thead><tr><th>Dia</th><th class='r'>Sesiones</th><th class='r'>Green%</th><th class='r'>Neto</th><th class='r'>Media</th><th class='r'>Trades</th></tr></thead><tbody>"+
-    rows.map(w=>`<tr>
-      <td>${w.label}</td>
-      <td class="r">${w.days}</td>
-      <td class="r">${pct(w.winRate)}</td>
-      <td class="r ${clsn(w.net)}"><b>${money(w.net)}</b></td>
-      <td class="r ${clsn(w.avg)}">${money(w.avg)}</td>
-      <td class="r">${w.trades}</td>
-    </tr>`).join("")+
-    "</tbody>"
-  ):`<tbody><tr><td colspan="6"><div class="empty">Aun no hay suficientes dias para compararlos.</div></td></tr></tbody>`;
-  $("#weekdayNote").innerHTML=A.bestWeekday&&A.worstWeekday?`<span>Top: <b class="${clsn(A.bestWeekday.net)}">${A.bestWeekday.label} ${money(A.bestWeekday.net)}</b></span><span>Debil: <b class="${clsn(A.worstWeekday.net)}">${A.worstWeekday.label} ${money(A.worstWeekday.net)}</b></span>`:"";
+  renderDayTbl(A); renderSymTbl(A); renderCharts(A);
 }
 function renderDayTbl(A){
   const tgt=CFG.account>0?CFG.account*0.03:0;
-  $("#dayTbl").innerHTML=A.dts.length?(
-    "<thead><tr><th>Fecha</th><th class='r'>Fills</th><th class='r'>Trades</th><th class='r'>Win%</th><th class='r'>Premkt</th><th class='r'>Mkt</th><th class='r'>After</th><th class='r'>Neto</th><th class='r'>R</th><th>Grado</th><th class='r'>Target</th><th></th></tr></thead><tbody>"+
-    A.dts.slice().reverse().map(d=>{
-      const D=hydrateDay(DAYS[d]);
-      const r=oneR();
-      const Rv=r>0?D.net/r:null;
-      const g=dayGrade(D.net);
-      return `<tr>
-        <td>${d}</td>
-        <td class='r mut'>${(D.fills||0).toLocaleString("en-US")}</td>
-        <td class='r'>${D.trades||0}</td>
-        <td class='r'>${D.trades?pct((D.wins||0)/D.trades*100):"-"}</td>
-        <td class='r ${clsn(D.sessions.premarket.net)}'>${money(D.sessions.premarket.net)}</td>
-        <td class='r ${clsn(D.sessions.market.net)}'>${money(D.sessions.market.net)}</td>
-        <td class='r ${clsn(D.sessions.after.net)}'>${money(D.sessions.after.net)}</td>
+  $("#dayTbl").innerHTML = A.dts.length ? (
+    "<thead><tr><th>Fecha</th><th class='r'>Fills</th><th class='r'>Trades</th><th class='r'>Win%</th><th class='r'>Bruto</th><th class='r'>Costes</th><th class='r'>Neto</th><th class='r'>R</th><th>Grado</th><th class='r'>Target</th><th></th></tr></thead><tbody>"+
+    A.dts.slice().reverse().map(d=>{ const D=DAYS[d]; const r=oneR(); const R=r>0?D.net/r:null; const g=dayGrade(D.net);
+      return `<tr><td>${d}</td><td class='r mut'>${(D.fills||0).toLocaleString("en-US")}</td><td class='r'>${D.trades}</td>
+        <td class='r'>${D.trades?pct(D.wins/D.trades*100):"—"}</td>
+        <td class='r ${clsn(D.gross)}'>${money(D.gross)}</td><td class='r mut'>${money(D.cost)}</td>
         <td class='r ${clsn(D.net)}'><b>${money(D.net)}</b></td>
-        <td class='r'>${Rv==null?"-":rr(Rv)}</td>
-        <td>${g?`<span class="grade ${g[1]}">${g[0]}</span>`:"-"}</td>
-        <td class='r'>${tgt?(D.net>=tgt?"<span class='pos'>OK</span>":"<span class='mut'>-</span>"):"-"}</td>
-        <td><span class="del" onclick="delDay('${d}')">✕</span></td>
-      </tr>`;
-    }).join("")+"</tbody>"
-  ):`<tbody><tr><td colspan="12"><div class="empty">Aun no hay dias. Suelta tu Excel de DAS arriba.</div></td></tr></tbody>`;
+        <td class='r'>${R==null?"—":(R>=0?"+":"")+R.toFixed(1)+"R"}</td>
+        <td>${g?`<span class="grade ${g[1]}">${g[0]}</span>`:"—"}</td>
+        <td class='r'>${tgt?(D.net>=tgt?"<span class='pos'>✓</span>":"<span class='mut'>—</span>"):"—"}</td>
+        <td><span class="del" onclick="delDay('${d}')">✕</span></td></tr>`; }).join("")+
+    "</tbody>") : `<tbody><tr><td colspan="11"><div class="empty">☠ Aún no hay días. Suelta tu Excel de DAS arriba.</div></td></tr></tbody>`;
 }
 function renderSymTbl(A){
   const ts=A.symArr;
-  $("#symTbl").innerHTML=ts.length?(
-    "<thead><tr><th>Simbolo</th><th>Bias</th><th>Mejor sesion</th><th class='r'>Trades</th><th class='r'>Neto</th><th class='r'>R</th></tr></thead><tbody>"+
-    ts.map(s=>`<tr>
-      <td><b>${esc(s.sym)}</b></td>
-      <td><span class="pill ${s.bias==='short'?'short':'long'}">${s.bias}</span></td>
-      <td><span class="pill ${SESSION_META[s.bestSession].pill}">${SESSION_META[s.bestSession].label}</span></td>
-      <td class='r'>${s.trades}</td>
-      <td class='r ${clsn(s.net)}'>${money(s.net)}</td>
-      <td class='r'>${oneR()>0?rr(s.net/oneR()):"-"}</td>
-    </tr>`).join("")+"</tbody>"
-  ):`<tbody><tr><td colspan="6"><div class="empty">Sin simbolos.</div></td></tr></tbody>`;
+  $("#symTbl").innerHTML = ts.length ? (
+    "<thead><tr><th>Símbolo</th><th>Tipo</th><th class='r'>Trades (días)</th><th class='r'>Neto</th><th class='r'>R</th></tr></thead><tbody>"+
+    ts.map(s=>{ const r=oneR();
+      return `<tr><td><b>${esc(s.sym)}</b></td><td><span class="pill ${s.short?'short':'long'}">${s.short?'short':'long'}</span></td>
+        <td class='r'>${s.trades}</td><td class='r ${clsn(s.net)}'>${money(s.net)}</td>
+        <td class='r'>${r>0?((s.net/r>=0?"+":"")+(s.net/r).toFixed(1)+"R"):"—"}</td></tr>`; }).join("")+
+    "</tbody>") : `<tbody><tr><td colspan="5"><div class="empty">Sin símbolos.</div></td></tr></tbody>`;
 }
 
-function dch(k){ if(CHARTS[k]){ CHARTS[k].destroy(); delete CHARTS[k]; } }
-const G="#00e676",R_="#ff3d57",NE="#22d3ee",PU="#a855f7",GO="#f5b41a",OR="#ff8a3d",tkc="#8a96aa",gc="#1d2530";
-function bopts(ex){
-  return Object.assign({
-    responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-    scales:{
-      x:{ticks:{color:tkc,font:{size:9}},grid:{color:gc}},
-      y:{ticks:{color:tkc,font:{size:9}},grid:{color:gc}}
-    }
-  },ex||{});
-}
+/* charts */
+function dch(k){ if(CHARTS[k]){CHARTS[k].destroy();delete CHARTS[k];} }
+const G="#00e676",R_="#ff3d57",NE="#22d3ee",PU="#a855f7",GO="#f5b41a",tkc="#8a96aa",gc="#1d2530";
+function bopts(ex){ return Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+  scales:{x:{ticks:{color:tkc,font:{size:9}},grid:{color:gc}},y:{ticks:{color:tkc,font:{size:9}},grid:{color:gc}}}},ex||{}); }
 function renderCharts(A){
-  if(typeof Chart==="undefined") return;
-  dch("eq");
-  CHARTS.eq=new Chart($("#cEq"),{
-    type:"line",
-    data:{labels:A.dts,datasets:[{data:A.eqCurve,borderColor:NE,backgroundColor:"rgba(34,211,238,.12)",fill:true,tension:.25,pointRadius:2}]},
-    options:bopts()
-  });
-
+  if(typeof Chart==="undefined")return;
+  dch("eq"); let c=0; const ed=A.dts.map(d=>c+=DAYS[d].net);
+  CHARTS.eq=new Chart($("#cEq"),{type:"line",data:{labels:A.dts,datasets:[{data:ed,borderColor:NE,backgroundColor:"rgba(34,211,238,.12)",fill:true,tension:.25,pointRadius:2}]},options:bopts()});
   dch("day");
-  CHARTS.day=new Chart($("#cDay"),{
-    type:"bar",
-    data:{labels:A.dts,datasets:[{data:A.dts.map(d=>DAYS[d].net),backgroundColor:A.dts.map(d=>DAYS[d].net>=0?G:R_)}]},
-    options:bopts()
-  });
-
-  dch("dd");
-  CHARTS.dd=new Chart($("#cDd"),{
-    type:"line",
-    data:{labels:A.dts,datasets:[{data:A.drawdowns,borderColor:R_,backgroundColor:"rgba(255,61,87,.12)",fill:true,tension:.2,pointRadius:2}]},
-    options:bopts()
-  });
-
+  CHARTS.day=new Chart($("#cDay"),{type:"bar",data:{labels:A.dts,datasets:[{data:A.dts.map(d=>DAYS[d].net),backgroundColor:A.dts.map(d=>DAYS[d].net>=0?G:R_)}]},options:bopts()});
   dch("sd");
-  CHARTS.sd=new Chart($("#cSd"),{
-    type:"doughnut",
-    data:{labels:["Short","Long"],datasets:[{data:[Math.abs(A.shortNet),Math.abs(A.longNet)],backgroundColor:[R_,G],borderColor:"#0a0d12",borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:tkc}}}}
-  });
-
-  dch("sess");
-  const sessionBars=A.sessionArr.filter(s=>s.key!=="overnight"&&(s.fills>0||Math.abs(s.net)>0));
-  CHARTS.sess=new Chart($("#cSess"),{
-    type:"bar",
-    data:{
-      labels:sessionBars.map(s=>s.label),
-      datasets:[{data:sessionBars.map(s=>s.net),backgroundColor:sessionBars.map(s=>SESSION_META[s.key].color)}]
-    },
-    options:bopts()
-  });
-
-  dch("week");
-  CHARTS.week=new Chart($("#cWeek"),{
-    type:"bar",
-    data:{
-      labels:A.weekdayArr.filter(w=>w.days>0).map(w=>w.label),
-      datasets:[{data:A.weekdayArr.filter(w=>w.days>0).map(w=>w.net),backgroundColor:A.weekdayArr.filter(w=>w.days>0).map(w=>w.net>=0?NE:OR)}]
-    },
-    options:bopts()
-  });
-
-  dch("sym");
-  const sorted=A.symArr.slice();
-  const top=sorted.slice(0,7);
-  const bot=sorted.slice(-7).reverse();
+  CHARTS.sd=new Chart($("#cSd"),{type:"doughnut",data:{labels:["Short","Long"],datasets:[{data:[Math.abs(A.shortNet),Math.abs(A.longNet)],backgroundColor:[R_,G],borderColor:"#0a0d12",borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:tkc}}}}});
+  dch("sym"); const sorted=A.symArr.slice(); const top=sorted.slice(0,7),bot=sorted.slice(-7).reverse();
   const bw=[...top,...bot.filter(b=>!top.includes(b))];
-  CHARTS.sym=new Chart($("#cSym"),{
-    type:"bar",
-    data:{labels:bw.map(s=>s.sym),datasets:[{data:bw.map(s=>s.net),backgroundColor:bw.map(s=>s.net>=0?G:R_)}]},
-    options:bopts({indexAxis:"y"})
-  });
-
-  dch("cost");
-  CHARTS.cost=new Chart($("#cCost"),{
-    type:"bar",
-    data:{labels:["Comision","ECN fee/rebate","Costes netos"],datasets:[{data:[A.comm,A.ecn,A.cost],backgroundColor:[R_,A.ecn<0?G:R_,GO]}]},
-    options:bopts()
-  });
+  CHARTS.sym=new Chart($("#cSym"),{type:"bar",data:{labels:bw.map(s=>s.sym),datasets:[{data:bw.map(s=>s.net),backgroundColor:bw.map(s=>s.net>=0?G:R_)}]},options:bopts({indexAxis:"y"})});
+  dch("cost"); const comm=A.comm, ecn=A.ecn;
+  CHARTS.cost=new Chart($("#cCost"),{type:"bar",data:{labels:["Comisión","Rebate/Fee ECN","Costes netos"],datasets:[{data:[comm,ecn,A.cost],backgroundColor:[R_,ecn<0?G:R_,GO]}]},options:bopts()});
 }
-
 window.delDay=delDay;
-setupDrop();
-start();
+setupDrop(); start();
 </script>
 </body>
 </html>
