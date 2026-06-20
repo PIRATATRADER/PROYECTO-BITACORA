@@ -458,6 +458,22 @@ body::before {
         <div class="card-arrow" style="color:#22d3ee;">Abrir Journal →</div>
       </div>
 
+      <!-- TARJETA: JOURNAL SAGE -->
+      <div class="mode-card card-journal-das" onclick="window.location.href='pirata_journal_sage.html'" style="cursor:pointer;--card-accent:#00bfff;border-color:#00bfff30;">
+        <div class="card-icon">📓</div>
+        <div>
+          <div class="card-label">Journal</div>
+          <div class="card-title" style="color:#00bfff;">JOURNAL SAGE</div>
+        </div>
+        <div class="card-desc">Suelta tu Excel de DAS de la cuenta SAGE: calcula el P&L solo y guarda todo como journal con stats acumuladas.</div>
+        <div class="card-stats">
+          <div class="card-stat"><div class="card-stat-val" id="jsNet" style="color:#00bfff">—</div><div class="card-stat-label">Neto</div></div>
+          <div class="card-stat"><div class="card-stat-val" id="jsDias" style="color:#f5b41a">—</div><div class="card-stat-label">Días</div></div>
+          <div class="card-stat"><div class="card-stat-val" id="jsWin" style="color:#00e676">—</div><div class="card-stat-label">Win rate</div></div>
+        </div>
+        <div class="card-arrow" style="color:#00bfff;">Abrir Journal →</div>
+      </div>
+
       <!-- TARJETA: TRADING DISCRECIONAL -->
       <div class="mode-card card-discrecional" onclick="window.location.href='trading_discrecional.html'" style="cursor:pointer;">
         <div class="card-icon">🎯</div>
@@ -840,6 +856,19 @@ function renderJournalDasStats(docs) {
 db.collection("journal_das").onSnapshot(snap => {
   const docs = []; snap.forEach(d => docs.push(d.data())); renderJournalDasStats(docs);
 }, err => console.warn("onSnapshot journal_das:", err));
+
+function renderJournalSageStats(docs) {
+  let net = 0, trades = 0, wins = 0;
+  docs.forEach(D => { net += D.net || 0; trades += D.trades || 0; wins += D.wins || 0; });
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  const fmt = n => { const k = Math.round(n); return (k < 0 ? "-$" : "$") + Math.abs(k).toLocaleString("en-US"); };
+  set('jsNet', docs.length ? fmt(net) : '—');
+  set('jsDias', docs.length || '—');
+  set('jsWin', trades ? Math.round(wins / trades * 100) + '%' : '—');
+}
+db.collection("journal_sage").onSnapshot(snap => {
+  const docs = []; snap.forEach(d => docs.push(d.data())); renderJournalSageStats(docs);
+}, err => console.warn("onSnapshot journal_sage:", err));
 
 db.collection("trading_discrecional").onSnapshot(snap => {
   const t = [];
