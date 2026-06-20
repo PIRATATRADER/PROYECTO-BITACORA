@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pirata Journal · SAGE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0d12;--bg2:#11151c;--bg3:#171c25;--border:#1d2530;--border2:#2a3340;
+  --text:#e6e9f0;--muted:#5a6678;--muted2:#8a96aa;--green:#00e676;--red:#ff3d57;--blue:#3da9ff;--neon:#22d3ee;--purple:#a855f7;--gold:#f5b41a;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;padding:18px 16px 70px;
+  background-image:radial-gradient(circle at 15% -10%,rgba(61,169,255,.06),transparent 42%),radial-gradient(circle at 95% 0%,rgba(168,85,247,.05),transparent 38%);}
+.wrap{max-width:1180px;margin:0 auto;}
+.back{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;transition:all .15s;margin-bottom:16px;}
+.back:hover{color:var(--text);border-color:var(--muted2);background:var(--bg3);}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;}.pos{color:var(--green);}.neg{color:var(--red);}.mut{color:var(--muted2);}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.brand{display:flex;align-items:center;gap:11px;}.brand .m{font-size:27px;}
+.brand h1{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;line-height:.9;}.brand h1 b{color:var(--gold);}
+.brand p{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-top:3px;}
+.chip{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;padding:5px 11px;border-radius:20px;border:1px solid var(--border2);}
+.chip.on{color:var(--green);border-color:#00e67644;background:#00e67610;}.chip.off{color:var(--gold);border-color:#f5b41a44;background:#f5b41a10;}
+.sec{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted2);margin:24px 0 12px;display:flex;align-items:center;gap:10px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+.drop{border:2px dashed var(--border2);border-radius:16px;padding:34px 18px;text-align:center;cursor:pointer;background:var(--bg2);transition:all .18s;}
+.drop:hover,.drop.drag{border-color:var(--blue);background:#3da9ff0c;}.drop .ic{font-size:38px;margin-bottom:10px;}
+.drop h3{font-size:16px;margin-bottom:5px;}.drop p{color:var(--muted2);font-size:12.5px;}.drop input{display:none;}
+.prev{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:16px;margin-top:12px;}
+.prev h4{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:10px;}
+.daychips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0;}
+.dchip{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--bg);}
+.dchip.new{border-color:var(--green);color:var(--green);}.dchip.upd{border-color:var(--gold);color:var(--gold);}
+.btn{font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.5px;padding:11px 18px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;transition:all .14s;white-space:nowrap;}
+.btn:hover{border-color:var(--muted2);}.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn.green{background:#00e67615;border-color:var(--green);color:var(--green);}.btn.green:hover{background:#00e67625;}
+.btn.ghost{background:transparent;color:var(--muted2);}.btn.red{background:#ff3d5712;border-color:var(--red);color:var(--red);}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}.spacer{flex:1;}
+.f{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;}
+.f label{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted2);margin-bottom:7px;}
+.f input{width:140px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:15px;padding:8px 10px;outline:none;}
+.f input:focus{border-color:var(--blue);}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:11px;}
+.kpi{position:relative;overflow:hidden;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--blue));opacity:.85;}
+.kpi .l{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted2);margin-bottom:7px;}
+.kpi .v{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;}.kpi .sx{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted2);margin-top:5px;}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;}@media(max-width:760px){.charts{grid-template-columns:1fr;}}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:14px;}
+.chart-card h4{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;}
+.chart-box{position:relative;height:250px;}
+.tbl-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;}
+table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}
+th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);text-align:left;padding:10px 12px;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;top:0;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;}
+tr:hover td{background:var(--bg2);}th.r,td.r{text-align:right;}
+.grade{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:600;}
+.gA{background:#00e67620;color:var(--green);}.gB{background:#3da9ff20;color:var(--blue);}.gC{background:#f5b41a20;color:var(--gold);}.gD{background:#ff3d5720;color:var(--red);}
+.pill{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:20px;}
+.pill.long{background:#00e67615;color:var(--green);}.pill.short{background:#ff3d5715;color:var(--red);}
+.del{cursor:pointer;color:var(--muted);}.del:hover{color:var(--red);}
+.empty{padding:42px 16px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border2);border-radius:11px;padding:12px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;box-shadow:0 12px 40px -10px #000;transition:transform .3s;z-index:90;max-width:90vw;}
+.toast.show{transform:translateX(-50%) translateY(0);}.toast.ok{border-color:var(--green);}.toast.err{border-color:var(--red);}
+.foot{margin-top:28px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="proyecto_bitacora_home.html">← Inicio</a>
+  <header>
+    <div class="brand"><div class="m">☠️</div><div><h1>PIRATA <b>JOURNAL</b> · SAGE</h1><p>suelta tu Excel diario · stats automáticas</p></div></div>
+    <div class="row"><span class="chip off" id="chip">● conectando…</span><span class="mono mut" id="count" style="font-size:11px;">0 días</span></div>
+  </header>
+
+  <div class="sec">Importar ejecuciones del día</div>
+  <label class="drop" id="drop">
+    <input type="file" id="fileInput" accept=".xls,.xlsx,.csv">
+    <div class="ic">📥</div><h3>Suelta aquí tu Excel de DAS</h3>
+    <p>Cada día arrastras el export de ejecuciones · calcula el P&L solo (no necesita columna de P&L)</p>
+  </label>
+  <div class="prev" id="prev" style="display:none;"></div>
+
+  <div class="sec">Cuenta &amp; riesgo</div>
+  <div class="row">
+    <div class="f"><label>Cuenta ($)</label><input id="cfgAcc" inputmode="numeric" placeholder="25000"></div>
+    <div class="f"><label>Risk/Trade (%)</label><input id="cfgRisk" type="number" step="0.1" value="1" style="width:110px"></div>
+    <div class="f"><label>1R</label><div class="mono" id="oneR" style="font-size:18px;color:var(--gold);padding:5px 0;">—</div></div>
+    <div class="f"><label>Target diario</label><div class="mono" id="tgt" style="font-size:18px;color:var(--green);padding:5px 0;">—</div></div>
+  </div>
+
+  <div class="sec">Resumen del journal</div>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="sec">Gráficas</div>
+  <div class="charts">
+    <div class="chart-card" style="grid-column:1/-1;"><h4>Equity curve · neto acumulado por día</h4><div class="chart-box"><canvas id="cEq"></canvas></div></div>
+    <div class="chart-card"><h4>P&L neto por día</h4><div class="chart-box"><canvas id="cDay"></canvas></div></div>
+    <div class="chart-card"><h4>Long vs Short</h4><div class="chart-box"><canvas id="cSd"></canvas></div></div>
+    <div class="chart-card"><h4>Mejores / peores símbolos</h4><div class="chart-box"><canvas id="cSym"></canvas></div></div>
+    <div class="chart-card"><h4>Costes (comisión vs rebate ECN)</h4><div class="chart-box"><canvas id="cCost"></canvas></div></div>
+  </div>
+
+  <div class="sec">Journal por día <span class="mut mono" style="font-size:10px;text-transform:none;letter-spacing:0;">— cada fila es un día guardado</span></div>
+  <div class="tbl-wrap"><table id="dayTbl"></table></div>
+
+  <div class="sec">Por símbolo (acumulado)</div>
+  <div class="tbl-wrap"><table id="symTbl"></table></div>
+
+  <div class="foot">Pirata Journal SAGE · P&L = cashflow neto por símbolo-día · guardado en tu Firebase, sincroniza entre dispositivos</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+/* ===== Firebase (tu proyecto — ya configurado) ===== */
+const firebaseConfig={apiKey:"AIzaSyDVR0xHEt5AIUPANlnfNok3dFqBVQb7jT0",authDomain:"proyecto-bitacora-fead3.firebaseapp.com",
+  projectId:"proyecto-bitacora-fead3",storageBucket:"proyecto-bitacora-fead3.firebasestorage.app",messagingSenderId:"907354671911",appId:"1:907354671911:web:68000bcbaa989d25db7702"};
+let db=null,online=false;
+try{ firebase.initializeApp(firebaseConfig); db=firebase.firestore(); online=true; }catch(e){ console.warn(e); }
+const COL="journal_sage", CFGDOC="journal_sage_config";
+
+/* ===== Estado ===== */
+let DAYS={}, CFG={account:0,riskPct:1}, CHARTS={}, PENDING=null;
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const num=v=>{ if(v===''||v==null)return 0; const n=+v; return isNaN(n)?0:n; };
+const money=n=>(n==null||isNaN(n))?"—":(n<0?"-$":"$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const moneyK=n=>(n==null||isNaN(n))?"—":(n<0?"-$":"$")+Math.abs(Math.round(n)).toLocaleString("en-US");
+const pct=n=>(n==null||isNaN(n))?"—":n.toFixed(1)+"%";
+const clsn=n=>n>0?"pos":n<0?"neg":"";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toast(m,k){ const t=$("#toast"); t.textContent=m; t.className="toast show "+(k||""); clearTimeout(t._t); t._t=setTimeout(()=>t.className="toast",3400); }
+function oneR(){ return (CFG.account>0&&CFG.riskPct>0)?CFG.account*CFG.riskPct/100:0; }
+
+/* ===== Parseo DAS + motor (cashflow por símbolo-día) ===== */
+function parseDAS(buf){
+  const u8=new Uint8Array(buf);
+  if(u8[28]===0xFF&&u8[29]===0xFE){ u8[28]=0xFE; u8[29]=0xFF; }   // parche byte-order DAS
+  const wb=XLSX.read(u8,{type:"array"});
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:"",raw:true});
+}
+const COSTC=["Comm","Ecn Fee","SEC","TAF","NSCC","Clr","CAT","Misc"];
+function _entrySession(t){ var p=String(t||"").split(":"); var sec=(+p[0]||0)*3600+(+p[1]||0)*60+(+(p[2]||0)); if(sec<9*3600+30*60)return "Premarket"; if(sec<11*3600)return "Open 9:30-11"; if(sec<14*3600)return "Mediodía 11-14"; if(sec<16*3600)return "Tarde 14-16"; return "After 16+"; }
+function computeDays(rows){
+  const grp={};                       // sym|date
+  let account="";
+  for(const r of rows){
+    const dtRaw=String(r["Date/Time"]||"").trim(); if(!dtRaw) continue;
+    const [d,t]=dtRaw.split(/\s+/); const p=d.split("/"); if(p.length<3) continue;
+    const date="20"+p[2]+"-"+p[0].padStart(2,"0")+"-"+p[1].padStart(2,"0");
+    const sym=String(r["Symbol"]||"").trim(); if(!sym) continue;
+    const side=String(r["B/S"]||"").trim(); const qty=num(r["Qty"]); const price=num(r["Price"]);
+    account=account||String(r["Account"]||"").trim();
+    const k=sym+"|"+date; const g=grp[k]||(grp[k]={sym,date,gross:0,cost:0,fills:0,short:false,ecn:0,comm:0,entry:(t||"99:99:99")});
+    if(t && t<g.entry) g.entry=t;
+    g.gross += (side==="S"||side==="T")? qty*price : -qty*price;
+    let c=0; for(const cc of COSTC){ c+=num(r[cc]); } g.cost+=c;
+    g.comm+=num(r["Comm"]); g.ecn+=num(r["Ecn Fee"]);
+    g.fills++; if(side==="T") g.short=true;
+  }
+  // agrupar por día
+  const days={};
+  for(const k in grp){ const g=grp[k]; const net=g.gross-g.cost;
+    const D=days[g.date]||(days[g.date]={date:g.date,account,gross:0,cost:0,net:0,trades:0,wins:0,longNet:0,shortNet:0,fills:0,comm:0,ecn:0,symbols:[],byHour:{},bySession:{}});
+    D.gross+=g.gross; D.cost+=g.cost; D.net+=net; D.trades++; if(net>0)D.wins++;
+    D.fills+=g.fills; D.comm+=g.comm; D.ecn+=g.ecn;
+    if(g.short)D.shortNet+=net; else D.longNet+=net;
+    D.symbols.push({sym:g.sym,net:+net.toFixed(2),trades:1,short:g.short});
+    var hh=(g.entry&&g.entry!=="99:99:99")?g.entry.slice(0,2):"--";
+    var hb=D.byHour[hh]||(D.byHour[hh]={net:0,trades:0,wins:0});
+    hb.net+=net; hb.trades++; if(net>0)hb.wins++;
+    var ss=(g.entry&&g.entry!=="99:99:99")?_entrySession(g.entry):"--";
+    var sb=D.bySession[ss]||(D.bySession[ss]={net:0,trades:0,wins:0});
+    sb.net+=net; sb.trades++; if(net>0)sb.wins++;
+  }
+  for(const dt in days){ const D=days[dt]; D.gross=+D.gross.toFixed(2);D.cost=+D.cost.toFixed(2);D.net=+D.net.toFixed(2);
+    D.longNet=+D.longNet.toFixed(2);D.shortNet=+D.shortNet.toFixed(2);D.comm=+D.comm.toFixed(2);D.ecn=+D.ecn.toFixed(2);
+    D.symbols.sort((a,b)=>b.net-a.net); for(var h in D.byHour){ D.byHour[h].net=+D.byHour[h].net.toFixed(2); } for(var ss in D.bySession){ D.bySession[ss].net=+D.bySession[ss].net.toFixed(2); } D.importedAt=Date.now(); }
+  return days;
+}
+
+/* ===== Importar ===== */
+function setupDrop(){
+  const drop=$("#drop"),inp=$("#fileInput");
+  ["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("drag");}));
+  ["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("drag");}));
+  drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)readFile(f);});
+  inp.addEventListener("change",e=>{const f=e.target.files[0];if(f)readFile(f);});
+}
+function readFile(file){
+  const r=new FileReader();
+  r.onload=e=>{ try{
+    const rows=parseDAS(e.target.result);
+    if(!rows.length){ toast("El archivo no tiene filas","err"); return; }
+    if(!("Date/Time"in rows[0])||!("Symbol"in rows[0])||!("B/S"in rows[0])){
+      toast("No parece un export de DAS (faltan columnas Date/Time, Symbol, B/S)","err"); return; }
+    PENDING=computeDays(rows);
+    showPreview(rows.length);
+  }catch(err){ console.error(err); toast("No se pudo leer el archivo","err"); } };
+  r.readAsArrayBuffer(file);
+}
+function showPreview(nfills){
+  const dts=Object.keys(PENDING).sort();
+  let totNet=0,totTrades=0; dts.forEach(d=>{totNet+=PENDING[d].net;totTrades+=PENDING[d].trades;});
+  const chips=dts.map(d=>{ const isNew=!DAYS[d]; return `<span class="dchip ${isNew?'new':'upd'}">${d} · ${moneyK(PENDING[d].net)} ${isNew?'(nuevo)':'(actualiza)'}</span>`; }).join("");
+  $("#prev").style.display="block";
+  $("#prev").innerHTML=`<h4>Listo para guardar</h4>
+    <div class="row mut mono" style="font-size:12px;">${nfills.toLocaleString("en-US")} fills · ${dts.length} día(s) · ${totTrades} trades · neto <b class="${clsn(totNet)}">${money(totNet)}</b></div>
+    <div class="daychips">${chips}</div>
+    <div class="row" style="margin-top:6px;"><button class="btn green" id="saveDays">💾 Guardar en el journal</button><button class="btn ghost" id="cancelImp">Cancelar</button></div>`;
+  $("#saveDays").addEventListener("click",saveDays);
+  $("#cancelImp").addEventListener("click",()=>{PENDING=null;$("#prev").style.display="none";$("#fileInput").value="";});
+}
+async function saveDays(){
+  const dts=Object.keys(PENDING);
+  dts.forEach(d=>DAYS[d]=PENDING[d]);
+  saveLocal(); render();
+  if(online){ try{ let b=db.batch();
+    dts.forEach(d=>b.set(db.collection(COL).doc(d),PENDING[d]));
+    await b.commit(); toast(`✓ ${dts.length} día(s) guardados en la NUBE`,"ok");
+    const _c=$("#chip"); if(_c){ _c.className="chip on"; _c.textContent="● sincronizado"; }
+  }catch(e){ console.error("Firestore save error:",e); const code=(e&&e.code)?e.code:((e&&e.message)?e.message:"desconocido"); toast("⚠ LA NUBE FALLÓ: "+code+" · revisa las reglas de Firestore","err"); const _c=$("#chip"); if(_c){ _c.className="chip off"; _c.textContent="● nube ERROR: "+code; } } }
+  else toast(`⚠ Guardado SOLO local (Firebase no cargó)`,"err");
+  PENDING=null; $("#prev").style.display="none"; $("#fileInput").value="";
+}
+async function delDay(d){
+  if(!confirm("¿Borrar el día "+d+" del journal?"))return;
+  delete DAYS[d]; saveLocal(); render();
+  if(online){ try{ await db.collection(COL).doc(d).delete(); }catch(e){} }
+}
+
+/* ===== Persistencia ===== */
+function saveLocal(){ try{ localStorage.setItem("pjsage_days",JSON.stringify(DAYS)); localStorage.setItem("pjsage_cfg",JSON.stringify(CFG)); }catch(e){} }
+function start(){
+  try{ const d=JSON.parse(localStorage.getItem("pjsage_days")||"null"); if(d)DAYS=d; }catch(e){}
+  try{ const c=JSON.parse(localStorage.getItem("pjsage_cfg")||"null"); if(c)CFG=Object.assign(CFG,c); }catch(e){}
+  applyCfg(); render();
+  if(online){
+    $("#chip").className="chip on"; $("#chip").textContent="● sincronizado";
+    db.collection(CFGDOC).doc("main").get().then(s=>{if(s.exists){CFG=Object.assign(CFG,s.data());applyCfg();render();}}).catch(()=>{});
+    db.collection(COL).onSnapshot(snap=>{ DAYS={}; snap.forEach(doc=>DAYS[doc.id]=doc.data()); saveLocal(); render(); },
+      err=>{ console.warn(err); $("#chip").className="chip off"; $("#chip").textContent="● sin conexión"; });
+  } else { $("#chip").className="chip off"; $("#chip").textContent="● modo local"; }
+}
+
+/* ===== Config ===== */
+function applyCfg(){ $("#cfgAcc").value=CFG.account||""; $("#cfgRisk").value=CFG.riskPct||1;
+  $("#oneR").textContent=oneR()>0?money(oneR()):"—"; $("#tgt").textContent=CFG.account>0?money(CFG.account*0.03):"—"; }
+async function saveCfg(){ saveLocal(); if(online){ try{ await db.collection(CFGDOC).doc("main").set(CFG,{merge:true}); }catch(e){} } }
+$("#cfgAcc").addEventListener("input",e=>{CFG.account=num(e.target.value)||0;applyCfg();saveCfg();render();});
+$("#cfgRisk").addEventListener("input",e=>{CFG.riskPct=parseFloat(e.target.value)||0;applyCfg();saveCfg();render();});
+
+/* ===== Grado por día (R) ===== */
+function dayGrade(net){ const r=oneR(); if(r<=0) return null; const R=net/r;
+  if(R>=3)return["A+","gA"]; if(R>=1)return["A","gA"]; if(R>=0.3)return["B","gB"]; if(R>0)return["C","gC"]; return["D","gD"]; }
+
+/* ===== Render ===== */
+function aggregate(){
+  const dts=Object.keys(DAYS).sort(); let gross=0,cost=0,net=0,trades=0,wins=0,longNet=0,shortNet=0,fills=0,comm=0,ecn=0;
+  const sym={}; let posSum=0,negSum=0,bestDay=null,worstDay=null;
+  dts.forEach(d=>{ const D=DAYS[d]; gross+=D.gross;cost+=D.cost;net+=D.net;trades+=D.trades;wins+=D.wins;
+    longNet+=D.longNet;shortNet+=D.shortNet;fills+=D.fills||0;comm+=D.comm||0;ecn+=D.ecn||0;
+    if(D.net>0)posSum+=D.net; else negSum+=D.net;
+    if(!bestDay||D.net>bestDay.net)bestDay={date:d,net:D.net};
+    if(!worstDay||D.net<worstDay.net)worstDay={date:d,net:D.net};
+    (D.symbols||[]).forEach(s=>{ const o=sym[s.sym]||(sym[s.sym]={sym:s.sym,net:0,trades:0,short:s.short}); o.net+=s.net; o.trades+=s.trades||1; if(s.short)o.short=true; }); });
+  const symArr=Object.values(sym).sort((a,b)=>b.net-a.net);
+  return {dts,gross,cost,net,trades,wins,longNet,shortNet,fills,comm,ecn,
+    winRate:trades?wins/trades*100:null, pf: negSum<0? posSum/Math.abs(negSum):(posSum>0?Infinity:null),
+    bestDay,worstDay, best:symArr[0],worst:symArr[symArr.length-1], symArr,
+    avgDay: dts.length? net/dts.length:null };
+}
+function kpi(l,v,sx,ac){ return `<div class="kpi" style="--ac:${ac||'var(--blue)'}"><div class="l">${l}</div><div class="v">${v}</div>${sx?`<div class="sx">${sx}</div>`:""}</div>`; }
+function pf(p){ return p==null?"—":p===Infinity?"∞":p.toFixed(2); }
+
+function render(){
+  const A=aggregate();
+  $("#count").textContent=`${A.dts.length} días`;
+  $("#kpis").innerHTML=[
+    kpi("Neto total",`<span class="${clsn(A.net)}">${moneyK(A.net)}</span>`,`${A.dts.length} días · ${A.trades} trades`,A.net>=0?"var(--green)":"var(--red)"),
+    kpi("Bruto",`<span class="${clsn(A.gross)}">${moneyK(A.gross)}</span>`,"","var(--blue)"),
+    kpi("Costes",money(A.cost),`rebate ECN ${money(A.ecn)}`,"var(--muted2)"),
+    kpi("Win rate",pct(A.winRate),`${A.wins}/${A.trades}`,"var(--neon)"),
+    kpi("Profit factor",pf(A.pf),"","var(--gold)"),
+    kpi("Media/día",A.avgDay==null?"—":`<span class="${clsn(A.avgDay)}">${moneyK(A.avgDay)}</span>`,"","var(--neon)"),
+    kpi("Short",`<span class="${clsn(A.shortNet)}">${moneyK(A.shortNet)}</span>`,"tu edge","var(--red)"),
+    kpi("Long",`<span class="${clsn(A.longNet)}">${moneyK(A.longNet)}</span>`,"","var(--green)"),
+    kpi("Mejor día",A.bestDay?`<span class="pos">${moneyK(A.bestDay.net)}</span>`:"—",A.bestDay?A.bestDay.date:"","var(--green)"),
+    kpi("Peor día",A.worstDay?`<span class="neg">${moneyK(A.worstDay.net)}</span>`:"—",A.worstDay?A.worstDay.date:"","var(--red)"),
+    kpi("Mejor símbolo",A.best?A.best.sym:"—",A.best?`<span class="pos">${moneyK(A.best.net)}</span>`:"","var(--green)"),
+    kpi("Peor símbolo",A.worst?A.worst.sym:"—",A.worst?`<span class="neg">${moneyK(A.worst.net)}</span>`:"","var(--red)"),
+    kpi("Símbolos",A.symArr.length,"operados","var(--purple)"),
+    kpi("Fills",A.fills.toLocaleString("en-US"),"ejecuciones","var(--muted2)"),
+  ].join("");
+  renderDayTbl(A); renderSymTbl(A); renderCharts(A);
+}
+function renderDayTbl(A){
+  const tgt=CFG.account>0?CFG.account*0.03:0;
+  $("#dayTbl").innerHTML = A.dts.length ? (
+    "<thead><tr><th>Fecha</th><th class='r'>Fills</th><th class='r'>Trades</th><th class='r'>Win%</th><th class='r'>Bruto</th><th class='r'>Costes</th><th class='r'>Neto</th><th class='r'>R</th><th>Grado</th><th class='r'>Target</th><th></th></tr></thead><tbody>"+
+    A.dts.slice().reverse().map(d=>{ const D=DAYS[d]; const r=oneR(); const R=r>0?D.net/r:null; const g=dayGrade(D.net);
+      return `<tr><td>${d}</td><td class='r mut'>${(D.fills||0).toLocaleString("en-US")}</td><td class='r'>${D.trades}</td>
+        <td class='r'>${D.trades?pct(D.wins/D.trades*100):"—"}</td>
+        <td class='r ${clsn(D.gross)}'>${money(D.gross)}</td><td class='r mut'>${money(D.cost)}</td>
+        <td class='r ${clsn(D.net)}'><b>${money(D.net)}</b></td>
+        <td class='r'>${R==null?"—":(R>=0?"+":"")+R.toFixed(1)+"R"}</td>
+        <td>${g?`<span class="grade ${g[1]}">${g[0]}</span>`:"—"}</td>
+        <td class='r'>${tgt?(D.net>=tgt?"<span class='pos'>✓</span>":"<span class='mut'>—</span>"):"—"}</td>
+        <td><span class="del" onclick="delDay('${d}')">✕</span></td></tr>`; }).join("")+
+    "</tbody>") : `<tbody><tr><td colspan="11"><div class="empty">☠ Aún no hay días. Suelta tu Excel de DAS arriba.</div></td></tr></tbody>`;
+}
+function renderSymTbl(A){
+  const ts=A.symArr;
+  $("#symTbl").innerHTML = ts.length ? (
+    "<thead><tr><th>Símbolo</th><th>Tipo</th><th class='r'>Trades (días)</th><th class='r'>Neto</th><th class='r'>R</th></tr></thead><tbody>"+
+    ts.map(s=>{ const r=oneR();
+      return `<tr><td><b>${esc(s.sym)}</b></td><td><span class="pill ${s.short?'short':'long'}">${s.short?'short':'long'}</span></td>
+        <td class='r'>${s.trades}</td><td class='r ${clsn(s.net)}'>${money(s.net)}</td>
+        <td class='r'>${r>0?((s.net/r>=0?"+":"")+(s.net/r).toFixed(1)+"R"):"—"}</td></tr>`; }).join("")+
+    "</tbody>") : `<tbody><tr><td colspan="5"><div class="empty">Sin símbolos.</div></td></tr></tbody>`;
+}
+
+/* charts */
+function dch(k){ if(CHARTS[k]){CHARTS[k].destroy();delete CHARTS[k];} }
+const G="#00e676",R_="#ff3d57",NE="#22d3ee",PU="#a855f7",GO="#f5b41a",tkc="#8a96aa",gc="#1d2530";
+function bopts(ex){ return Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+  scales:{x:{ticks:{color:tkc,font:{size:9}},grid:{color:gc}},y:{ticks:{color:tkc,font:{size:9}},grid:{color:gc}}}},ex||{}); }
+function renderCharts(A){
+  if(typeof Chart==="undefined")return;
+  dch("eq"); let c=0; const ed=A.dts.map(d=>c+=DAYS[d].net);
+  CHARTS.eq=new Chart($("#cEq"),{type:"line",data:{labels:A.dts,datasets:[{data:ed,borderColor:NE,backgroundColor:"rgba(34,211,238,.12)",fill:true,tension:.25,pointRadius:2}]},options:bopts()});
+  dch("day");
+  CHARTS.day=new Chart($("#cDay"),{type:"bar",data:{labels:A.dts,datasets:[{data:A.dts.map(d=>DAYS[d].net),backgroundColor:A.dts.map(d=>DAYS[d].net>=0?G:R_)}]},options:bopts()});
+  dch("sd");
+  CHARTS.sd=new Chart($("#cSd"),{type:"doughnut",data:{labels:["Short","Long"],datasets:[{data:[Math.abs(A.shortNet),Math.abs(A.longNet)],backgroundColor:[R_,G],borderColor:"#0a0d12",borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:tkc}}}}});
+  dch("sym"); const sorted=A.symArr.slice(); const top=sorted.slice(0,7),bot=sorted.slice(-7).reverse();
+  const bw=[...top,...bot.filter(b=>!top.includes(b))];
+  CHARTS.sym=new Chart($("#cSym"),{type:"bar",data:{labels:bw.map(s=>s.sym),datasets:[{data:bw.map(s=>s.net),backgroundColor:bw.map(s=>s.net>=0?G:R_)}]},options:bopts({indexAxis:"y"})});
+  dch("cost"); const comm=A.comm, ecn=A.ecn;
+  CHARTS.cost=new Chart($("#cCost"),{type:"bar",data:{labels:["Comisión","Rebate/Fee ECN","Costes netos"],datasets:[{data:[comm,ecn,A.cost],backgroundColor:[R_,ecn<0?G:R_,GO]}]},options:bopts()});
+}
+window.delDay=delDay;
+setupDrop(); start();
+</script>
+</body>
+</html>
