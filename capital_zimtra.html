@@ -447,6 +447,24 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
   <div class="kpi" style="--ac:#ffd60a"><div class="kpi-l">Racha Actual</div><div class="kpi-v" id="kStreak" style="font-size:18px;">—</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:3px;" id="kStreakSub"></div></div>
 </div>
 
+<!-- ── BOTÓN ESTADÍSTICAS IA ── -->
+<div style="margin:6px 0 16px;">
+  <button id="btnEstadisticasIA" onclick="toggleEstadisticasIA()" style="
+    width:100%;display:flex;align-items:center;justify-content:center;gap:14px;
+    font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3.5px;text-transform:uppercase;
+    padding:17px 20px;border-radius:12px;
+    border:1px solid #a855f7;background:linear-gradient(180deg,#a855f722,#a855f708);
+    color:#a855f7;cursor:pointer;transition:all .2s;box-shadow:0 0 22px #a855f71f;"
+    onmouseover="this.style.background='linear-gradient(180deg,#a855f736,#a855f714)';this.style.boxShadow='0 0 30px #a855f733'"
+    onmouseout="this.style.background='linear-gradient(180deg,#a855f722,#a855f708)';this.style.boxShadow='0 0 22px #a855f71f'">
+    <span>🧠 ESTADÍSTICAS IA</span>
+    <span id="iaChevron" style="display:inline-block;font-size:14px;transition:transform .25s;">▼</span>
+  </button>
+</div>
+
+<!-- ── CONTENEDOR ESTADÍSTICAS IA (oculto por defecto) ── -->
+<div id="estadisticasIA" style="display:none;">
+
 <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted2);margin:4px 0 10px;display:flex;align-items:center;gap:9px;">📊 Proceso · desde trades reales (Journal DAS)<span id="procEmpty" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0;text-transform:none;color:var(--muted);"></span></div>
 <div class="kpis" id="procKpis"></div>
 
@@ -536,6 +554,9 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
   </details>
   <div id="pbNote" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:10px;line-height:1.6;"></div>
 </div>
+
+</div>
+<!-- ── /CONTENEDOR ESTADÍSTICAS IA ── -->
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
   <div class="tabs" id="tabs" style="margin-bottom:0;flex:1;"></div>
@@ -6093,6 +6114,18 @@ function renderRPerSymbol(monthIdx) {
     <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Evolución día a día</div>
     ${rows}
   `;
+}
+
+/* ── TOGGLE ESTADÍSTICAS IA ─────────────────────────────────────── */
+function toggleEstadisticasIA(){
+  var c=document.getElementById('estadisticasIA');
+  var ch=document.getElementById('iaChevron');
+  if(!c) return;
+  var abrir = (c.style.display==='none' || !c.style.display);
+  c.style.display = abrir ? 'block' : 'none';
+  if(ch) ch.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+  // al abrir, re-renderiza para que los gráficos midan su ancho real
+  if(abrir){ try{ renderBridge(); }catch(e){ console.warn('renderBridge on open', e); } }
 }
 
 /* ── PUENTE JOURNAL DAS → CAPITAL ZIMTRA ───────────────────────── */
