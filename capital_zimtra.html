@@ -471,6 +471,13 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
     display:inline-flex;align-items:center;gap:6px;">
     📈 PNL Anual
   </button>
+  <button id="btnImportZimtra" onclick="zOpenTotalsImport()" style="
+    font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    padding:6px 16px;border-radius:7px;border:1px solid #00e676;background:#00e67615;
+    color:#00e676;cursor:pointer;transition:all .15s;margin-left:10px;flex-shrink:0;
+    display:inline-flex;align-items:center;gap:6px;">
+    📥 Importar día Zimtra
+  </button>
   <button id="btnRetiros" onclick="openRetirosModal()" style="
     font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
     padding:6px 16px;border-radius:7px;border:1px solid var(--red);background:#ff3d5715;
@@ -673,6 +680,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script>
 // ── FIREBASE — Configuración y conexión ──────────────────────────────────────
 // Proyecto Bitácora: Capital Tracker 2026
@@ -1805,149 +1813,116 @@ function hideCalendar() {
   document.body.style.overflow = '';
 }
 
+let calMode = 'gross'; // gross | net | r | pct
+function setCalMode(mode){
+  calMode = mode;
+  ['gross','net','r','pct'].forEach(x=>{
+    const b=document.getElementById('calMode_'+x); if(!b) return;
+    const on = x===mode;
+    b.style.background = on ? 'var(--cyan)' : 'transparent';
+    b.style.color = on ? 'var(--bg)' : 'var(--cyan)';
+  });
+  renderCalendar();
+}
 function renderCalendar() {
   const m = MONTHS[calendarMonth];
   document.getElementById('calendarTitle').textContent = m.name + ', 2026';
-  
-  // Calcular PNL neto del mes (pnlDay - htb)
-  let totalPNL = 0;
-  m.days.forEach(d => {
-    const row = D[dk(d)] || {};
-    const pnl = pd(row.pnlDay);
-    const htb = pd(row.htb) || 0;
-    if (pnl !== null) totalPNL += (pnl - htb);
-  });
-  
-  const pnlEl = document.getElementById('calendarPNL');
-  pnlEl.textContent = fd(totalPNL);
-  pnlEl.style.color = totalPNL >= 0 ? 'var(--green)' : 'var(--red)';
-  
-  // Crear calendario
-  const firstDay = new Date(2026, m.num - 1, 1).getDay(); // 0=Sunday
+
+  // métricas por día y valor según el modo activo
+  function dayMetrics(row){
+    const pnl = pd(row.pnlDay); const htb = pd(row.htb)||0; const sod = pd(row.startOfDay);
+    if(pnl===null) return { has:false };
+    const net = pnl - htb;
+    return { has:true, gross:pnl, net,
+             r:(sod&&sod>0)?net/(sod*0.01):null,
+             pct:(sod&&sod>0)?net/sod*100:null,
+             trades:(row.tradesCount!=null?row.tradesCount:null) };
+  }
+  function valOf(mt){ if(!mt||!mt.has) return null; const v=mt[calMode]; return (v===undefined?null:v); }
+  function fmtVal(v){ if(v===null||v===undefined||isNaN(v)) return ''; if(calMode==='r') return (v>=0?'+':'')+v.toFixed(2)+'R'; if(calMode==='pct') return (v>=0?'+':'')+v.toFixed(2)+'%'; return fd(v); }
+
+  const firstDay = new Date(2026, m.num - 1, 1).getDay();
   const daysInMonth = new Date(2026, m.num, 0).getDate();
-  
-  // Calcular totales por semana (neto)
-  const weekTotals = {};
+
+  // total del mes + totales y series por semana (según modo)
+  let monthTotal = 0;
+  const weekTotals = {}, weekSeries = {};
   m.days.forEach(d => {
     const dayNum = parseInt(d.split('/')[0]);
     const weekNum = Math.floor((dayNum + firstDay - 1) / 7);
-    const row = D[dk(d)] || {};
-    const pnl = pd(row.pnlDay);
-    const htb = pd(row.htb) || 0;
-    if (!weekTotals[weekNum]) weekTotals[weekNum] = { pnl: 0, trades: 0, sodSum: 0, sodCount: 0 };
-    const rowSod = pd((D[dk(d)] || {}).startOfDay);
-    if (pnl !== null) {
-      weekTotals[weekNum].pnl += (pnl - htb);
-      weekTotals[weekNum].trades++;
-    }
-    if (rowSod) { weekTotals[weekNum].sodSum += rowSod; weekTotals[weekNum].sodCount++; }
+    const v = valOf(dayMetrics(D[dk(d)] || {}));
+    if(weekTotals[weekNum]===undefined){ weekTotals[weekNum]=0; weekSeries[weekNum]=[]; }
+    if(v!==null && !isNaN(v)){ weekTotals[weekNum]+=v; weekSeries[weekNum].push(v); monthTotal+=v; }
   });
-  
+
+  const pnlEl = document.getElementById('calendarPNL');
+  pnlEl.textContent = fmtVal(monthTotal) || (calMode==='r'?'0R':calMode==='pct'?'0%':'$0');
+  pnlEl.style.color = monthTotal >= 0 ? 'var(--green)' : 'var(--red)';
+
+  function sparkline(series, col){
+    if(!series || series.length<2) return '';
+    const w=72,h=22,pad=3;
+    const min=Math.min(...series), max=Math.max(...series), span=(max-min)||1;
+    const pts=series.map((v,i)=>{ const x=pad+(i*(w-2*pad)/(series.length-1)); const y=h-pad-((v-min)/span)*(h-2*pad); return x.toFixed(1)+','+y.toFixed(1); }).join(' ');
+    const zeroY=(max>0&&min<0)?(h-pad-((0-min)/span)*(h-2*pad)).toFixed(1):null;
+    return '<svg width="'+w+'" height="'+h+'" style="margin-top:4px;overflow:visible;">'+
+           (zeroY?'<line x1="0" y1="'+zeroY+'" x2="'+w+'" y2="'+zeroY+'" stroke="var(--border)" stroke-width="1"/>':'')+
+           '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+
   let grid = `
     <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:12px;">
+      ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat','Week'].map(d=>`
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Sun</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Mon</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Tue</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Wed</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Thu</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Fri</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Sat</div>
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">Week</div>
-      </div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);">${d}</div>
+      </div>`).join('')}
   `;
-  
-  let currentWeek = 0;
-  let dayIndex = 0;
-  
-  for (let i = 0; i < firstDay; i++) {
-    grid += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;"></div>`;
-    dayIndex++;
-  }
-  
+
+  let currentWeek = 0, dayIndex = 0;
+  for (let i = 0; i < firstDay; i++) { grid += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;"></div>`; dayIndex++; }
+
   for (let day = 1; day <= daysInMonth; day++) {
-    // Formato correcto: DD/MM/YYYY (con ceros a la izquierda)
-    const dayStr = String(day).padStart(2, '0');
-    const monthStr = String(m.num).padStart(2, '0');
-    const dateStr = `${dayStr}/${monthStr}/2026`;
+    const dateStr = `${String(day).padStart(2,'0')}/${String(m.num).padStart(2,'0')}/2026`;
     const k = dk(dateStr);
-    const row = D[k] || {};
-    const pnl = pd(row.pnlDay);
-    const htb  = pd(row.htb) || 0;
-    const sod  = pd(row.startOfDay);
-    const pnlNeto = pnl !== null ? pnl - htb : null;
-    
-    // Verificar si es un día festivo
+    const mt = dayMetrics(D[k] || {});
     const hol = HOLIDAYS[dateStr];
-    
-    const color = pnlNeto === null ? 'var(--muted)' : pnlNeto >= 0 ? 'var(--green)' : 'var(--red)';
-    const pnlText = pnlNeto !== null ? fd(pnlNeto) : '';
-    
-    // Mostrar R calculadas con htb descontado: R = pnlNeto / riskTrade (1% SOD)
-    let tradesText = '';
-    let rColor = 'var(--muted2)';
-    if (pnlNeto !== null && sod && sod > 0) {
-      const riskTrade = sod * 0.01;
-      const R = pnlNeto / riskTrade;
-      tradesText = (R >= 0 ? '+' : '') + R.toFixed(2) + 'R';
-      rColor = R >= 0 ? 'var(--green)' : 'var(--red)';
-    } else if (pnlNeto !== null) {
-      tradesText = '1 trade';
-    }
-    
-    // Si es día festivo, mostrar cartel especial
+    const v = valOf(mt);
+    const color = (v===null) ? 'var(--muted)' : (v>=0 ? 'var(--green)' : 'var(--red)');
+    const valText = (v===null) ? '' : fmtVal(v);
+    const nTrades = (mt.has && mt.trades!=null) ? mt.trades : null;
+    const tradesText = nTrades!=null ? (nTrades+' trade'+(nTrades===1?'':'s')) : '';
+
     if (hol) {
       grid += `
         <div style="background:#a855f715;border:2px solid #a855f7;border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;text-align:center;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#a855f7;letter-spacing:2px;">🎉</div>
           <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;color:#a855f7;margin-top:4px;">${hol.name}</div>
           <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px;">${hol.desc}</div>
-        </div>
-      `;
+        </div>`;
     } else {
       grid += `
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;gap:8px;">
+        <div onclick="selectCalendarDay('${k}')" title="Ver resumen del día" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)'">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--muted2);">${day}</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${color};">${pnlText}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:9px;color:${rColor};margin-top:auto;">${tradesText}</div>
-        </div>
-      `;
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${color};">${valText}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:auto;">${tradesText}</div>
+        </div>`;
     }
-    
+
     dayIndex++;
-    
-    // Si es sábado, añadir celda de semana
     if (dayIndex % 7 === 0 || day === daysInMonth) {
-      const weekData = weekTotals[currentWeek] || { pnl: 0, trades: 0, sodSum: 0, sodCount: 0 };
-      const weekColor = weekData.pnl >= 0 ? 'var(--green)' : 'var(--red)';
-      const avgSod = weekData.sodCount > 0 ? weekData.sodSum / weekData.sodCount : 0;
-      const weekRisk = avgSod * 0.01;
-      const weekR = weekRisk > 0 ? weekData.pnl / weekRisk : null;
-      const weekRText = weekR !== null && weekData.trades > 0 ? (weekR >= 0 ? '+' : '') + weekR.toFixed(2) + 'R' : '';
+      const wt = weekTotals[currentWeek] || 0;
+      const hasW = weekSeries[currentWeek] && weekSeries[currentWeek].length;
+      const wc = wt >= 0 ? 'var(--green)' : 'var(--red)';
       grid += `
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${weekColor};">${weekData.pnl !== 0 ? fd(weekData.pnl) : ''}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:${weekColor};">${weekRText}</div>
-        </div>
-      `;
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);">Week ${currentWeek+1}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:19px;color:${wc};">${hasW?fmtVal(wt):''}</div>
+          ${sparkline(weekSeries[currentWeek]||[], wc)}
+        </div>`;
       currentWeek++;
     }
   }
-  
+
   grid += `</div>`;
   document.getElementById('calendarGrid').innerHTML = grid;
 }
@@ -7724,9 +7699,16 @@ function renderLongSide(monthIdx) {
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);">
       <button onclick="hideCalendar()" style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;transition:all .15s;">← Volver</button>
       <div id="calendarTitle" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;">March, 2026</div>
+      <div id="calModeBtns" style="display:flex;gap:6px;margin-left:18px;">
+        <button id="calMode_gross" onclick="setCalMode('gross')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:var(--cyan);color:var(--bg);cursor:pointer;transition:all .15s;">Gross</button>
+        <button id="calMode_net" onclick="setCalMode('net')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:all .15s;">Net</button>
+        <button id="calMode_r" onclick="setCalMode('r')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:all .15s;">R</button>
+        <button id="calMode_pct" onclick="setCalMode('pct')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:all .15s;">%</button>
+      </div>
       <div id="calendarPNL" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--green);margin-left:auto;">$0</div>
     </div>
     <div id="calendarGrid"></div>
+    <div id="calDaySummary" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);"></div>
   </div>
 </div>
 
@@ -10027,6 +10009,797 @@ document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
     <button class="ov-dismiss" onclick="cerrarAfterHoursOverlay(false)">Cerrar — seguiré un poco más</button>
   </div>
 </div>
+
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- ══ MÓDULO IMPORTACIÓN ZIMTRA/DAS (Firestore + Storage) ════════════════════ -->
+<!-- Aditivo. Usa los globales existentes: db, storage, D, dk, pd, fd, MONTHS,    -->
+<!-- save, showToast. localStorage solo como caché temporal; Firestore manda.     -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Estilos del módulo -->
+<style>
+#dayDetailScreen,#tradeDetailModal,#zImportDialog{display:none;}
+#dayDetailScreen{position:fixed;inset:0;background:var(--bg);z-index:120;overflow-y:auto;}
+.z-wrap{max-width:1200px;margin:0 auto;padding:24px 20px;}
+.z-hdr{display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.z-back{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;}
+.z-back:hover{color:var(--text);border-color:var(--muted2);}
+.z-btn{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border-radius:7px;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.z-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px;margin-bottom:20px;}
+.z-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden;}
+.z-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--cyan));}
+.z-kpi-l{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;}
+.z-kpi-v{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.5px;line-height:1;}
+.z-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:8px;}
+.z-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden;transition:border-color .15s;}
+.z-card:hover{border-color:var(--muted2);}
+.z-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--side,var(--muted));}
+.z-side{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;padding:3px 8px;border-radius:20px;border:1px solid currentColor;}
+.z-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.z-modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;}
+.z-field{margin-bottom:13px;}
+.z-field label{display:block;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px;}
+.z-field input,.z-field select,.z-field textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;}
+.z-field textarea{resize:vertical;min-height:54px;}
+.z-grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.z-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;}
+.z-chip{font-family:'DM Mono',monospace;font-size:10px;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--muted2);cursor:pointer;user-select:none;}
+.z-chip.on{background:#ff3d5715;border-color:var(--red);color:var(--red);}
+</style>
+
+<!-- Pantalla detalle del día -->
+<div id="dayDetailScreen">
+  <div class="z-wrap">
+    <div class="z-hdr">
+      <button class="z-back" onclick="hideDayDetail()">← Volver</button>
+      <div id="zDayTitle" style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;">—</div>
+      <button class="z-btn" style="border:1px solid var(--cyan);background:#00b0ff15;color:var(--cyan);margin-left:auto;"
+        onclick="document.getElementById('zExecFileInput').click()">⚡ Importar ejecuciones del día</button>
+      <input type="file" id="zExecFileInput" accept=".xls,.xlsx,.csv" style="display:none;"
+        onchange="if(this.files[0]){importDailyExecutionsFile(window.__zCurrentDay,this.files[0]);this.value='';}">
+    </div>
+    <div class="z-kpis" id="zDaySummary"></div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin:6px 0 12px;">Trades del día <span id="zTradeCount" style="color:var(--muted);"></span></div>
+    <div class="z-cards" id="zTradeCards"></div>
+  </div>
+</div>
+
+<!-- Modal detalle de trade -->
+<div id="tradeDetailModal" class="z-modal-bg">
+  <div class="z-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;" id="ztd_head">DETALLE TRADE</div>
+      <button class="z-back" onclick="closeTradeDetail()">✕</button>
+    </div>
+    <div class="z-grid3">
+      <div class="z-field"><label>Ticker</label><input id="ztd_ticker"></div>
+      <div class="z-field"><label>Lado</label><select id="ztd_side"><option>LONG</option><option>SHORT</option></select></div>
+      <div class="z-field"><label>Fecha</label><input id="ztd_date" disabled></div>
+    </div>
+    <div class="z-grid3">
+      <div class="z-field"><label>PnL ($)</label><input id="ztd_pnl" type="number" step="0.01"></div>
+      <div class="z-field"><label>R</label><input id="ztd_r" type="number" step="0.01"></div>
+      <div class="z-field"><label>Shares</label><input id="ztd_shares" type="number"></div>
+    </div>
+    <div class="z-grid3">
+      <div class="z-field"><label>Avg Entry</label><input id="ztd_avgEntry" type="number" step="0.0001"></div>
+      <div class="z-field"><label>Avg Exit</label><input id="ztd_avgExit" type="number" step="0.0001"></div>
+      <div class="z-field"><label>Duración</label><input id="ztd_duration"></div>
+    </div>
+    <div class="z-grid3">
+      <div class="z-field"><label>Hora entrada</label><input id="ztd_entryTime"></div>
+      <div class="z-field"><label>Hora salida</label><input id="ztd_exitTime"></div>
+      <div class="z-field"><label>Grade</label><select id="ztd_grade"><option value=""></option><option>A++</option><option>A+</option><option>A</option><option>B</option><option>C</option></select></div>
+    </div>
+    <div class="z-field"><label>Setup</label><input id="ztd_setup" placeholder="Sin setup"></div>
+    <div class="z-field"><label>Mistakes</label><div id="ztd_mistakes" style="display:flex;flex-wrap:wrap;gap:7px;"></div></div>
+    <div class="z-grid2">
+      <div class="z-field"><label>Qué hice bien</label><textarea id="ztd_well"></textarea></div>
+      <div class="z-field"><label>Qué hice mal</label><textarea id="ztd_wrong"></textarea></div>
+    </div>
+    <div class="z-field"><label>Qué haría distinto</label><textarea id="ztd_improve"></textarea></div>
+    <div class="z-field"><label>Notas personales</label><textarea id="ztd_notes"></textarea></div>
+    <div class="z-field">
+      <label>Imagen del gráfico</label>
+      <div id="ztd_imgWrap" style="margin-bottom:8px;"></div>
+      <input type="file" id="ztd_imgInput" accept="image/*" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="z-btn" style="border:1px solid var(--border);background:transparent;color:var(--muted2);" onclick="closeTradeDetail()">Cancelar</button>
+      <button class="z-btn" style="border:1px solid var(--green);background:#00e67615;color:var(--green);" onclick="saveTradeDetailChanges()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diálogo de conflicto al importar día -->
+<div id="zImportDialog" class="z-modal-bg">
+  <div class="z-modal" style="max-width:440px;text-align:center;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;margin-bottom:10px;">YA EXISTE ESTE DÍA</div>
+    <div id="zImportDialogMsg" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:20px;"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="z-btn" style="border:1px solid var(--red);background:#ff3d5715;color:var(--red);" onclick="window.__zImportResolve&&window.__zImportResolve('overwrite')">Sobrescribir</button>
+      <button class="z-btn" style="border:1px solid var(--cyan);background:#00b0ff15;color:var(--cyan);" onclick="window.__zImportResolve&&window.__zImportResolve('merge')">Fusionar</button>
+      <button class="z-btn" style="border:1px solid var(--border);background:transparent;color:var(--muted2);" onclick="window.__zImportResolve&&window.__zImportResolve('cancel')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="zTotalsFileInput" accept=".xls,.xlsx,.csv" style="display:none;"
+  onchange="if(this.files[0]){importDailyTotalsFile(this.files[0]);this.value='';}">
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// MÓDULO ZIMTRA — Firestore + Storage. Todo en try/catch; Firestore = fuente.
+// ══════════════════════════════════════════════════════════════════════════
+(function(){
+  "use strict";
+
+  // ── Usuario / refs ───────────────────────────────────────────────────────
+  const ZUID = 'defaultUser';
+  function getCurrentUserId(){ return ZUID; }
+  const TS = () => firebase.firestore.FieldValue.serverTimestamp();
+
+  function dayRef(date){ // date = 'YYYY-MM-DD'
+    const [y,m] = date.split('-');
+    return db.collection('users').doc(ZUID)
+             .collection('years').doc(y)
+             .collection('months').doc(m)
+             .collection('days').doc(date);
+  }
+  function tradesRef(date){ return dayRef(date).collection('trades'); }
+
+  function zToast(msg){ try{ showToast(msg); }catch(e){ console.log(msg); } }
+  function zErr(e){ console.error('[Zimtra]', e); zToast('⚠ No se pudo conectar con Firebase. Se muestran datos locales si existen.'); }
+
+  // Caché temporal (solo lectura rápida; Firestore sobrescribe)
+  function cacheTrades(date, trades){ try{ localStorage.setItem('ztr_'+date, JSON.stringify(trades)); }catch(e){} }
+  function readCacheTrades(date){ try{ const r=localStorage.getItem('ztr_'+date); return r?JSON.parse(r):null; }catch(e){ return null; } }
+
+  // ── Firebase helpers ─────────────────────────────────────────────────────
+  async function saveDayToFirebase(dayData){
+    const date = dayData.date;
+    const [y,m,d] = date.split('-').map(Number);
+    const payload = Object.assign({}, dayData, {
+      year:y, month:m, day:d, updatedAt:TS()
+    });
+    if(!payload.importedAt) payload.importedAt = TS();
+    await dayRef(date).set(payload, { merge:true });
+  }
+  async function getDayFromFirebase(date){
+    const snap = await dayRef(date).get();
+    return snap.exists ? snap.data() : null;
+  }
+  async function saveTradeToFirebase(date, trade){
+    const id = trade.id || tradesRef(date).doc().id;
+    trade.id = id;
+    await tradesRef(date).doc(id).set(Object.assign({}, trade, { updatedAt:TS() }), { merge:true });
+    return id;
+  }
+  async function getTradesFromFirebase(date){
+    const qs = await tradesRef(date).orderBy('entryTime').get();
+    const out = []; qs.forEach(d => out.push(d.data()));
+    return out;
+  }
+  async function updateTradeInFirebase(date, tradeId, data){
+    await tradesRef(date).doc(tradeId).set(Object.assign({}, data, { updatedAt:TS() }), { merge:true });
+  }
+  async function uploadTradeImageToStorage(date, tradeId, file){
+    const path = `users/${ZUID}/trade-images/${date}/${tradeId}/${file.name}`;
+    const ref = storage.ref().child(path);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+    await updateTradeInFirebase(date, tradeId, { imageUrl:url, imagePath:path });
+    return url;
+  }
+  async function deleteTradeImageFromFirebase(date, tradeId, imagePath){
+    try{ if(imagePath) await storage.ref().child(imagePath).delete(); }catch(e){ console.warn('storage delete', e); }
+    await updateTradeInFirebase(date, tradeId, { imageUrl:'', imagePath:'' });
+  }
+
+  // ── Detección flexible de columnas ───────────────────────────────────────
+  function norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+  function findCol(headers, synonyms){
+    const H = headers.map(norm);
+    for(const syn of synonyms){
+      const n = norm(syn);
+      let i = H.indexOf(n);
+      if(i>=0) return i;
+    }
+    // match parcial
+    for(const syn of synonyms){
+      const n = norm(syn);
+      const i = H.findIndex(h => h.includes(n) && n.length>=3);
+      if(i>=0) return i;
+    }
+    return -1;
+  }
+  function numify(v){
+    if(v==null||v==='') return null;
+    if(typeof v==='number') return v;
+    let s = String(v).replace(/[$,\s]/g,'').replace(/[()]/g,'-'); // (123) → -123
+    if(s.endsWith('-')) s = '-'+s.slice(0,-1);
+    const n = parseFloat(s);
+    return isNaN(n)?null:n;
+  }
+  // Excel serial o texto → 'YYYY-MM-DD'
+  function toISODate(v){
+    if(v==null||v==='') return null;
+    if(typeof v==='number'){ // serial Excel
+      const dt = new Date(Math.round((v-25569)*86400*1000));
+      return dt.toISOString().slice(0,10);
+    }
+    let s = String(v).trim().split(' ')[0];
+    let m;
+    if((m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/))) return s;
+    if((m=s.match(/^(\d{4})\/(\d{2})\/(\d{2})$/))) return s.replace(/\//g,'-');
+    if((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/))){
+      let [_,a,b,y]=m; if(y.length===2)y='20'+y;
+      // Zimtra/DAS suele ser MM/DD/YYYY
+      return `${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`;
+    }
+    const dt = new Date(s); return isNaN(dt)?null:dt.toISOString().slice(0,10);
+  }
+
+  // ── IMPORTADOR: totals-by-date ───────────────────────────────────────────
+  // Los .xls de DAS/Zimtra a veces necesitan parche de byte-order; probamos
+  // lectura normal, parcheada y binary string, y devolvemos TODOS los candidatos.
+  function buildWorkbookCandidates(buf){
+    const u8 = new Uint8Array(buf), cands = [];
+    try{ cands.push(XLSX.read(u8, {type:'array'})); }catch(e){}
+    try{ const p=u8.slice(); if(p.length>30){ p[28]=0xFE; p[29]=0xFF; } cands.push(XLSX.read(p,{type:'array'})); }catch(e){}
+    try{ let bin='',CH=8192; for(let i=0;i<u8.length;i+=CH){ bin+=String.fromCharCode.apply(null,u8.subarray(i,i+CH)); } cands.push(XLSX.read(bin,{type:'binary'})); }catch(e){}
+    return cands.filter(Boolean);
+  }
+  function readWorkbook(file){
+    return new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = e => { const c = buildWorkbookCandidates(e.target.result); c.length ? res(c) : rej(new Error('No se pudo leer el archivo')); };
+      r.onerror = rej;
+      r.readAsArrayBuffer(file);
+    });
+  }
+  function allSheetsRows(wb){
+    return (wb.SheetNames||[]).map(n => ({ name:n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, defval:'' }) }));
+  }
+  function sheetToRows(wb){ const s=allSheetsRows(wb)[0]; return s?s.rows:[]; }
+  function firstUsable(cands, parseFn, okFn){
+    let last=null, diag=[];
+    for(const wb of cands){ try{ const p=parseFn(wb); last=p; if(p&&p._diag) diag=diag.concat(p._diag); if(okFn(p)) return p; }catch(e){ console.warn('parse cand', e); } }
+    if(last) last._diagAll = diag; return last;
+  }
+  function fileDateFromName(name){ const m=String(name||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[1]}-${m[2]}-${m[3]}`:null; }
+  function findHeaderRow(rows){
+    const kw=/date|fecha|gross|net|p\/?l|p&l|pnl|symbol|ticker|shares|qty|volume|htb|locate|comm|fee|side|price/i;
+    let best=-1,bs=0;
+    for(let i=0;i<Math.min(rows.length,20);i++){ const sc=(rows[i]||[]).filter(c=>kw.test(String(c))).length; if(sc>bs){bs=sc;best=i;} }
+    return bs>=1?best:0;
+  }
+  function detectDateColByValue(rows, startRow){
+    const width=rows.slice(startRow).reduce((w,r)=>Math.max(w,r.length),0);
+    let best=-1,bestHits=0;
+    for(let c=0;c<width;c++){ let hits=0,total=0; for(let i=startRow;i<rows.length;i++){ const v=rows[i]&&rows[i][c]; if(v===''||v==null)continue; total++; if(toISODate(v))hits++; } if(total>0&&hits>=Math.max(1,total*0.6)&&hits>bestHits){bestHits=hits;best=c;} }
+    return best;
+  }
+  function parseZimtraDailyTotals(wb){
+    const sheets = allSheetsRows(wb);
+    const diag = sheets.map(s=>({sheet:s.name, header:(s.rows[findHeaderRow(s.rows)]||[]).map(String)}));
+    for(const sh of sheets){
+      const rows = sh.rows; if(!rows.length) continue;
+      const hi = findHeaderRow(rows);
+      const headers = (rows[hi]||[]).map(c=>String(c));
+      const col = {
+        date:   findCol(headers,['date','fecha','trade date','day']),
+        shares: findCol(headers,['shares','volume','qty','quantity','vol']),
+        trades: findCol(headers,['trades','tradescount','# trades','numtrades','count']),
+        gross:  findCol(headers,['gross pnl','gross p/l','gross','pnl day','p&l','p/l','pl','realized','profit']),
+        net:    findCol(headers,['net pnl','net p/l','net','adj net','adjnet']),
+        htb:    findCol(headers,['htb','locate fees','locate','borrow fees','borrow','stock loan','loan fee']),
+        comm:   findCol(headers,['commissions','commission','comm','fees','ecn','ecn fee']),
+      };
+      const dateCol = col.date>=0 ? col.date : detectDateColByValue(rows, hi+1);
+      const out=[];
+      for(let i=hi+1;i<rows.length;i++){
+        const r=rows[i]; if(!r||r.every(c=>c===''||c==null)) continue;
+        if(r.some(c=>/^total|totales|summary|grand/i.test(String(c)))) continue; // saltar filas de total
+        const date = dateCol>=0 ? toISODate(r[dateCol]) : null;
+        const norm = normalizeDailyTotalsRow(r, col, date);
+        if(norm.grossPnl!=null || norm.netPnl!=null || date) out.push(norm);
+      }
+      if(out.length) return { rows:out, missing:Object.keys(col).filter(k=>col[k]<0), _diag:diag };
+    }
+    return { rows:[], missing:[], _diag:diag };
+  }
+  function normalizeDailyTotalsRow(r, col, date){
+    const gross = col.gross>=0 ? numify(r[col.gross]) : null;
+    let net     = col.net>=0   ? numify(r[col.net])   : null;
+    const htb   = col.htb>=0   ? (numify(r[col.htb])||0) : 0;
+    const comm  = col.comm>=0  ? (numify(r[col.comm])||0): 0;
+    if(net==null && gross!=null) net = gross - htb - comm;
+    return {
+      date,
+      grossPnl: gross,
+      netPnl: net,
+      htb, commissions: comm,
+      shares: col.shares>=0 ? numify(r[col.shares]) : null,
+      tradesCount: col.trades>=0 ? numify(r[col.trades]) : null,
+    };
+  }
+
+  async function importDailyTotalsFile(file){
+    try{
+      const cands = await readWorkbook(file);
+      const parsed = firstUsable(cands, parseZimtraDailyTotals, p=>p&&p.rows.length);
+      const fileDate = fileDateFromName(file.name);
+      if(!parsed || !parsed.rows.length){
+        const d=(parsed&&(parsed._diagAll||parsed._diag))||[];
+        console.warn('[Zimtra] cabeceras vistas en totals:', d);
+        const seen=d.map(x=>'· '+x.sheet+': ['+x.header.slice(0,8).join(' | ')+']').join('\n');
+        zToast('⚠ No se reconocieron columnas. Abre la consola (F12) y pásame esto:\n'+(seen||'(sin hojas legibles)'));
+        return;
+      }
+      let rows = parsed.rows.map(r=> r.date ? r : Object.assign({}, r, {date:fileDate}) ).filter(r=>r.date);
+      if(!rows.length){ zToast('⚠ Las filas no traen fecha y el nombre del archivo tampoco (formato YYYY-MM-DD).'); return; }
+      if(parsed.missing.length) zToast('ℹ Columnas no encontradas: '+parsed.missing.join(', ')+' (se continúa)');
+      let ok=0;
+      for(const row of rows){ if(await saveImportedDay(row, file.name)) ok++; }
+      save();
+      try{ renderAll(); }catch(e){}
+      try{ if(document.getElementById('calendarScreen').style.display==='block') renderCalendar(); }catch(e){}
+      zToast('✓ Importado: '+ok+' día(s) desde '+file.name);
+    }catch(e){ zErr(e); }
+  }
+
+  // Diálogo Sobrescribir / Fusionar / Cancelar
+  function askImportConflict(date){
+    return new Promise(res=>{
+      document.getElementById('zImportDialogMsg').textContent =
+        'El día '+date+' ya tiene datos. ¿Qué quieres hacer?';
+      const dlg = document.getElementById('zImportDialog');
+      dlg.style.display='flex';
+      window.__zImportResolve = (choice)=>{ dlg.style.display='none'; window.__zImportResolve=null; res(choice); };
+    });
+  }
+
+  async function saveImportedDay(row, fileName){
+    const date = row.date;
+    const existsLocal = D[dk2(date)] && (pd(D[dk2(date)].pnlDay)!==null);
+    let mode = 'overwrite';
+    if(existsLocal){
+      mode = await askImportConflict(date);
+      if(mode==='cancel') return false;
+    }
+    // ── Modelo D (capital_tracker): pnlDay = gross, htb = coste total (gross-net)
+    const key = dk2(date);
+    if(!D[key]) D[key] = {};
+    const costeTotal = (row.grossPnl!=null && row.netPnl!=null) ? (row.grossPnl - row.netPnl) : row.htb;
+    if(mode==='overwrite'){
+      if(row.grossPnl!=null) D[key].pnlDay = String(row.grossPnl);
+      if(costeTotal!=null)   D[key].htb    = String(costeTotal);
+    } else { // merge: solo rellena lo que falte
+      if(D[key].pnlDay==null && row.grossPnl!=null) D[key].pnlDay = String(row.grossPnl);
+      if((D[key].htb==null||D[key].htb==='') && costeTotal!=null) D[key].htb = String(costeTotal);
+    }
+    if(row.tradesCount!=null) D[key].tradesCount = row.tradesCount; // para el calendario
+    // ── Doc anidado Firestore (estructura nueva) ──
+    try{
+      const sod = pd(D[key].startOfDay);
+      await saveDayToFirebase({
+        date,
+        grossPnl: row.grossPnl, netPnl: row.netPnl,
+        htb: row.htb, commissions: row.commissions,
+        shares: row.shares, tradesCount: row.tradesCount,
+        pnlPercent: (row.netPnl!=null && sod) ? +(row.netPnl/sod*100).toFixed(2) : null,
+        pnlR: (row.netPnl!=null && sod) ? +(row.netPnl/(sod*0.01)).toFixed(2) : null,
+        sourceTotalsFileName: fileName,
+      });
+    }catch(e){ zErr(e); }
+    return true;
+  }
+  function dk2(iso){ return iso; } // D ya usa 'YYYY-MM-DD'; alias por claridad
+
+  // ── IMPORTADOR: ejecuciones del día ──────────────────────────────────────
+  function parseDASExecutions(wb){
+    const sheets = allSheetsRows(wb);
+    const diag = sheets.map(s=>({sheet:s.name, header:(s.rows[findHeaderRow(s.rows)]||[]).map(String)}));
+    for(const sh of sheets){
+      const rows = sh.rows; if(!rows.length) continue;
+      const hi = findHeaderRow(rows);
+      const headers = (rows[hi]||[]).map(c=>String(c));
+      const col = {
+        time:   findCol(headers,['time','exec time','filltime','timestamp','datetime','filled time']),
+        ticker: findCol(headers,['symbol','ticker','sym','stock']),
+        side:   findCol(headers,['side','b/s','action','type','bs']),
+        qty:    findCol(headers,['qty','shares','quantity','filledqty','size','filled']),
+        price:  findCol(headers,['price','fillprice','avgprice','execprice','fill price','avg price']),
+      };
+      const exes=[];
+      for(let i=hi+1;i<rows.length;i++){
+        const r=rows[i]; if(!r||r.every(c=>c===''||c==null)) continue;
+        const ticker = col.ticker>=0 ? String(r[col.ticker]||'').trim().toUpperCase() : '';
+        const qty = col.qty>=0 ? numify(r[col.qty]) : null;
+        const price = col.price>=0 ? numify(r[col.price]) : null;
+        if(!ticker || qty==null || price==null) continue;
+        const rawSide = String(col.side>=0 ? r[col.side] : '').trim().toUpperCase();
+        const isBuy = /^B|BUY|BOT|COVER|BTC/.test(rawSide) && !/^S|SELL|SHORT|SLD|^T/.test(rawSide);
+        const timeRaw = col.time>=0 ? String(r[col.time]||'') : '';
+        exes.push({ ticker, qty:Math.abs(qty), price, isBuy, side:isBuy?'B':'S', time:timeRaw, timeVal:parseTimeVal(timeRaw,i) });
+      }
+      if(exes.length) return { exes, missing:Object.keys(col).filter(k=>col[k]<0), _diag:diag };
+    }
+    return { exes:[], missing:[], _diag:diag };
+  }
+  function parseTimeVal(s, fallbackIdx){
+    if(!s) return fallbackIdx; // sin hora → conserva orden de fila
+    const m = String(s).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if(m) return (+m[1])*3600 + (+m[2])*60 + (+(m[3]||0));
+    const dt = new Date(s); return isNaN(dt)?fallbackIdx:dt.getTime()/1000;
+  }
+  function fmtTime(s){ const m=String(s||'').match(/(\d{1,2}:\d{2}(?::\d{2})?)/); return m?m[1]:String(s||''); }
+  function fmtDur(sec){ if(sec==null||isNaN(sec)||sec<0) return '—'; if(sec<60) return Math.round(sec)+'s'; const m=Math.floor(sec/60), s=Math.round(sec%60); if(m<60) return m+'m'+(s?(' '+s+'s'):''); const h=Math.floor(m/60); return h+'h '+(m%60)+'m'; }
+
+  // Reconstrucción por posición: LONG/SHORT independientes por ticker
+  function reconstructTradesFromExecutions(exes, date){
+    const byTicker = {};
+    exes.forEach(e => (byTicker[e.ticker]=byTicker[e.ticker]||[]).push(e));
+    const trades = [];
+    Object.keys(byTicker).forEach(ticker=>{
+      const fills = byTicker[ticker].slice().sort((a,b)=>a.timeVal-b.timeVal);
+      let pos=0, seg=[], dir=null, peak=0;
+      const flush = (open)=>{
+        if(!seg.length) return;
+        let buyQ=0,buyC=0,sellQ=0,sellC=0,firstT=seg[0].timeVal,lastT=seg[seg.length-1].timeVal;
+        seg.forEach(f=>{ if(f.isBuy){buyQ+=f.qty;buyC+=f.qty*f.price;} else {sellQ+=f.qty;sellC+=f.qty*f.price;} });
+        const pnl = +(sellC - buyC).toFixed(2); // cashflow realizado (válido si cerrado)
+        const avgBuy = buyQ?buyC/buyQ:null, avgSell = sellQ?sellC/sellQ:null;
+        trades.push({
+          id: `${date}_${ticker}_${dir}_${String(seg[0].timeVal)}`.replace(/[^a-zA-Z0-9_]/g,''),
+          date, ticker, side:dir,
+          pnl: open?0:pnl, pnlRaw:pnl,
+          shares: peak,
+          avgEntry: +(dir==='LONG'?avgBuy:avgSell || 0).toFixed(4),
+          avgExit:  +(dir==='LONG'?avgSell:avgBuy || 0).toFixed(4),
+          entryTime: fmtTime(seg[0].time), exitTime: fmtTime(seg[seg.length-1].time),
+          duration: fmtDur(lastT-firstT),
+          executionsCount: seg.length,
+          openPosition: !!open,
+          setup:'Sin setup', grade:'', mistakes:[], notes:'',
+          whatWentWell:'', whatWentWrong:'', whatToImprove:'', imageUrl:'', imagePath:'',
+          r:null, pnlPercent:null,
+        });
+        seg=[]; dir=null; peak=0;
+      };
+      fills.forEach(f=>{
+        if(pos===0 && !seg.length){ dir = f.isBuy?'LONG':'SHORT'; }
+        seg.push(f);
+        pos += f.isBuy ? f.qty : -f.qty;
+        peak = Math.max(peak, Math.abs(pos));
+        if(pos===0) flush(false);
+      });
+      if(seg.length) flush(true); // posición abierta al cierre
+    });
+    // R y % con SOD del día
+    const sod = pd((D[date]||{}).startOfDay);
+    trades.forEach(t=>{
+      if(!t.openPosition && sod && sod>0){
+        t.r = +(t.pnl/(sod*0.01)).toFixed(2);
+        t.pnlPercent = +(t.pnl/sod*100).toFixed(2);
+      }
+    });
+    return trades.sort((a,b)=> (a.entryTime>b.entryTime?1:-1));
+  }
+
+  function calculateProfitFactor(trades){
+    let gw=0,gl=0; trades.forEach(t=>{ if(t.openPosition)return; if(t.pnl>0)gw+=t.pnl; else gl+=t.pnl; });
+    return gl<0 ? +(gw/Math.abs(gl)).toFixed(2) : (gw>0?Infinity:0);
+  }
+  function calculateLongShortStats(trades){
+    let l=0,s=0; trades.forEach(t=>{ if(t.openPosition)return; if(t.side==='LONG')l+=t.pnl; else s+=t.pnl; });
+    return { longPnl:+l.toFixed(2), shortPnl:+s.toFixed(2) };
+  }
+  function calculateDayStats(trades){
+    const closed = trades.filter(t=>!t.openPosition);
+    const wins = closed.filter(t=>t.pnl>0), losses = closed.filter(t=>t.pnl<0);
+    const ls = calculateLongShortStats(closed);
+    let best=null,worst=null;
+    closed.forEach(t=>{ if(!best||t.pnl>best.pnl)best=t; if(!worst||t.pnl<worst.pnl)worst=t; });
+    return {
+      tradesCount: closed.length,
+      winTrades: wins.length, lossTrades: losses.length,
+      winRate: closed.length? +(wins.length/closed.length*100).toFixed(1):0,
+      profitFactor: calculateProfitFactor(closed),
+      longPnl: ls.longPnl, shortPnl: ls.shortPnl,
+      bestTicker: best?best.ticker:'', worstTicker: worst?worst.ticker:'',
+      netPnlTrades: +closed.reduce((a,t)=>a+t.pnl,0).toFixed(2),
+      openCount: trades.length-closed.length,
+    };
+  }
+
+  async function saveReconstructedTradesToFirebase(date, trades){
+    for(const t of trades){ await tradesRef(date).doc(t.id).set(Object.assign({}, t, { createdAt:TS(), updatedAt:TS() }), { merge:true }); }
+    const stats = calculateDayStats(trades);
+    await saveDayToFirebase(Object.assign({ date, executionsImported:true }, stats));
+    try{ if(!D[date]) D[date]={}; D[date].tradesCount = stats.tradesCount; save(); }catch(e){}
+    return stats;
+  }
+
+  async function importDailyExecutionsFile(date, file){
+    try{
+      const cands = await readWorkbook(file);
+      const parsed = firstUsable(cands, parseDASExecutions, p=>p&&p.exes.length);
+      if(!parsed || !parsed.exes.length){
+        const d=(parsed&&(parsed._diagAll||parsed._diag))||[];
+        console.warn('[Zimtra] cabeceras ejecuciones:', d);
+        const seen=d.map(x=>'· '+x.sheet+': ['+x.header.slice(0,8).join(' | ')+']').join('\n');
+        zToast('⚠ No se reconocieron ejecuciones. Consola (F12):\n'+(seen||'(sin hojas legibles)'));
+        return;
+      }
+      if(parsed.missing.length) zToast('ℹ Columnas no encontradas: '+parsed.missing.join(', ')+' (se continúa)');
+      const trades = reconstructTradesFromExecutions(parsed.exes, date);
+      const stats = await saveReconstructedTradesToFirebase(date, trades);
+      await saveDayToFirebase({ date, sourceExecutionsFileName:file.name });
+      cacheTrades(date, trades);
+      zToast('✓ '+trades.length+' trade(s) reconstruidos · WR '+stats.winRate+'% · PF '+(stats.profitFactor===Infinity?'∞':stats.profitFactor));
+      renderSelectedDaySummary(date);
+      renderDayTradeCards(date);
+    }catch(e){ zErr(e); }
+  }
+
+  // ── VISTA DÍA ────────────────────────────────────────────────────────────
+  async function openDayDetail(date){
+    window.__zCurrentDay = date;
+    document.getElementById('zDayTitle').textContent = 'DÍA ' + date;
+    document.getElementById('dayDetailScreen').style.display='block';
+    document.body.style.overflow='hidden';
+    renderSelectedDaySummary(date);
+    // pinta cache al instante, luego Firestore manda
+    const c = readCacheTrades(date); if(c) renderTradeCardsList(date, c);
+    renderDayTradeCards(date);
+  }
+  function hideDayDetail(){ document.getElementById('dayDetailScreen').style.display='none'; document.body.style.overflow=''; }
+
+  async function renderSelectedDaySummary(date){
+    const row = D[date] || {};
+    const grossD = pd(row.pnlDay);
+    const htbD = pd(row.htb)||0;
+    const netD = grossD!=null ? grossD - htbD : null;
+    const sod = pd(row.startOfDay);
+    let fb = null; try{ fb = await getDayFromFirebase(date); }catch(e){}
+    const gross = (fb&&fb.grossPnl!=null)?fb.grossPnl:grossD;
+    const net   = (fb&&fb.netPnl!=null)?fb.netPnl:netD;
+    const htb   = (fb&&fb.htb!=null)?fb.htb:htbD;
+    const comm  = (fb&&fb.commissions!=null)?fb.commissions:0;
+    const shares= (fb&&fb.shares!=null)?fb.shares:null;
+    const nT    = (fb&&fb.tradesCount!=null)?fb.tradesCount:null;
+    const wr    = (fb&&fb.winRate!=null)?fb.winRate:null;
+    const pf    = (fb&&fb.profitFactor!=null)?fb.profitFactor:null;
+    const lP    = (fb&&fb.longPnl!=null)?fb.longPnl:null;
+    const sP    = (fb&&fb.shortPnl!=null)?fb.shortPnl:null;
+    const best  = (fb&&fb.bestTicker)?fb.bestTicker:'';
+    const worst = (fb&&fb.worstTicker)?fb.worstTicker:'';
+    const rV    = (net!=null && sod) ? +(net/(sod*0.01)).toFixed(2) : null;
+    const pctV  = (net!=null && sod) ? +(net/sod*100).toFixed(2) : null;
+    const money = v => v==null?'—':(v<0?'-$':'$')+Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:2});
+    const col = v => v==null?'var(--muted)':(v>=0?'var(--green)':'var(--red)');
+    const K = (l,v,c,ac)=>`<div class="z-kpi" style="--ac:${ac||'var(--cyan)'}"><div class="z-kpi-l">${l}</div><div class="z-kpi-v" style="color:${c||'var(--text)'}">${v}</div></div>`;
+    document.getElementById('zDaySummary').innerHTML =
+      K('Gross PnL', money(gross), col(gross), 'var(--green)')+
+      K('Net PnL', money(net), col(net), 'var(--cyan)')+
+      K('HTB', money(htb), 'var(--red)', '#ff6b9d')+
+      K('Comisiones', money(comm), 'var(--muted2)', 'var(--muted2)')+
+      K('Shares', shares!=null?shares.toLocaleString('en-US'):'—', 'var(--text)', 'var(--blue)')+
+      K('Trades', nT!=null?nT:'—', 'var(--text)', 'var(--blue)')+
+      K('Win Rate', wr!=null?wr+'%':'—', 'var(--green)', 'var(--green)')+
+      K('Profit Factor', pf!=null?(pf===Infinity?'∞':pf):'—', col(pf===Infinity?1:pf), 'var(--gold)')+
+      K('PnL Long', money(lP), col(lP), 'var(--green)')+
+      K('PnL Short', money(sP), col(sP), 'var(--green)')+
+      K('Mejor Ticker', best||'—', 'var(--green)', 'var(--gold)')+
+      K('Peor Ticker', worst||'—', 'var(--red)', 'var(--red)')+
+      K('Resultado R', rV!=null?(rV>=0?'+':'')+rV+'R':'—', col(rV), 'var(--gold)')+
+      K('Resultado %', pctV!=null?(pctV>=0?'+':'')+pctV+'%':'—', col(pctV), 'var(--cyan)');
+  }
+
+  async function renderDayTradeCards(date){
+    let trades=[];
+    try{ trades = await getTradesFromFirebase(date); cacheTrades(date, trades); }
+    catch(e){ const c=readCacheTrades(date); if(c){ trades=c; zToast('⚠ Firebase sin conexión: trades desde caché'); } else { zErr(e); } }
+    renderTradeCardsList(date, trades);
+  }
+  function renderTradeCardsList(date, trades){
+    window.__zTrades = window.__zTrades || {}; window.__zTrades[date] = trades;
+    document.getElementById('zTradeCount').textContent = trades.length?('· '+trades.length):'';
+    const cont = document.getElementById('zTradeCards');
+    if(!trades.length){ cont.innerHTML = `<div style="grid-column:1/-1;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);padding:30px;text-align:center;border:1px dashed var(--border);border-radius:12px;">Sin trades. Pulsa «Importar ejecuciones del día» para reconstruirlos.</div>`; return; }
+    const money = v => (v<0?'-$':'$')+Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:2});
+    cont.innerHTML = trades.map((t,i)=>{
+      const sideCol = t.side==='LONG'?'var(--green)':'var(--red)';
+      const pnlCol = t.pnl>=0?'var(--green)':'var(--red)';
+      const mistakes = (t.mistakes&&t.mistakes.length)?t.mistakes.join(', '):'';
+      return `<div class="z-card" style="--side:${sideCol}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--gold);">${t.ticker}${t.openPosition?' <span style=\"font-size:10px;color:var(--red)\">●ABIERTA</span>':''}</div>
+          <span class="z-side" style="color:${sideCol}">${t.side}</span>
+        </div>
+        <div style="display:flex;gap:14px;align-items:baseline;margin-bottom:10px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:${pnlCol};">${money(t.pnl)}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:${pnlCol};">${t.r!=null?((t.r>=0?'+':'')+t.r+'R'):''}</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);line-height:1.7;">
+          ${t.shares?t.shares.toLocaleString('en-US'):'—'} sh · ${t.entryTime||'—'} → ${t.exitTime||'—'} · ${t.duration||''}<br>
+          Setup: <span style="color:var(--text)">${t.setup||'Sin setup'}</span> ${t.grade?('· Grade: <span style=\"color:var(--gold)\">'+t.grade+'</span>'):''}
+          ${mistakes?('<br>Mistakes: <span style=\"color:var(--red)\">'+mistakes+'</span>'):''}
+        </div>
+        <button class="z-btn" style="border:1px solid var(--cyan);background:transparent;color:var(--cyan);margin-top:12px;width:100%;justify-content:center;" onclick="openTradeDetail('${date}',${i})">Ver detalle</button>
+      </div>`;
+    }).join('');
+  }
+
+  // ── DETALLE TRADE (editable) ─────────────────────────────────────────────
+  const MISTAKES = ['FOMO','Size excesivo','Mal stop','Revenge trade','Entrada tarde','Salida mala','No respeté max loss ticker','Sin mistake'];
+  function openTradeDetail(date, idx){
+    const t = (window.__zTrades[date]||[])[idx]; if(!t) return;
+    window.__zEditing = { date, idx, id:t.id, imagePath:t.imagePath||'' };
+    const g = id => document.getElementById(id);
+    g('ztd_head').textContent = t.ticker+' · '+t.side;
+    g('ztd_ticker').value=t.ticker||''; g('ztd_side').value=t.side||'LONG'; g('ztd_date').value=t.date||date;
+    g('ztd_pnl').value=t.pnl??''; g('ztd_r').value=t.r??''; g('ztd_shares').value=t.shares??'';
+    g('ztd_avgEntry').value=t.avgEntry??''; g('ztd_avgExit').value=t.avgExit??''; g('ztd_duration').value=t.duration||'';
+    g('ztd_entryTime').value=t.entryTime||''; g('ztd_exitTime').value=t.exitTime||''; g('ztd_grade').value=t.grade||'';
+    g('ztd_setup').value=t.setup||''; g('ztd_well').value=t.whatWentWell||''; g('ztd_wrong').value=t.whatWentWrong||'';
+    g('ztd_improve').value=t.whatToImprove||''; g('ztd_notes').value=t.notes||'';
+    g('ztd_mistakes').innerHTML = MISTAKES.map(m=>{
+      const on=(t.mistakes||[]).indexOf(m)>=0;
+      return `<span class="z-chip ${on?'on':''}" onclick="this.classList.toggle('on')">${m}</span>`;
+    }).join('');
+    const iw=g('ztd_imgWrap');
+    iw.innerHTML = t.imageUrl ? `<img src="${t.imageUrl}" style="max-width:100%;border-radius:10px;border:1px solid var(--border);"><button class="z-btn" style="border:1px solid var(--red);background:#ff3d5715;color:var(--red);margin-top:8px;" onclick="zDeleteTradeImage()">🗑 Borrar imagen</button>` : '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);">Sin imagen</span>';
+    g('ztd_imgInput').value='';
+    document.getElementById('tradeDetailModal').style.display='flex';
+  }
+  function closeTradeDetail(){ document.getElementById('tradeDetailModal').style.display='none'; }
+
+  async function saveTradeDetailChanges(){
+    const e = window.__zEditing; if(!e) return;
+    const g = id => document.getElementById(id);
+    const mistakes = Array.from(g('ztd_mistakes').querySelectorAll('.z-chip.on')).map(c=>c.textContent);
+    const data = {
+      ticker:g('ztd_ticker').value.trim().toUpperCase(), side:g('ztd_side').value,
+      pnl:parseFloat(g('ztd_pnl').value)||0, r:g('ztd_r').value!==''?parseFloat(g('ztd_r').value):null,
+      shares:parseInt(g('ztd_shares').value)||0,
+      avgEntry:parseFloat(g('ztd_avgEntry').value)||0, avgExit:parseFloat(g('ztd_avgExit').value)||0,
+      duration:g('ztd_duration').value, entryTime:g('ztd_entryTime').value, exitTime:g('ztd_exitTime').value,
+      grade:g('ztd_grade').value, setup:g('ztd_setup').value, mistakes,
+      whatWentWell:g('ztd_well').value, whatWentWrong:g('ztd_wrong').value,
+      whatToImprove:g('ztd_improve').value, notes:g('ztd_notes').value,
+    };
+    try{
+      await updateTradeInFirebase(e.date, e.id, data);
+      const file = g('ztd_imgInput').files[0];
+      if(file){ zToast('⏳ Subiendo imagen…'); await uploadTradeImageToStorage(e.date, e.id, file); }
+      zToast('✓ Trade guardado');
+      closeTradeDetail();
+      renderDayTradeCards(e.date);
+    }catch(err){ zErr(err); }
+  }
+  async function zDeleteTradeImage(){
+    const e = window.__zEditing; if(!e) return;
+    try{ await deleteTradeImageFromFirebase(e.date, e.id, e.imagePath); document.getElementById('ztd_imgWrap').innerHTML='<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);">Sin imagen</span>'; zToast('✓ Imagen borrada'); renderDayTradeCards(e.date); }
+    catch(err){ zErr(err); }
+  }
+
+  // ── Exponer al ámbito global (onclick inline) ────────────────────────────
+  window.getCurrentUserId = getCurrentUserId;
+  window.saveDayToFirebase = saveDayToFirebase;
+  window.getDayFromFirebase = getDayFromFirebase;
+  window.saveTradeToFirebase = saveTradeToFirebase;
+  window.getTradesFromFirebase = getTradesFromFirebase;
+  window.updateTradeInFirebase = updateTradeInFirebase;
+  window.uploadTradeImageToStorage = uploadTradeImageToStorage;
+  window.deleteTradeImageFromFirebase = deleteTradeImageFromFirebase;
+  window.importDailyTotalsFile = importDailyTotalsFile;
+  window.importDailyExecutionsFile = importDailyExecutionsFile;
+  window.reconstructTradesFromExecutions = reconstructTradesFromExecutions;
+  window.calculateDayStats = calculateDayStats;
+  window.calculateProfitFactor = calculateProfitFactor;
+  window.calculateLongShortStats = calculateLongShortStats;
+  // ── RESUMEN DEL DÍA (inline bajo el calendario) ──────────────────────────
+  let __calSelectedDay = null;
+  function intradaySeriesFromTrades(trades){
+    const sorted = trades.slice().sort((a,b)=> (String(a.entryTime)>String(b.entryTime)?1:(String(a.entryTime)<String(b.entryTime)?-1:0)));
+    let cum=0; const pts=[{label:'Inicio', v:0}];
+    sorted.forEach(t=>{ cum += (+t.pnl||0); pts.push({label:(t.ticker||'')+' '+(t.exitTime||''), v:+cum.toFixed(2)}); });
+    return pts;
+  }
+  function runupDrawdown(series){
+    let peak=0, maxRun=0, maxDD=0;
+    series.forEach(p=>{ maxRun=Math.max(maxRun,p.v); peak=Math.max(peak,p.v); maxDD=Math.max(maxDD, peak-p.v); });
+    return { runup:maxRun, drawdown:maxDD };
+  }
+  function dayCurveSVG(series){
+    if(!series || series.length<2) return '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);padding:24px;text-align:center;border:1px dashed var(--border);border-radius:12px;">Importa las ejecuciones del día para ver la curva intradía.</div>';
+    const w=680,h=190,padL=52,padR=14,padT=16,padB=22;
+    const vals=series.map(p=>p.v);
+    const min=Math.min(...vals,0), max=Math.max(...vals,0), span=(max-min)||1;
+    const X=i=> padL + i*(w-padL-padR)/(series.length-1);
+    const Y=v=> padT + (1-(v-min)/span)*(h-padT-padB);
+    const line = series.map((p,i)=> (i?'L':'M')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+    const area = 'M'+X(0).toFixed(1)+' '+Y(0).toFixed(1)+' '+series.map((p,i)=>'L'+X(i).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ')+' L'+X(series.length-1).toFixed(1)+' '+Y(0).toFixed(1)+' Z';
+    const finalV=vals[vals.length-1];
+    const col = finalV>=0?'var(--green)':'var(--red)';
+    const zeroY=Y(0).toFixed(1);
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;display:block;">
+      <line x1="${padL}" y1="${zeroY}" x2="${w-padR}" y2="${zeroY}" stroke="var(--border)" stroke-dasharray="3 3"/>
+      <path d="${area}" fill="${col}" opacity="0.10"/>
+      <path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="6" y="${(Y(max)+4).toFixed(1)}" fill="var(--muted2)" font-size="9" font-family="'DM Mono',monospace">${fd(max)}</text>
+      <text x="6" y="${(Y(min)+4).toFixed(1)}" fill="var(--muted2)" font-size="9" font-family="'DM Mono',monospace">${fd(min)}</text>
+      <text x="6" y="${zeroY}" fill="var(--muted)" font-size="8" font-family="'DM Mono',monospace">0</text>
+    </svg>`;
+  }
+  async function selectCalendarDay(date){
+    __calSelectedDay = date;
+    const cont = document.getElementById('calDaySummary');
+    cont.style.display='block';
+    cont.innerHTML = '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted2);padding:10px;">Cargando resumen de '+date+'…</div>';
+    cont.scrollIntoView({behavior:'smooth', block:'start'});
+    const row = D[date] || {};
+    const gross = pd(row.pnlDay);
+    const htb = pd(row.htb)||0;
+    const net = gross!=null ? gross-htb : null;
+    let trades=[], fb=null;
+    try{ trades = await getTradesFromFirebase(date); }catch(e){}
+    try{ fb = await getDayFromFirebase(date); }catch(e){}
+    const closed = trades.filter(t=>!t.openPosition);
+    const stats = closed.length ? calculateDayStats(trades) : null;
+    const series = closed.length ? intradaySeriesFromTrades(closed) : null;
+    const rud = series ? runupDrawdown(series) : null;
+    renderCalDaySummary({ date, gross, net, htb,
+      comm:(fb&&fb.commissions!=null)?fb.commissions:null, stats, series, rud });
+  }
+  function renderCalDaySummary(o){
+    const money = v => v==null?'—':(v<0?'-$':'$')+Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:2});
+    const col = v => v==null?'var(--text)':(v>=0?'var(--green)':'var(--red)');
+    const s = o.stats;
+    const nT = s?s.tradesCount:(D[o.date]&&D[o.date].tradesCount!=null?D[o.date].tradesCount:null);
+    const wins = s?s.winTrades:null, losses = s?s.lossTrades:null, wr = s?s.winRate:null;
+    const pf = s?(s.profitFactor===Infinity?'∞':s.profitFactor):null;
+    const K=(l,v,c,ac)=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${ac||'var(--cyan)'}"></div><div style="font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">${l}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;line-height:1;color:${c||'var(--text)'}">${v}</div></div>`;
+    document.getElementById('calDaySummary').innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;">📋 RESUMEN DEL DÍA · ${o.date}</div>
+        <button onclick="openDayDetail('${o.date}')" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:7px;border:1px solid var(--cyan);background:#00b0ff15;color:var(--cyan);cursor:pointer;">Ver tarjetas de trades →</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px;margin-bottom:20px;">
+        ${K('Total Trades', nT!=null?nT:'—', 'var(--text)','var(--blue)')}
+        ${K('Ganadores', wins!=null?wins:'—', 'var(--green)','var(--green)')}
+        ${K('Perdedores', losses!=null?losses:'—', 'var(--red)','var(--red)')}
+        ${K('Win Rate', wr!=null?wr+'%':'—', 'var(--green)','var(--green)')}
+        ${K('PnL Gross', money(o.gross), col(o.gross),'var(--green)')}
+        ${K('PnL Net', money(o.net), col(o.net),'var(--cyan)')}
+        ${K('HTB', money(o.htb), 'var(--red)','#ff6b9d')}
+        ${K('Comisiones', money(o.comm), 'var(--muted2)','var(--muted2)')}
+        ${K('Profit Factor', pf!=null?pf:'—', 'var(--gold)','var(--gold)')}
+        ${K('Máx Runup', o.rud?money(o.rud.runup):'—', 'var(--green)','var(--green)')}
+        ${K('Máx Drawdown', o.rud?money(-o.rud.drawdown):'—', 'var(--red)','var(--red)')}
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;">Curva intradía (PnL acumulado por trade)</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;">${dayCurveSVG(o.series)}</div>
+    `;
+  }
+  window.selectCalendarDay = selectCalendarDay;
+  window.renderCalDaySummary = renderCalDaySummary;
+  window.openDayDetail = openDayDetail;
+  window.hideDayDetail = hideDayDetail;
+  window.renderSelectedDaySummary = renderSelectedDaySummary;
+  window.renderDayTradeCards = renderDayTradeCards;
+  window.openTradeDetail = openTradeDetail;
+  window.closeTradeDetail = closeTradeDetail;
+  window.saveTradeDetailChanges = saveTradeDetailChanges;
+  window.zDeleteTradeImage = zDeleteTradeImage;
+  window.zOpenTotalsImport = ()=>document.getElementById('zTotalsFileInput').click();
+})();
+</script>
+<!-- ══ /MÓDULO IMPORTACIÓN ZIMTRA/DAS ════════════════════════════════════════ -->
 
 </body>
 </html>
