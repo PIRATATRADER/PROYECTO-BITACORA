@@ -174,13 +174,13 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 .prog-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold),#ffcc02);transition:width 1s ease;}
 
 /* ── OBJETIVO / AFTER-HOURS OVERLAYS ── */
-#objetivoOverlay,#afterHoursOverlay{
+#__removedOverlay__{
   display:none;position:fixed;inset:0;z-index:9999;
   background:rgba(0,0,0,.88);backdrop-filter:blur(8px);
   align-items:center;justify-content:center;
   animation:fadeInOv .35s ease;
 }
-#objetivoOverlay.show,#afterHoursOverlay.show{display:flex;}
+
 @keyframes fadeInOv{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
 .ov-box{
   max-width:560px;width:90%;border-radius:20px;padding:40px 44px;
@@ -408,11 +408,6 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
 <div class="wrap">
 
 <a class="back" href="proyecto_bitacora_home.html">← Inicio</a>
-<div id="lossTickerReminder" style="display:none;margin:10px auto 0;max-width:1400px;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.4);border-radius:10px;padding:10px 16px;font-family:'DM Mono',monospace;font-size:13px;color:#ff6b6b;text-align:center;letter-spacing:.5px;">
-  🔔 <b>LUNES</b> — Fija el <b>LOSS TICKER</b> de la semana (3% del SOD del lunes, vale toda la semana).
-  <span onclick="this.parentElement.style.display='none'" style="cursor:pointer;margin-left:14px;opacity:.6;font-weight:bold;">✕</span>
-</div>
-
 <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px 14px;">
   <div style="width:200px;"></div>
   <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
@@ -5944,7 +5939,7 @@ function renderRPerSymbol(monthIdx) {
 }
 
 function renderAll(){ renderMain(); renderObj(); renderYear(); initTradeImgs(); initPdfs(); showLossReminder(); }
-function showLossReminder(){ const el=document.getElementById('lossTickerReminder'); if(el) el.style.display=(new Date().getDay()===1)?'block':'none'; }
+function showLossReminder(){ const el=document.getElementById('lossTickerReminder'); if(el) el.style.display='none'; }
 
 let _tradeModalKey = null;
 
@@ -7709,6 +7704,7 @@ function renderLongSide(monthIdx) {
     </div>
     <div id="calendarGrid"></div>
     <div id="calDaySummary" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);"></div>
+    <div id="calDayTickerCards" style="display:none;margin-top:24px;"></div>
   </div>
 </div>
 
@@ -9881,6 +9877,7 @@ function updateCostDisplay() {
 
 // ── OVERLAY: OBJETIVO DEL DÍA CUMPLIDO ───────────────────────────────────────
 function checkObjetivoAlert(k) {
+  return; // aviso de objetivo desactivado
   const row = D[k] || {};
   const pnl = pd(row.pnlDay);
   const sod = pd(row.startOfDay);
@@ -9907,108 +9904,15 @@ function checkObjetivoAlert(k) {
   }
 }
 
-function cerrarObjetivoOverlay() {
-  document.getElementById('objetivoOverlay').classList.remove('show');
-}
+function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOverlay'); if(_o) _o.classList.remove('show'); }
 
-// ── OVERLAY: AFTER-HOURS (después 14:00 Madrid) ──────────────────────────────
-const AFTER_MSGS = [
-  { emoji: '🐕', title: 'SACA AL PERRO', msg: 'Lleva al perro a pasear. El mercado seguirá mañana —<br>tu perro <b>te necesita ahora</b>.' },
-  { emoji: '🏠', title: 'CUIDA LA CASA', msg: 'Hay cosas pendientes en casa. <b>La casa es tu base</b> —<br>mantenla en orden y tu mente también lo estará.' },
-  { emoji: '💻', title: 'MEJORA TUS APPS', msg: 'Una hora de mejora en tu bitácora o tus herramientas<br>vale más que una hora de trading en la tarde.' },
-  { emoji: '🤖', title: 'TRADING ALGORÍTMICO', msg: 'Dedica tiempo a mejorar tus sistemas.<br><b>El algoritmo trabaja cuando tú duermes.</b>' },
-  { emoji: '📈', title: 'TRADING DISCRECIONAL', msg: 'Revisa tus setups, estudia gráficas.<br><b>El estudio de hoy es el edge de mañana.</b>' },
-  { emoji: '🧘', title: 'DESCANSA LA MENTE', msg: 'Un trader descansado toma mejores decisiones.<br><b>El descanso es parte del proceso.</b>' },
-  { emoji: '🚶', title: 'CAMINA UN RATO', msg: 'Sal a la calle, despeja la cabeza.<br><b>Las mejores ideas no vienen delante de la pantalla.</b>' },
-  { emoji: '📚', title: 'LEE / APRENDE', msg: 'Un libro de trading, psicología o finanzas.<br><b>Invertir en conocimiento siempre da el mejor retorno.</b>' },
-];
-let afterMsgIdx = 0;
-let afterHoursIntervalId = null;
-let afterHoursDismissCount = 0;
-let afterHoursSilencedDay = null;
 
-function getMadridMinutes() {
-  const str = new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false });
-  const [h, m] = str.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function showAfterHoursReminder() {
-  const mins = getMadridMinutes();
-  if (mins < 14 * 60 || mins >= 22 * 60) return; // solo entre 14:00 y 22:00
-  // Silenciado si ya cerró 3 veces hoy
-  const todayStr = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' });
-  if (afterHoursSilencedDay === todayStr) return;
-  const m = AFTER_MSGS[afterMsgIdx % AFTER_MSGS.length];
-  afterMsgIdx++;
-  const ov = document.getElementById('afterHoursOverlay');
-  document.getElementById('ahEmoji').textContent = m.emoji;
-  document.getElementById('ahTitle').textContent = m.title;
-  document.getElementById('ahMsg').innerHTML = m.msg;
-  const t = new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' });
-  document.getElementById('ahTime').textContent = 'Son las ' + t + ' (Madrid). Tu jornada laboral terminó a las 14:00.';
-  ov.classList.add('show');
-}
-
-function cerrarAfterHoursOverlay(confirmed) {
-  document.getElementById('afterHoursOverlay').classList.remove('show');
-  if (confirmed) {
-    afterHoursDismissCount++;
-    if (afterHoursDismissCount >= 3) {
-      afterHoursSilencedDay = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' });
-      showToast('🔕 Sin más avisos hasta mañana. ¡Disfruta!');
-    }
-  }
-}
-
-function startAfterHoursWatcher() {
-  // Check every 30 minutes
-  setInterval(() => {
-    const mins = getMadridMinutes();
-    if (mins >= 14 * 60) showAfterHoursReminder();
-  }, 30 * 60 * 1000);
-
-  // Also check immediately if already in the 14:00–22:00 window
-  setTimeout(() => {
-    const mins = getMadridMinutes();
-    if (mins >= 14 * 60 && mins < 22 * 60) showAfterHoursReminder();
-  }, 3000);
-}
-
-// Arrancar el watcher cuando la página carga
-document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
 
 </script>
 
-<!-- ── OVERLAY: OBJETIVO CUMPLIDO ─────────────────────────────────────────── -->
-<div id="objetivoOverlay" onclick="if(event.target===this)cerrarObjetivoOverlay()">
-  <div class="ov-box obj">
-    <div class="ov-emoji">🏆</div>
-    <div class="ov-title">OBJETIVO CUMPLIDO</div>
-    <div class="ov-sub">Has alcanzado el trabajo bien hecho del día.<br>Ya puedes cerrar las pantallas.</div>
-    <div class="ov-pnl" id="ovPNL">+$0</div>
-    <div class="ov-msg">
-      <b>🎯 Objetivo superado:</b> <span id="ovTarget">—</span> · <b>HTB cubierto:</b> <span id="ovHTB">—</span> · <b>R conseguida:</b> <span id="ovR">—</span><br><br>
-      Has hecho tu trabajo. El mercado seguirá mañana.<br>
-      <b>Seguir operando ahora es perseguir dinero extra, no hacer tu trabajo.</b><br><br>
-      Sal a pasear al perro, disfruta del día. 🐕☀️
-    </div>
-    <button class="ov-close" onclick="cerrarObjetivoOverlay()">ENTENDIDO — CIERRO PANTALLAS</button>
-    <button class="ov-dismiss" onclick="cerrarObjetivoOverlay()">ignorar y seguir operando (bajo tu responsabilidad)</button>
-  </div>
-</div>
 
-<!-- ── OVERLAY: AFTER-HOURS ───────────────────────────────────────────────── -->
-<div id="afterHoursOverlay" onclick="if(event.target===this)cerrarAfterHoursOverlay()">
-  <div class="ov-box after">
-    <div class="ov-emoji" id="ahEmoji">🐕</div>
-    <div class="ov-title" id="ahTitle">SACA AL PERRO</div>
-    <div class="ov-sub" id="ahTime">Son las 14:30 (Madrid). Tu jornada laboral terminó a las 14:00.</div>
-    <div class="ov-msg" style="margin-top:16px;" id="ahMsg">—</div>
-    <button class="ov-close" onclick="cerrarAfterHoursOverlay(true)">SÍ, VOY A DESCONECTAR</button>
-    <button class="ov-dismiss" onclick="cerrarAfterHoursOverlay(false)">Cerrar — seguiré un poco más</button>
-  </div>
-</div>
+
+
 
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -10094,20 +9998,29 @@ document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
     </div>
     <div class="z-field"><label>Setup</label><input id="ztd_setup" placeholder="Sin setup"></div>
     <div class="z-field"><label>Mistakes</label><div id="ztd_mistakes" style="display:flex;flex-wrap:wrap;gap:7px;"></div></div>
+    <div style="margin:8px 0 12px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--cyan);border-top:1px solid var(--border);padding-top:14px;">🔍 ANÁLISIS DEL TRADE</div>
+    <div class="z-field"><label>¿Por qué entré?</label><textarea id="ztd_why"></textarea></div>
     <div class="z-grid2">
-      <div class="z-field"><label>Qué hice bien</label><textarea id="ztd_well"></textarea></div>
-      <div class="z-field"><label>Qué hice mal</label><textarea id="ztd_wrong"></textarea></div>
+      <div class="z-field"><label>¿Dónde debía estar el stop?</label><textarea id="ztd_stop"></textarea></div>
+      <div class="z-field"><label>¿Respeté el plan?</label><textarea id="ztd_plan"></textarea></div>
     </div>
-    <div class="z-field"><label>Qué haría distinto</label><textarea id="ztd_improve"></textarea></div>
+    <div class="z-grid2">
+      <div class="z-field"><label>¿Qué hice bien?</label><textarea id="ztd_well"></textarea></div>
+      <div class="z-field"><label>¿Qué hice mal?</label><textarea id="ztd_wrong"></textarea></div>
+    </div>
+    <div class="z-field"><label>¿Qué haría distinto la próxima vez?</label><textarea id="ztd_improve"></textarea></div>
     <div class="z-field"><label>Notas personales</label><textarea id="ztd_notes"></textarea></div>
     <div class="z-field">
       <label>Imagen del gráfico</label>
       <div id="ztd_imgWrap" style="margin-bottom:8px;"></div>
       <input type="file" id="ztd_imgInput" accept="image/*" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);">
     </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
-      <button class="z-btn" style="border:1px solid var(--border);background:transparent;color:var(--muted2);" onclick="closeTradeDetail()">Cancelar</button>
-      <button class="z-btn" style="border:1px solid var(--green);background:#00e67615;color:var(--green);" onclick="saveTradeDetailChanges()">💾 Guardar</button>
+    <div style="display:flex;gap:10px;justify-content:space-between;margin-top:8px;flex-wrap:wrap;">
+      <button class="z-btn" style="border:1px solid var(--cyan);background:transparent;color:var(--cyan);" onclick="closeTradeDetail()">← Volver al resumen del día</button>
+      <div style="display:flex;gap:10px;">
+        <button class="z-btn" style="border:1px solid var(--border);background:transparent;color:var(--muted2);" onclick="closeTradeDetail()">Cancelar</button>
+        <button class="z-btn" style="border:1px solid var(--green);background:#00e67615;color:var(--green);" onclick="saveTradeDetailChanges()">💾 Guardar cambios</button>
+      </div>
     </div>
   </div>
 </div>
@@ -10636,26 +10549,31 @@ document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
 
   // ── DETALLE TRADE (editable) ─────────────────────────────────────────────
   const MISTAKES = ['FOMO','Size excesivo','Mal stop','Revenge trade','Entrada tarde','Salida mala','No respeté max loss ticker','Sin mistake'];
-  function openTradeDetail(date, idx){
-    const t = (window.__zTrades[date]||[])[idx]; if(!t) return;
-    window.__zEditing = { date, idx, id:t.id, imagePath:t.imagePath||'' };
+  function openTradeDetailObj(date, t){
+    if(!t) return;
+    const ov = ((D[date]&&D[date].tradeDetails)||{})[t.id] || {};
+    const tt = Object.assign({}, t, ov); // overrides locales (localStorage) mandan en lo editado
+    window.__zEditing = { date, id:t.id, imagePath:tt.imagePath||t.imagePath||'' };
     const g = id => document.getElementById(id);
-    g('ztd_head').textContent = t.ticker+' · '+t.side;
-    g('ztd_ticker').value=t.ticker||''; g('ztd_side').value=t.side||'LONG'; g('ztd_date').value=t.date||date;
-    g('ztd_pnl').value=t.pnl??''; g('ztd_r').value=t.r??''; g('ztd_shares').value=t.shares??'';
-    g('ztd_avgEntry').value=t.avgEntry??''; g('ztd_avgExit').value=t.avgExit??''; g('ztd_duration').value=t.duration||'';
-    g('ztd_entryTime').value=t.entryTime||''; g('ztd_exitTime').value=t.exitTime||''; g('ztd_grade').value=t.grade||'';
-    g('ztd_setup').value=t.setup||''; g('ztd_well').value=t.whatWentWell||''; g('ztd_wrong').value=t.whatWentWrong||'';
-    g('ztd_improve').value=t.whatToImprove||''; g('ztd_notes').value=t.notes||'';
+    g('ztd_head').textContent = (tt.ticker||'')+' · '+(tt.side||'');
+    g('ztd_ticker').value=tt.ticker||''; g('ztd_side').value=tt.side||'LONG'; g('ztd_date').value=tt.date||date;
+    g('ztd_pnl').value=tt.pnl??''; g('ztd_r').value=tt.r??''; g('ztd_shares').value=tt.shares??'';
+    g('ztd_avgEntry').value=tt.avgEntry??''; g('ztd_avgExit').value=tt.avgExit??''; g('ztd_duration').value=tt.duration||'';
+    g('ztd_entryTime').value=tt.entryTime||''; g('ztd_exitTime').value=tt.exitTime||''; g('ztd_grade').value=tt.grade||'';
+    g('ztd_setup').value=tt.setup||'';
+    g('ztd_why').value=tt.whyEntered||''; g('ztd_stop').value=tt.stopPlan||''; g('ztd_plan').value=tt.followedPlan||'';
+    g('ztd_well').value=tt.whatWentWell||''; g('ztd_wrong').value=tt.whatWentWrong||'';
+    g('ztd_improve').value=tt.whatToImprove||''; g('ztd_notes').value=tt.notes||'';
     g('ztd_mistakes').innerHTML = MISTAKES.map(m=>{
-      const on=(t.mistakes||[]).indexOf(m)>=0;
+      const on=(tt.mistakes||[]).indexOf(m)>=0;
       return `<span class="z-chip ${on?'on':''}" onclick="this.classList.toggle('on')">${m}</span>`;
     }).join('');
     const iw=g('ztd_imgWrap');
-    iw.innerHTML = t.imageUrl ? `<img src="${t.imageUrl}" style="max-width:100%;border-radius:10px;border:1px solid var(--border);"><button class="z-btn" style="border:1px solid var(--red);background:#ff3d5715;color:var(--red);margin-top:8px;" onclick="zDeleteTradeImage()">🗑 Borrar imagen</button>` : '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);">Sin imagen</span>';
+    iw.innerHTML = tt.imageUrl ? `<img src="${tt.imageUrl}" style="max-width:100%;border-radius:10px;border:1px solid var(--border);"><button class="z-btn" style="border:1px solid var(--red);background:#ff3d5715;color:var(--red);margin-top:8px;" onclick="zDeleteTradeImage()">🗑 Borrar imagen</button>` : '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);">Sin imagen</span>';
     g('ztd_imgInput').value='';
     document.getElementById('tradeDetailModal').style.display='flex';
   }
+  function openTradeDetail(date, idx){ openTradeDetailObj(date, (window.__zTrades[date]||[])[idx]); }
   function closeTradeDetail(){ document.getElementById('tradeDetailModal').style.display='none'; }
 
   async function saveTradeDetailChanges(){
@@ -10669,17 +10587,31 @@ document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
       avgEntry:parseFloat(g('ztd_avgEntry').value)||0, avgExit:parseFloat(g('ztd_avgExit').value)||0,
       duration:g('ztd_duration').value, entryTime:g('ztd_entryTime').value, exitTime:g('ztd_exitTime').value,
       grade:g('ztd_grade').value, setup:g('ztd_setup').value, mistakes,
+      whyEntered:g('ztd_why').value, stopPlan:g('ztd_stop').value, followedPlan:g('ztd_plan').value,
       whatWentWell:g('ztd_well').value, whatWentWrong:g('ztd_wrong').value,
       whatToImprove:g('ztd_improve').value, notes:g('ztd_notes').value,
     };
+    // Persistir en localStorage (junto con D) — fuente local; Firestore como respaldo
+    try{
+      if(!D[e.date]) D[e.date]={};
+      if(!D[e.date].tradeDetails) D[e.date].tradeDetails={};
+      D[e.date].tradeDetails[e.id]=Object.assign({}, D[e.date].tradeDetails[e.id], data);
+      save();
+    }catch(err){ console.warn('save tradeDetails', err); }
     try{
       await updateTradeInFirebase(e.date, e.id, data);
       const file = g('ztd_imgInput').files[0];
-      if(file){ zToast('⏳ Subiendo imagen…'); await uploadTradeImageToStorage(e.date, e.id, file); }
+      if(file){ zToast('⏳ Subiendo imagen…'); const url=await uploadTradeImageToStorage(e.date, e.id, file);
+        try{ D[e.date].tradeDetails[e.id].imageUrl=url; save(); }catch(_){} }
       zToast('✓ Trade guardado');
       closeTradeDetail();
-      renderDayTradeCards(e.date);
-    }catch(err){ zErr(err); }
+      try{ renderDayTradeCards(e.date); }catch(_){}
+      try{ if(window.refreshTickerCards) window.refreshTickerCards(); }catch(_){}
+    }catch(err){
+      // aunque Firestore falle, ya quedó en localStorage
+      zToast('✓ Guardado en local (Firebase no disponible)'); closeTradeDetail();
+      try{ if(window.refreshTickerCards) window.refreshTickerCards(); }catch(_){}
+    }
   }
   async function zDeleteTradeImage(){
     const e = window.__zEditing; if(!e) return;
@@ -10755,6 +10687,12 @@ document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
     const rud = series ? runupDrawdown(series) : null;
     renderCalDaySummary({ date, gross, net, htb,
       comm:(fb&&fb.commissions!=null)?fb.commissions:null, stats, series, rud });
+    // Tarjetas agrupadas por ticker
+    const groups = groupByTicker(closed);
+    window.__calDayTrades = { date, byTicker:{} };
+    groups.forEach(g=> window.__calDayTrades.byTicker[g.ticker]=g.trades);
+    window.__calDayGroups = groups;
+    renderDayTickerCards(date, groups);
   }
   function renderCalDaySummary(o){
     const money = v => v==null?'—':(v<0?'-$':'$')+Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:2});
@@ -10786,6 +10724,126 @@ document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;">${dayCurveSVG(o.series)}</div>
     `;
   }
+  // ── TARJETAS POR TICKER (clasificación guardada en D → localStorage+Firestore) ──
+  const Z_GRADES = ['A++','A+','A','B','C'];
+  const Z_SETUPS = ['SIR vs AFTER','Gap & Crap','PMH Fail','Liquidity Trap','VWAP Reject','Long scalp','Sin setup'];
+  const Z_MISTAKES = ['FOMO','Size excesivo','Mal stop','Revenge trade','No respeté max loss ticker','Entrada tarde','Salida mala','Sin mistake'];
+
+  function groupByTicker(trades){
+    const g={};
+    trades.forEach(t=>{
+      const k=t.ticker||'—';
+      if(!g[k]) g[k]={ticker:k,count:0,pnl:0,longPnl:0,shortPnl:0,longCount:0,shortCount:0,trades:[]};
+      const p=(+t.pnl||0);
+      g[k].count++; g[k].pnl+=p; g[k].trades.push(t);
+      if(t.side==='LONG'){ g[k].longPnl+=p; g[k].longCount++; } else { g[k].shortPnl+=p; g[k].shortCount++; }
+    });
+    return Object.values(g).map(x=>{ x.pnl=+x.pnl.toFixed(2); x.longPnl=+x.longPnl.toFixed(2); x.shortPnl=+x.shortPnl.toFixed(2); return x; })
+                           .sort((a,b)=>b.pnl-a.pnl);
+  }
+  function getTickerMeta(date,ticker){
+    const tc=(D[date]&&D[date].tickerCards)||{};
+    return Object.assign({grade:'',setup:'Sin setup',mistakes:[]}, tc[ticker]||{});
+  }
+  function setTickerMeta(date,ticker,meta){
+    if(!D[date]) D[date]={};
+    if(!D[date].tickerCards) D[date].tickerCards={};
+    D[date].tickerCards[ticker]=meta;
+    try{ save(); }catch(e){ console.warn('save tickerCards', e); } // localStorage + Firestore
+  }
+  function setTickerGrade(date,ticker,grade){
+    const m=getTickerMeta(date,ticker); m.grade = (m.grade===grade)?'':grade; setTickerMeta(date,ticker,m); refreshTickerCards();
+  }
+  function setTickerSetup(date,ticker,value){
+    const m=getTickerMeta(date,ticker); m.setup=value; setTickerMeta(date,ticker,m);
+  }
+  function toggleTickerMistake(date,ticker,mk){
+    const m=getTickerMeta(date,ticker); let arr=m.mistakes||[];
+    if(mk==='Sin mistake'){ arr = arr.indexOf('Sin mistake')>=0?[]:['Sin mistake']; }
+    else { arr = arr.filter(x=>x!=='Sin mistake'); const i=arr.indexOf(mk); if(i>=0) arr.splice(i,1); else arr.push(mk); }
+    m.mistakes=arr; setTickerMeta(date,ticker,m); refreshTickerCards();
+  }
+  function refreshTickerCards(){ if(window.__calSelectedDay&&window.__calDayGroups) renderDayTickerCards(window.__calSelectedDay, window.__calDayGroups); }
+
+  function renderDayTickerCards(date, groups){
+    const cont=document.getElementById('calDayTickerCards');
+    cont.style.display='block';
+    const money = v => (v<0?'-$':'$')+Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:2});
+    if(!groups || !groups.length){
+      cont.innerHTML='<div style="font-family:\'DM Mono\',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;">Trades por ticker</div><div style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--muted);padding:24px;text-align:center;border:1px dashed var(--border);border-radius:12px;">Sin trades importados para este día. Importa las ejecuciones del día.</div>';
+      return;
+    }
+    const cards = groups.map(g=>{
+      const meta=getTickerMeta(date,g.ticker);
+      const pnlCol=g.pnl>=0?'var(--green)':'var(--red)';
+      const grades = Z_GRADES.map(gr=>{
+        const on=meta.grade===gr;
+        return `<span onclick="setTickerGrade('${date}','${g.ticker}','${gr}')" style="cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;padding:4px 9px;border-radius:7px;border:1px solid ${on?'var(--gold)':'var(--border)'};background:${on?'#f5a62320':'var(--bg3)'};color:${on?'var(--gold)':'var(--muted2)'};">${gr}</span>`;
+      }).join('');
+      const setupOpts = Z_SETUPS.map(s=>`<option ${meta.setup===s?'selected':''}>${s}</option>`).join('');
+      const mistakes = Z_MISTAKES.map(mk=>{
+        const on=(meta.mistakes||[]).indexOf(mk)>=0;
+        return `<span onclick="toggleTickerMistake('${date}','${g.ticker}','${mk.replace(/'/g,"\\'")}')" style="cursor:pointer;font-family:'DM Mono',monospace;font-size:9.5px;padding:4px 9px;border-radius:20px;border:1px solid ${on?'var(--red)':'var(--border)'};background:${on?'#ff3d5715':'var(--bg3)'};color:${on?'var(--red)':'var(--muted2)'};">${mk}</span>`;
+      }).join('');
+      return `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;bottom:0;width:3px;background:${pnlCol};"></div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;">
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;color:var(--gold);line-height:1;">${g.ticker}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:4px;">${g.count} trade${g.count===1?'':'s'}</div>
+          </div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:${pnlCol};line-height:1;">${money(g.pnl)}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div style="background:#ff3d5710;border:1px solid #ff3d5740;border-radius:9px;padding:8px 10px;">
+            <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:var(--red);">SHORT · ${g.shortCount}</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${g.shortPnl>=0?'var(--green)':'var(--red)'};">${money(g.shortPnl)}</div>
+          </div>
+          <div style="background:#00e67610;border:1px solid #00e67640;border-radius:9px;padding:8px 10px;">
+            <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:var(--green);">LONG · ${g.longCount}</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${g.longPnl>=0?'var(--green)':'var(--red)'};">${money(g.longPnl)}</div>
+          </div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px;">Grade</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${grades}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px;">Setup</div>
+        <select onchange="setTickerSetup('${date}','${g.ticker}',this.value)" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;margin-bottom:12px;">${setupOpts}</select>
+        <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px;">Mistakes</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">${mistakes}</div>
+        <button onclick="openTickerExecChart('${date}','${g.ticker}')" style="width:100%;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:8px;border-radius:8px;border:1px solid var(--cyan);background:#00b0ff15;color:var(--cyan);cursor:pointer;">📈 Ver gráfico de ejecuciones</button>
+      </div>`;
+    }).join('');
+    cont.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:12px;">Trades por ticker</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;">${cards}</div>`;
+  }
+
+  function openTickerExecChart(date,ticker){
+    const trades=((window.__calDayTrades||{}).byTicker||{})[ticker]||[];
+    document.getElementById('tickerChartTitle').textContent='📈 '+ticker+' · '+date;
+    const series=intradaySeriesFromTrades(trades);
+    const sorted=trades.slice().sort((a,b)=>String(a.entryTime)>String(b.entryTime)?1:-1);
+    window.__tickerChartTrades=sorted;
+    const rows=sorted.map((t,i)=>{
+      const c=t.pnl>=0?'var(--green)':'var(--red)';
+      return `<div onclick="closeTickerChart();window.openTradeDetailObj('${date}',window.__tickerChartTrades[${i}])" title="Ver detalle del trade" style="cursor:pointer;display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;padding:7px 8px;border-bottom:1px solid var(--border);border-radius:6px;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><span style="color:${t.side==='LONG'?'var(--green)':'var(--red)'};">${t.side} ${t.shares||''}sh</span><span style="color:var(--muted2);">${t.entryTime||'—'}→${t.exitTime||'—'}</span><span style="color:${c};">${(t.pnl<0?'-$':'$')+Math.abs(t.pnl).toLocaleString('en-US',{maximumFractionDigits:2})}</span></div>`;
+    }).join('');
+    document.getElementById('tickerChartBody').innerHTML =
+      `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">${dayCurveSVG(series)}</div>`+
+      `<div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:4px;">Ejecuciones (${trades.length}) · pulsa una para ver detalle</div>${rows||'<div style=\"color:var(--muted);font-family:DM Mono;font-size:11px;\">Sin trades</div>'}`;
+    document.getElementById('tickerChartModal').style.display='flex';
+  }
+  function closeTickerChart(){ document.getElementById('tickerChartModal').style.display='none'; }
+
+  window.groupByTicker = groupByTicker;
+  window.renderDayTickerCards = renderDayTickerCards;
+  window.setTickerGrade = setTickerGrade;
+  window.setTickerSetup = setTickerSetup;
+  window.toggleTickerMistake = toggleTickerMistake;
+  window.openTickerExecChart = openTickerExecChart;
+  window.closeTickerChart = closeTickerChart;
+  window.openTradeDetailObj = openTradeDetailObj;
+  window.refreshTickerCards = refreshTickerCards;
   window.selectCalendarDay = selectCalendarDay;
   window.renderCalDaySummary = renderCalDaySummary;
   window.openDayDetail = openDayDetail;
@@ -10801,5 +10859,15 @@ document.addEventListener('DOMContentLoaded', startAfterHoursWatcher);
 </script>
 <!-- ══ /MÓDULO IMPORTACIÓN ZIMTRA/DAS ════════════════════════════════════════ -->
 
+
+<div id="tickerChartModal" class="z-modal-bg">
+  <div class="z-modal" style="max-width:740px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div id="tickerChartTitle" style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;">GRÁFICO</div>
+      <button class="z-back" onclick="closeTickerChart()">✕</button>
+    </div>
+    <div id="tickerChartBody"></div>
+  </div>
+</div>
 </body>
 </html>
