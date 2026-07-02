@@ -513,25 +513,37 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th style="text-align:center;color:var(--gold)">Setup</th>
           <th>Shares</th>
           <th style="color:#ff6b9d">HTB</th>
+          <th style="color:#ffb27a" title="Comisiones que pagas (manual)">COM</th>
+          <th style="color:#00e676" title="ECN Fee / rebate que te pagan por la ruta (manual)">ECNFEE</th>
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
           <th style="text-align:center;color:#00e676;min-width:50px;" title="Objetivo: PNL Day ≥ 3R + HTB">OBJ</th>
           <th style="text-align:center;color:#5bc0c4;min-width:90px;">ANÁLISIS</th>
           <th style="text-align:center;color:#7c6af7;min-width:140px;">PNL</th>
-          <th style="text-align:center;color:#e8634a;min-width:100px;">PDF</th>
         </tr></thead>
         <tbody id="mb"></tbody>
       </table>
     </div>
   </div>
 
+  <!-- Gráficos en la misma fila -->
+  <div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;">
   <!-- Gráfico PNL diario -->
-  <div class="pnl-chart-card">
+  <div class="pnl-chart-card" style="flex:1;min-width:0;">
     <div class="pnl-chart-title">📊 PNL Diario · Mes en curso</div>
     <div id="pnlChartWrap" style="overflow-x:auto;padding:4px 0;min-height:90px;">
       <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2)">Sin datos aún</span>
     </div>
+  </div>
+
+  <!-- Gráfico COM vs ECN FEE -->
+  <div class="pnl-chart-card" style="flex:1;min-width:0;">
+    <div class="pnl-chart-title">📊 Comisiones vs ECN Fee · Mes en curso</div>
+    <div id="feeChartWrap" style="overflow-x:auto;padding:4px 0;min-height:110px;">
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2)">Sin datos aún</span>
+    </div>
+  </div>
   </div>
 
   <!-- 4 tarjetas en línea debajo de la tabla -->
@@ -923,7 +935,7 @@ function renderMain() {
   const m = MONTHS[month];
   document.getElementById('ttl').textContent = m.name+' 2026';
 
-  let rows='', pnlTotal=0, shTotal=0, htbTotal=0, wins=0, losses=0, firstSOD=null;
+  let rows='', pnlTotal=0, shTotal=0, htbTotal=0, comTotal=0, ecnTotal=0, wins=0, losses=0, firstSOD=null;
   let sodSum=0, sodCount=0;
   let rSum=0, rCount=0;
   let scoreSum=0, scoreCount=0;
@@ -937,7 +949,7 @@ function renderMain() {
     // Check if this day is a holiday
     const hol = HOLIDAYS[d];
     if (hol) {
-      const colCount = 16; // total columns in table
+      const colCount = 17; // total columns in table
       rows += `<tr class="tr-holiday">
         <td>${d}</td>
         <td colspan="${colCount - 1}" style="text-align:left;padding-left:12px">
@@ -955,6 +967,8 @@ function renderMain() {
     if (pnl!==null){ pnlTotal+=pnl; pnl>0?wins++:losses++; }
     const sh=pd(row.shares); if(sh) shTotal+=sh;
     const htb=pd(row.htb);   if(htb) htbTotal+=htb;
+    const com=pd(row.com);   if(com) comTotal+=com;
+    const ecn=pd(row.ecnfee);if(ecn) ecnTotal+=ecn;
     if(sod){ sodSum+=sod; sodCount++; }
 
     // % Day = PNL / SOD  (automatic)
@@ -983,6 +997,8 @@ function renderMain() {
       <td class="cgo" style="text-align:center">${c.sb?fd(Math.round(c.sb/25)*25):''}</td>
       <td class="ed" data-k="${k}" data-f="shares">${row.shares||''}</td>
       <td class="ed cpink" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
+      <td class="ed" style="color:#ffb27a" data-k="${k}" data-f="com">${com!==null?fd(com):''}</td>
+      <td class="ed" style="color:#00e676" data-k="${k}" data-f="ecnfee">${ecn!==null?fd(ecn):''}</td>
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
@@ -994,9 +1010,6 @@ function renderMain() {
       </td>
       <td style="text-align:center;padding:4px;" class="tradely-img-cell">
         <div class="tradely-thumb-wrap" data-key="tradely_img_${month}_${k}"></div>
-      </td>
-      <td style="text-align:center;padding:4px;" class="pdf-cell">
-        <div class="pdf-wrap" data-key="pdf_${month}_${k}"></div>
       </td>
     </tr>`;
   });
@@ -1034,11 +1047,12 @@ function renderMain() {
     <td class="cgo" style="text-align:center" title="Promedio Setup">${avgC.sb?fd(Math.round(avgC.sb/25)*25):''}</td>
     <td>${shTotal>0?shTotal.toLocaleString('en-US'):''}</td>
     <td class="cpink">${htbTotal>0?fd(htbTotal):''}</td>
+    <td style="color:#ffb27a">${comTotal!==0?fd(comTotal):''}</td>
+    <td style="color:#00e676">${ecnTotal!==0?fd(ecnTotal):''}</td>
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
     <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
     <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);">${countObjDays>0?countObjMet+'/'+countObjDays:''}</td>
-    <td></td>
     <td></td>
     <td></td>
   </tr>`;
@@ -1108,6 +1122,38 @@ function renderMain() {
       chartWrap.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${h}" viewBox="0 0 ${svgW} ${h}" style="display:block;">${svgContent}</svg>`;
     } else {
       chartWrap.innerHTML='<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted2)">Sin datos aún</span>';
+    }
+  }
+
+  // ── Gráfico doble columna: COM vs ECN FEE por día ──
+  const feeData=m.days.map(d=>({d, com:pd((D[dk(d)]||{}).com)||0, ecn:pd((D[dk(d)]||{}).ecnfee)||0})).filter(x=>x.com||x.ecn);
+  const feeWrap=document.getElementById('feeChartWrap');
+  if(feeWrap){
+    if(feeData.length>0){
+      const maxV=Math.max(...feeData.map(x=>Math.max(Math.abs(x.com),Math.abs(x.ecn))))||1;
+      const barW=11, innerGap=2, gap=10, h=110, padT=16, padB=22;
+      const slotW=barW*2+innerGap;
+      const totalW=feeData.length*(slotW+gap)-gap;
+      const baseY=h-padB;
+      let c='';
+      c+=`<line x1="0" y1="${baseY}" x2="${totalW}" y2="${baseY}" stroke="#2a2a3a" stroke-width="1"/>`;
+      feeData.forEach((x,i)=>{
+        const sx=i*(slotW+gap);
+        const comH=Math.max(2,Math.round((Math.abs(x.com)/maxV)*(h-padT-padB)));
+        c+=`<rect x="${sx}" y="${baseY-comH}" width="${barW}" height="${comH}" fill="#ffb27a" rx="2" opacity=".9"/>`;
+        if(x.com) c+=`<text x="${sx+barW/2}" y="${baseY-comH-3}" text-anchor="middle" fill="#ffb27a" font-size="6" font-family="DM Mono,monospace">${fd(x.com)}</text>`;
+        const ex=sx+barW+innerGap;
+        const ecnH=Math.max(2,Math.round((Math.abs(x.ecn)/maxV)*(h-padT-padB)));
+        c+=`<rect x="${ex}" y="${baseY-ecnH}" width="${barW}" height="${ecnH}" fill="#00e676" rx="2" opacity=".9"/>`;
+        if(x.ecn) c+=`<text x="${ex+barW/2}" y="${baseY-ecnH-3}" text-anchor="middle" fill="#00e676" font-size="6" font-family="DM Mono,monospace">${fd(x.ecn)}</text>`;
+        const dd=x.d.substring(0,2);
+        c+=`<text x="${sx+slotW/2}" y="${h-6}" text-anchor="middle" fill="#555" font-size="7" font-family="DM Mono,monospace">${dd}</text>`;
+      });
+      const svgW=Math.max(totalW,200);
+      const legend=`<div style="display:flex;gap:16px;margin-bottom:6px;font-family:'DM Mono',monospace;font-size:10px;"><span style="color:#ffb27a">■ COM (comisiones)</span><span style="color:#00e676">■ ECN FEE (rebate)</span></div>`;
+      feeWrap.innerHTML=legend+`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${h}" viewBox="0 0 ${svgW} ${h}" style="display:block;">${c}</svg>`;
+    } else {
+      feeWrap.innerHTML='<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted2)">Sin datos aún</span>';
     }
   }
 

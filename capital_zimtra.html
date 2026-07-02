@@ -7700,11 +7700,24 @@ function renderLongSide(monthIdx) {
         <button id="calMode_r" onclick="setCalMode('r')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:all .15s;">R</button>
         <button id="calMode_pct" onclick="setCalMode('pct')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:all .15s;">%</button>
       </div>
+      <button id="btnCalImport" onclick="openCalTradesImport()" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:8px;border:1px solid var(--gold);background:#f5a62315;color:var(--gold);cursor:pointer;margin-left:18px;">⚡ Importar trades</button>
+      <input type="file" id="calTradesFileInput" accept=".xls,.xlsx,.csv" style="display:none;" onchange="if(this.files[0]){calImportTradesFile(this.files[0]);this.value='';}">
       <div id="calendarPNL" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--green);margin-left:auto;">$0</div>
     </div>
     <div id="calendarGrid"></div>
     <div id="calDaySummary" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);"></div>
     <div id="calDayTickerCards" style="display:none;margin-top:24px;"></div>
+  </div>
+</div>
+
+<!-- ═══════ IMPORTAR TRADES (calendario) ═══════ -->
+<div id="calImportModal" class="z-modal-bg" style="z-index:1002;">
+  <div class="z-modal" style="max-width:540px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--gold);">⚡ IMPORTAR TRADES</div>
+      <button class="z-back" onclick="document.getElementById('calImportModal').style.display='none'">✕</button>
+    </div>
+    <div id="calImportBody"></div>
   </div>
 </div>
 
@@ -9940,7 +9953,7 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
 .z-card:hover{border-color:var(--muted2);}
 .z-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--side,var(--muted));}
 .z-side{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;padding:3px 8px;border-radius:20px;border:1px solid currentColor;}
-.z-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.z-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;padding:20px;}
 .z-modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;}
 .z-field{margin-bottom:13px;}
 .z-field label{display:block;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px;}
@@ -10068,6 +10081,8 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
   // Caché temporal (solo lectura rápida; Firestore sobrescribe)
   function cacheTrades(date, trades){ try{ localStorage.setItem('ztr_'+date, JSON.stringify(trades)); }catch(e){} }
   function readCacheTrades(date){ try{ const r=localStorage.getItem('ztr_'+date); return r?JSON.parse(r):null; }catch(e){ return null; } }
+  function cacheMeta(date, meta){ try{ localStorage.setItem('zmeta_'+date, JSON.stringify(meta)); }catch(e){} }
+  function readCacheMeta(date){ try{ const r=localStorage.getItem('zmeta_'+date); return r?JSON.parse(r):null; }catch(e){ return null; } }
 
   // ── Firebase helpers ─────────────────────────────────────────────────────
   async function saveDayToFirebase(dayData){
@@ -10312,6 +10327,68 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
   function dk2(iso){ return iso; } // D ya usa 'YYYY-MM-DD'; alias por claridad
 
   // ── IMPORTADOR: ejecuciones del día ──────────────────────────────────────
+  // Parser dedicado para el "Transactions.csv" de Zimtra
+  // (columnas: Entry Type, Side, Symbol, Qty[con signo], Price, Comm, Total Fees,
+  //  Gross Amt, Net Amt, Transaction ID). No trae hora → orden por Transaction ID.
+  function parseZimtraTransactions(wb){
+    const sheets = allSheetsRows(wb);
+    const diag = sheets.map(s=>({sheet:s.name, header:(s.rows[findHeaderRow(s.rows)]||[]).map(String)}));
+    for(const sh of sheets){
+      const rows = sh.rows; if(!rows.length) continue;
+      const hi = findHeaderRow(rows);
+      const headers = (rows[hi]||[]).map(c=>String(c));
+      const cTxn = findCol(headers,['transaction id','transactionid','txn id','txnid']);
+      const cNet = findCol(headers,['net amt','netamt','net amount']);
+      if(cTxn<0 || cNet<0) continue; // no es un Transactions de Zimtra → que lo intente el parser DAS
+      const col = {
+        entry: findCol(headers,['entry type','entrytype']),
+        side:  findCol(headers,['side','b/s','bs']),
+        sym:   findCol(headers,['symbol','ticker','sym']),
+        qty:   findCol(headers,['qty','quantity','shares']),
+        price: findCol(headers,['price']),
+        comm:  findCol(headers,['comm','commission','commissions']),
+        fees:  findCol(headers,['total fees','totalfees']),
+        gross: findCol(headers,['gross amt','grossamt','gross amount']),
+        date:  findCol(headers,['trade date','tradedate','date']),
+      };
+      const exes=[]; let commissions=0, fees=0, charges=0, grossCsv=0, netCsv=0, tradeDate=null;
+      for(let i=hi+1;i<rows.length;i++){
+        const r=rows[i]; if(!r||r.every(c=>c===''||c==null)) continue;
+        const entry = col.entry>=0 ? String(r[col.entry]||'').trim().toUpperCase() : 'TRD';
+        const feeRow = col.fees>=0 ? (numify(r[col.fees])||0) : 0;
+        if(entry && entry!=='TRD'){ charges += feeRow; continue; } // JNLC: plataforma/market data → fuera de trades
+        const ticker = col.sym>=0 ? String(r[col.sym]||'').trim().toUpperCase() : '';
+        const qty = col.qty>=0 ? numify(r[col.qty]) : null;
+        const price = col.price>=0 ? numify(r[col.price]) : null;
+        if(!ticker || qty==null || price==null || qty===0) continue;
+        const rawSide = String(col.side>=0 ? r[col.side] : '').trim().toUpperCase();
+        const isBuy = /^B/.test(rawSide) || (!rawSide && qty>0); // B / BC(cover) = compra; S / SS = venta
+        const txn = numify(r[cTxn]);
+        const comm = col.comm>=0 ? (numify(r[col.comm])||0) : 0;
+        const gross = col.gross>=0 ? (numify(r[col.gross])||0) : 0;
+        const net = numify(r[cNet])||0;
+        commissions += comm; fees += feeRow;
+        grossCsv += -gross; netCsv += -net; // cash = signo opuesto al de acciones (venta = entrada de caja)
+        const rowDate = col.date>=0 ? toISODate(r[col.date]) : null;
+        if(rowDate && !tradeDate) tradeDate = rowDate;
+        exes.push({ ticker, qty:Math.abs(qty), price, isBuy, side:isBuy?'B':'S', time:'', timeVal:(txn!=null?txn:i), date:rowDate, comm, fee:feeRow });
+      }
+      if(exes.length) return {
+        exes, missing:[], zimtra:true,
+        meta:{ commissions:+commissions.toFixed(2), fees:+fees.toFixed(2), charges:+charges.toFixed(2),
+               grossCsv:+grossCsv.toFixed(2), netCsv:+netCsv.toFixed(2), date:tradeDate,
+               dates:[...new Set(exes.map(e=>e.date).filter(Boolean))].sort() },
+        _diag:diag
+      };
+    }
+    return { exes:[], missing:[], _diag:diag };
+  }
+  // Dispatcher: primero Zimtra Transactions, si no, ejecuciones DAS
+  function parseExecutionsAny(wb){
+    const z = parseZimtraTransactions(wb);
+    if(z && z.exes && z.exes.length) return z;
+    return parseDASExecutions(wb);
+  }
   function parseDASExecutions(wb){
     const sheets = allSheetsRows(wb);
     const diag = sheets.map(s=>({sheet:s.name, header:(s.rows[findHeaderRow(s.rows)]||[]).map(String)}));
@@ -10370,6 +10447,7 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
           date, ticker, side:dir,
           pnl: open?0:pnl, pnlRaw:pnl,
           shares: peak,
+          volume: Math.max(buyQ, sellQ),
           avgEntry: +(dir==='LONG'?avgBuy:avgSell || 0).toFixed(4),
           avgExit:  +(dir==='LONG'?avgSell:avgBuy || 0).toFixed(4),
           entryTime: fmtTime(seg[0].time), exitTime: fmtTime(seg[seg.length-1].time),
@@ -10378,7 +10456,7 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
           openPosition: !!open,
           setup:'Sin setup', grade:'', mistakes:[], notes:'',
           whatWentWell:'', whatWentWrong:'', whatToImprove:'', imageUrl:'', imagePath:'',
-          r:null, pnlPercent:null,
+          r:null, pnlPercent:null, seq:lastT,
         });
         seg=[]; dir=null; peak=0;
       };
@@ -10399,7 +10477,7 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
         t.pnlPercent = +(t.pnl/sod*100).toFixed(2);
       }
     });
-    return trades.sort((a,b)=> (a.entryTime>b.entryTime?1:-1));
+    return trades.sort((a,b)=> ((a.seq||0)-(b.seq||0)) || (a.entryTime>b.entryTime?1:-1));
   }
 
   function calculateProfitFactor(trades){
@@ -10439,7 +10517,7 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
   async function importDailyExecutionsFile(date, file){
     try{
       const cands = await readWorkbook(file);
-      const parsed = firstUsable(cands, parseDASExecutions, p=>p&&p.exes.length);
+      const parsed = firstUsable(cands, parseExecutionsAny, p=>p&&p.exes.length);
       if(!parsed || !parsed.exes.length){
         const d=(parsed&&(parsed._diagAll||parsed._diag))||[];
         console.warn('[Zimtra] cabeceras ejecuciones:', d);
@@ -10451,8 +10529,14 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
       const trades = reconstructTradesFromExecutions(parsed.exes, date);
       const stats = await saveReconstructedTradesToFirebase(date, trades);
       await saveDayToFirebase({ date, sourceExecutionsFileName:file.name });
+      // Comisiones / fees reales desde el CSV de Zimtra → rellena la caja COMISIONES
+      if(parsed.meta){
+        cacheMeta(date, { commissions:parsed.meta.commissions, fees:parsed.meta.fees });
+        try{ await saveDayToFirebase({ date, commissions:parsed.meta.commissions, fees:parsed.meta.fees, platformCharges:parsed.meta.charges }); }catch(_){}
+      }
       cacheTrades(date, trades);
-      zToast('✓ '+trades.length+' trade(s) reconstruidos · WR '+stats.winRate+'% · PF '+(stats.profitFactor===Infinity?'∞':stats.profitFactor));
+      const extra = parsed.meta ? (' · Comm $'+parsed.meta.commissions) : '';
+      zToast('✓ '+trades.length+' trade(s) reconstruidos · WR '+stats.winRate+'% · PF '+(stats.profitFactor===Infinity?'∞':stats.profitFactor)+extra);
       renderSelectedDaySummary(date);
       renderDayTradeCards(date);
     }catch(e){ zErr(e); }
@@ -10637,7 +10721,7 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
   // ── RESUMEN DEL DÍA (inline bajo el calendario) ──────────────────────────
   let __calSelectedDay = null;
   function intradaySeriesFromTrades(trades){
-    const sorted = trades.slice().sort((a,b)=> (String(a.entryTime)>String(b.entryTime)?1:(String(a.entryTime)<String(b.entryTime)?-1:0)));
+    const sorted = trades.slice().sort((a,b)=> (a.seq!=null&&b.seq!=null)?(a.seq-b.seq):(String(a.entryTime)>String(b.entryTime)?1:(String(a.entryTime)<String(b.entryTime)?-1:0)));
     let cum=0; const pts=[{label:'Inicio', v:0}];
     sorted.forEach(t=>{ cum += (+t.pnl||0); pts.push({label:(t.ticker||'')+' '+(t.exitTime||''), v:+cum.toFixed(2)}); });
     return pts;
@@ -10680,13 +10764,15 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
     const net = gross!=null ? gross-htb : null;
     let trades=[], fb=null;
     try{ trades = await getTradesFromFirebase(date); }catch(e){}
+    if(!trades || !trades.length){ const c=readCacheTrades(date); if(c && c.length){ trades=c; } } // respaldo local si Firebase falla o está vacío
     try{ fb = await getDayFromFirebase(date); }catch(e){}
+    let comm = (fb&&fb.commissions!=null)?fb.commissions:null;
+    if(comm==null){ const mc=readCacheMeta(date); if(mc && mc.commissions!=null) comm=mc.commissions; }
     const closed = trades.filter(t=>!t.openPosition);
     const stats = closed.length ? calculateDayStats(trades) : null;
     const series = closed.length ? intradaySeriesFromTrades(closed) : null;
     const rud = series ? runupDrawdown(series) : null;
-    renderCalDaySummary({ date, gross, net, htb,
-      comm:(fb&&fb.commissions!=null)?fb.commissions:null, stats, series, rud });
+    renderCalDaySummary({ date, gross, net, htb, comm, stats, series, rud, trades: closed });
     // Tarjetas agrupadas por ticker
     const groups = groupByTicker(closed);
     window.__calDayTrades = { date, byTicker:{} };
@@ -10701,14 +10787,55 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
     const nT = s?s.tradesCount:(D[o.date]&&D[o.date].tradesCount!=null?D[o.date].tradesCount:null);
     const wins = s?s.winTrades:null, losses = s?s.lossTrades:null, wr = s?s.winRate:null;
     const pf = s?(s.profitFactor===Infinity?'∞':s.profitFactor):null;
+    const totVol = (o.trades&&o.trades.length)?o.trades.reduce((a,t)=>a+(t.volume||t.shares||0),0):null;
     const K=(l,v,c,ac)=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${ac||'var(--cyan)'}"></div><div style="font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">${l}</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;line-height:1;color:${c||'var(--text)'}">${v}</div></div>`;
+    // Tabla de trades estilo Tradervue
+    window.__calDayFlat = o.trades||[]; window.__calDayFlatDate = o.date;
+    const money2 = v => (v<0?'-$':'$')+Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:2});
+    let tradesTable;
+    if(o.trades && o.trades.length){
+      const rows = o.trades.map((t,i)=>{
+        const sideCol = t.side==='LONG'?'var(--green)':'var(--red)';
+        const pnlCol = t.pnl>=0?'var(--green)':'var(--red)';
+        return `<tr onclick="openTradeFromCal(${i})" style="cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+          <td style="padding:11px 14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);">${t.entryTime||'—'}</td>
+          <td style="padding:11px 14px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--gold);">${t.ticker}</td>
+          <td style="padding:11px 14px;"><span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:5px;background:${sideCol}22;color:${sideCol};">${t.side}</span></td>
+          <td style="padding:11px 14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);text-align:right;">${(t.volume||t.shares||0).toLocaleString('en-US')}</td>
+          <td style="padding:11px 14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);text-align:right;">${t.executionsCount||'—'}</td>
+          <td style="padding:11px 14px;font-family:'DM Mono',monospace;font-size:13px;color:${pnlCol};text-align:right;">${money2(t.pnl)}</td>
+        </tr>`;
+      }).join('');
+      tradesTable = `
+        <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin:22px 0 10px;">Trades del día</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:11px 14px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);font-weight:400;">Time</th>
+              <th style="text-align:left;padding:11px 14px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);font-weight:400;">Symbol</th>
+              <th style="text-align:left;padding:11px 14px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);font-weight:400;">Side</th>
+              <th style="text-align:right;padding:11px 14px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);font-weight:400;">Volume</th>
+              <th style="text-align:right;padding:11px 14px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);font-weight:400;">Execs</th>
+              <th style="text-align:right;padding:11px 14px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);font-weight:400;">P&L</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    } else {
+      tradesTable = '';
+    }
     document.getElementById('calDaySummary').innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;">📋 RESUMEN DEL DÍA · ${o.date}</div>
-        <button onclick="openDayDetail('${o.date}')" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:7px;border:1px solid var(--cyan);background:#00b0ff15;color:var(--cyan);cursor:pointer;">Ver tarjetas de trades →</button>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button onclick="document.getElementById('calExecFileInput').click()" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:7px;border:1px solid var(--gold);background:#f5a62315;color:var(--gold);cursor:pointer;">⚡ Importar ejecuciones</button>
+          <input type="file" id="calExecFileInput" accept=".xls,.xlsx,.csv" style="display:none;" onchange="zImportExecForCalDay('${o.date}', this)">
+          <button onclick="openDayDetail('${o.date}')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:7px;border:1px solid var(--cyan);background:#00b0ff15;color:var(--cyan);cursor:pointer;">Ver tarjetas de trades →</button>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px;margin-bottom:20px;">
         ${K('Total Trades', nT!=null?nT:'—', 'var(--text)','var(--blue)')}
+        ${K('Total Volume', totVol!=null?totVol.toLocaleString('en-US'):'—', 'var(--text)','var(--blue)')}
         ${K('Ganadores', wins!=null?wins:'—', 'var(--green)','var(--green)')}
         ${K('Perdedores', losses!=null?losses:'—', 'var(--red)','var(--red)')}
         ${K('Win Rate', wr!=null?wr+'%':'—', 'var(--green)','var(--green)')}
@@ -10722,6 +10849,7 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;">Curva intradía (PnL acumulado por trade)</div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;">${dayCurveSVG(o.series)}</div>
+      ${tradesTable}
     `;
   }
   // ── TARJETAS POR TICKER (clasificación guardada en D → localStorage+Firestore) ──
@@ -10845,6 +10973,225 @@ function cerrarObjetivoOverlay() { const _o=document.getElementById('objetivoOve
   window.openTradeDetailObj = openTradeDetailObj;
   window.refreshTickerCards = refreshTickerCards;
   window.selectCalendarDay = selectCalendarDay;
+  function openTradeFromCal(i){ const t=(window.__calDayFlat||[])[i]; if(t) openTradeDetailObj(window.__calDayFlatDate, t); }
+  window.openTradeFromCal = openTradeFromCal;
+  // Importar ejecuciones desde el propio panel del calendario → rellena cajas + curva en el sitio
+  async function zImportExecForCalDay(date, input){
+    const f = input && input.files && input.files[0]; if(!f) return; input.value='';
+    try{ await importDailyExecutionsFile(date, f); }
+    catch(e){ try{ zErr(e); }catch(_){ console.error(e); } }
+    try{ await selectCalendarDay(date); }catch(_){}
+  }
+  window.zImportExecForCalDay = zImportExecForCalDay;
+
+  // ══ IMPORTAR TRADES DESDE EL CALENDARIO (con fecha + chequeo de duplicados) ══
+  function todayISO(){ return new Date().toLocaleDateString('en-CA'); }
+  function openCalTradesImport(){ document.getElementById('calTradesFileInput').click(); }
+  // Parser Tradervue "Trades View" (una fila = un trade: Time/Symbol/Volume/Execs/P&L/Side)
+  function parseTradervueTrades(wb){
+    const sheets = allSheetsRows(wb);
+    const diag = sheets.map(s=>({sheet:s.name, header:(s.rows[findHeaderRow(s.rows)]||[]).map(String)}));
+    for(const sh of sheets){
+      const rows = sh.rows; if(!rows.length) continue;
+      const hi = findHeaderRow(rows);
+      const headers = (rows[hi]||[]).map(c=>String(c));
+      const cPrice = findCol(headers,['price','fill price','avg price','exec price']);
+      const cPnl   = findCol(headers,['p&l','pnl','pl','net p&l','net pnl','gross p&l','gross pnl','profit','net','gross']);
+      const cSym   = findCol(headers,['symbol','ticker','sym']);
+      const cExecs = findCol(headers,['execs','executions','fills','exec count','numexecs','no of executions']);
+      // Es "por trade" si hay P&L + Symbol y (hay Execs) o (NO hay columna Price de ejecución)
+      const isPerTrade = cSym>=0 && cPnl>=0 && (cExecs>=0 || cPrice<0);
+      if(!isPerTrade) continue;
+      const col = {
+        date: findCol(headers,['date','trade date','open date','opened']),
+        time: findCol(headers,['time','open time','time opened','entry time']),
+        sym:  cSym, vol: findCol(headers,['volume','shares','quantity','qty','size']),
+        execs:cExecs,
+        gross:findCol(headers,['gross','gross p&l','gross pnl']),
+        net:  findCol(headers,['net','net p&l','net pnl']),
+        pnl:  cPnl,
+        comm: findCol(headers,['commissions','commissions/fees','commission','comm','fees']),
+        side: findCol(headers,['side','l/s','long/short','direction']),
+      };
+      const trades=[]; let commissions=0, hasComm=false, sumGross=0, sumNet=0;
+      for(let i=hi+1;i<rows.length;i++){
+        const r=rows[i]; if(!r||r.every(c=>c===''||c==null)) continue;
+        const ticker = String(r[col.sym]||'').trim().toUpperCase();
+        if(!ticker || /^(total|totals|summary|grand)/i.test(ticker)) continue;
+        const gross = col.gross>=0 ? numify(r[col.gross]) : null;
+        const net   = col.net>=0 ? numify(r[col.net]) : null;
+        const pnlCol= numify(r[col.pnl]);
+        const pnl = (gross!=null?gross:(pnlCol!=null?pnlCol:net));
+        if(pnl==null) continue;
+        const date = col.date>=0 ? toISODate(r[col.date]) : null;
+        const timeS = col.time>=0 ? fmtTime(String(r[col.time]||'')) : '';
+        const vol = col.vol>=0 ? (numify(r[col.vol])||0) : 0;
+        const execs = col.execs>=0 ? (numify(r[col.execs])||0) : 0;
+        const sideRaw = String(col.side>=0 ? r[col.side] : '').trim().toUpperCase();
+        const side = /^S|SHORT/.test(sideRaw) ? 'SHORT' : 'LONG';
+        const comm = col.comm>=0 ? (numify(r[col.comm])||0) : null;
+        if(comm!=null){ commissions+=comm; hasComm=true; }
+        if(gross!=null) sumGross+=gross; if(net!=null) sumNet+=net;
+        trades.push({
+          id: `${date||'nd'}_${ticker}_TV_${i}`.replace(/[^a-zA-Z0-9_]/g,''),
+          date, ticker, side, pnl:+pnl.toFixed(2), pnlRaw:+pnl.toFixed(2),
+          shares:vol, volume:vol, executionsCount:execs,
+          avgEntry:0, avgExit:0, entryTime:timeS, exitTime:'', duration:'',
+          openPosition:false, setup:'Sin setup', grade:'', mistakes:[], notes:'',
+          whatWentWell:'', whatWentWrong:'', whatToImprove:'', imageUrl:'', imagePath:'',
+          r:null, pnlPercent:null, seq:parseTimeVal(timeS,i), net: net!=null?+net.toFixed(2):null,
+        });
+      }
+      if(trades.length){
+        if(!hasComm && sumGross && sumNet){ commissions = +(sumGross - sumNet).toFixed(2); hasComm = true; }
+        return { trades, tradervue:true,
+          meta:{ commissions: hasComm?+commissions.toFixed(2):null, dates:[...new Set(trades.map(t=>t.date).filter(Boolean))].sort() },
+          _diag:diag };
+      }
+    }
+    return { trades:[], _diag:diag };
+  }
+
+  function reconstructPreview(exes){
+    const trades = reconstructTradesFromExecutions(exes, '0000-00-00');
+    return { trades:trades.length,
+      longs:trades.filter(t=>t.side==='LONG').length,
+      shorts:trades.filter(t=>t.side==='SHORT').length,
+      tickers:new Set(exes.map(e=>e.ticker)).size };
+  }
+  function tradePreview(trades){
+    return { trades:trades.length,
+      longs:trades.filter(t=>t.side==='LONG').length,
+      shorts:trades.filter(t=>t.side==='SHORT').length,
+      tickers:new Set(trades.map(t=>t.ticker)).size };
+  }
+  function importPreview(ctx, dt){ return ctx.kind==='trades' ? tradePreview(ctx.groups[dt]) : reconstructPreview(ctx.groups[dt]); }
+  function metaForExes(exes, isZimtra){
+    if(!isZimtra) return null;
+    let commissions=0, fees=0; exes.forEach(e=>{ commissions+=(e.comm||0); fees+=(e.fee||0); });
+    return { commissions:+commissions.toFixed(2), fees:+fees.toFixed(2) };
+  }
+  function commissionsFromTrades(trades){
+    let g=0,n=0,has=false; trades.forEach(t=>{ if(t.net!=null){ g+=t.pnl; n+=t.net; has=true; } });
+    return has ? { commissions:+(g-n).toFixed(2) } : null;
+  }
+  async function countExistingTrades(date){ try{ return (await getTradesFromFirebase(date)).length; }catch(e){ return 0; } }
+  async function clearTradesForDate(date){
+    try{ const qs=await tradesRef(date).get(); const dels=[]; qs.forEach(d=>dels.push(d.ref.delete())); await Promise.all(dels); }
+    catch(e){ console.warn('clearTradesForDate', e); }
+  }
+  async function calImportTradesFile(file){
+    let cands; try{ cands = await readWorkbook(file); }catch(e){ return zErr(e); }
+    let ctx=null;
+    // 1) ¿Export por-trade de Tradervue?
+    const tv = firstUsable(cands, parseTradervueTrades, p=>p&&p.trades&&p.trades.length);
+    if(tv && tv.trades && tv.trades.length){
+      const groups={}; tv.trades.forEach(t=>{ const k=t.date||'__nodate__'; (groups[k]=groups[k]||[]).push(t); });
+      ctx = { file, kind:'trades', groups, meta:tv.meta, srcLabel:'Tradervue', count:tv.trades.length };
+    } else {
+      // 2) Ejecuciones (Zimtra Transactions / DAS / genérico Tradervue)
+      const parsed = firstUsable(cands, parseExecutionsAny, p=>p&&p.exes.length);
+      if(!parsed || !parsed.exes.length){
+        const d=(parsed&&(parsed._diagAll||parsed._diag))||[];
+        const seen=d.map(x=>'· '+x.sheet+': ['+x.header.slice(0,8).join(' | ')+']').join('\n');
+        zToast('⚠ No se reconoció el archivo (ni trades ni ejecuciones). Consola (F12):\n'+(seen||'(sin hojas legibles)'));
+        return;
+      }
+      const groups={}; parsed.exes.forEach(e=>{ const k=e.date||'__nodate__'; (groups[k]=groups[k]||[]).push(e); });
+      ctx = { file, kind:'exes', groups, meta:parsed.meta, zimtra:parsed.zimtra, srcLabel:parsed.zimtra?'Zimtra':'Ejecuciones', count:parsed.exes.length };
+    }
+    window.__calImport = ctx;
+    const dates = Object.keys(ctx.groups).filter(k=>k!=='__nodate__').sort();
+    const noDate = (ctx.groups['__nodate__']||[]).length;
+    const fileDate = fileDateFromName(file.name);
+    const unit = ctx.kind==='trades' ? 'trades' : 'fills';
+    const chip=(t,c)=>`<span style="font-family:'DM Mono',monospace;font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid ${c};color:${c};margin:0 6px 6px 0;display:inline-block;">${t}</span>`;
+    let html = `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);margin-bottom:14px;">Archivo: <span style="color:var(--text)">${file.name}</span> · ${ctx.count} ${unit} · <span style="color:var(--gold)">${ctx.srcLabel}</span></div>`;
+    if(dates.length===0){
+      const p = importPreview(ctx, '__nodate__');
+      html += `<div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">¿De qué fecha son estos trades?</div>
+        <input type="date" id="calImportDate" value="${fileDate||todayISO()}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;color-scheme:dark;margin-bottom:12px;">
+        <div style="margin-bottom:6px;">${chip(p.trades+' trades','var(--cyan)')}${chip(p.longs+' LONG','var(--green)')}${chip(p.shorts+' SHORT','var(--red)')}${chip(p.tickers+' tickers','var(--gold)')}</div>
+        <div id="calImportDupWarn" style="margin-bottom:12px;min-height:16px;"></div>`;
+    } else {
+      html += `<div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">Fechas detectadas · marca las que quieras importar</div>`;
+      dates.forEach(dt=>{
+        const p = importPreview(ctx, dt);
+        html += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <input type="checkbox" class="calImpDay" data-date="${dt}" checked style="width:16px;height:16px;accent-color:var(--gold);">
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;">${dt}</span>
+            <span id="dupwarn_${dt}" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);">comprobando…</span>
+          </div>
+          <div>${chip(p.trades+' trades','var(--cyan)')}${chip(p.longs+' LONG','var(--green)')}${chip(p.shorts+' SHORT','var(--red)')}${chip(p.tickers+' tk','var(--gold)')}</div>
+        </div>`;
+      });
+      if(noDate) html += `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);margin-bottom:10px;">⚠ ${noDate} filas sin fecha en el archivo (se ignoran).</div>`;
+    }
+    html += `<div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);margin:10px 0 6px;">Si el día ya tiene trades</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <label style="flex:1;display:flex;align-items:center;gap:7px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;"><input type="radio" name="calImpMode" value="overwrite" checked style="accent-color:var(--gold)">Sobrescribir</label>
+        <label style="flex:1;display:flex;align-items:center;gap:7px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;"><input type="radio" name="calImpMode" value="merge" style="accent-color:var(--gold)">Fusionar</label>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="z-btn" style="flex:1;border:1px solid var(--border);background:transparent;color:var(--muted2);justify-content:center;" onclick="document.getElementById('calImportModal').style.display='none'">Cancelar</button>
+        <button class="z-btn" style="flex:2;border:1px solid var(--gold);background:#f5a62320;color:var(--gold);justify-content:center;" onclick="calImportConfirm()">Importar</button>
+      </div>`;
+    document.getElementById('calImportBody').innerHTML = html;
+    document.getElementById('calImportModal').style.display='flex';
+    if(dates.length===0){
+      const inp=document.getElementById('calImportDate');
+      const check=async()=>{ const dt=inp.value; const w=document.getElementById('calImportDupWarn'); if(!dt){w.innerHTML='';return;}
+        const ex=await countExistingTrades(dt);
+        w.innerHTML = ex>0 ? `<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gold)">⚠ ${dt} ya tiene ${ex} trades. Con «Sobrescribir» se reemplazan.</span>`
+                           : `<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">✓ ${dt} sin trades previos.</span>`; };
+      inp.addEventListener('change',check); check();
+    } else {
+      dates.forEach(async dt=>{ const ex=await countExistingTrades(dt); const el=document.getElementById('dupwarn_'+dt);
+        if(el) el.innerHTML = ex>0?`<span style="color:var(--gold)">⚠ ${ex} previos</span>`:`<span style="color:var(--green)">✓ nuevo</span>`; });
+    }
+  }
+  async function calImportConfirm(){
+    const ctx = window.__calImport; if(!ctx) return;
+    const mode = (document.querySelector('input[name="calImpMode"]:checked')||{}).value || 'overwrite';
+    const dates = Object.keys(ctx.groups).filter(k=>k!=='__nodate__');
+    let targetDates=[];
+    if(dates.length===0){
+      const dt = document.getElementById('calImportDate').value;
+      if(!dt){ zToast('⚠ Indica la fecha'); return; }
+      ctx.groups[dt] = ctx.groups['__nodate__']||[]; targetDates=[dt];
+    } else {
+      targetDates = Array.from(document.querySelectorAll('.calImpDay:checked')).map(c=>c.dataset.date);
+      if(!targetDates.length){ zToast('⚠ Selecciona al menos un día'); return; }
+    }
+    document.getElementById('calImportModal').style.display='none';
+    let totalTrades=0, days=0;
+    for(const date of targetDates){
+      try{
+        if(mode==='overwrite') await clearTradesForDate(date);
+        let trades, meta;
+        if(ctx.kind==='trades'){
+          trades = ctx.groups[date].map((x,i)=> Object.assign({}, x, { date, id:`${date}_${x.ticker}_TV_${i}`.replace(/[^a-zA-Z0-9_]/g,'') }));
+          meta = (ctx.meta && ctx.meta.commissions!=null) ? { commissions:ctx.meta.commissions } : commissionsFromTrades(trades);
+        } else {
+          trades = reconstructTradesFromExecutions(ctx.groups[date], date);
+          meta = metaForExes(ctx.groups[date], ctx.zimtra);
+        }
+        await saveReconstructedTradesToFirebase(date, trades);
+        if(meta){ cacheMeta(date, meta); await saveDayToFirebase({ date, commissions:meta.commissions, fees:(meta.fees!=null?meta.fees:null) }); }
+        cacheTrades(date, trades);
+        totalTrades += trades.length; days++;
+      }catch(e){ zErr(e); }
+    }
+    try{ save(); }catch(_){}
+    try{ renderCalendar(); }catch(e){}
+    try{ if(__calSelectedDay && targetDates.indexOf(__calSelectedDay)>=0) selectCalendarDay(__calSelectedDay); }catch(e){}
+    zToast('✓ '+totalTrades+' trades importados en '+days+' día(s)');
+    window.__calImport=null;
+  }
+  window.openCalTradesImport = openCalTradesImport;
+  window.calImportTradesFile = calImportTradesFile;
+  window.calImportConfirm = calImportConfirm;
   window.renderCalDaySummary = renderCalDaySummary;
   window.openDayDetail = openDayDetail;
   window.hideDayDetail = hideDayDetail;
