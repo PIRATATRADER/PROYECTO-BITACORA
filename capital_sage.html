@@ -1845,44 +1845,63 @@ function hideCalendar() {
   document.body.style.overflow = '';
 }
 
+let calMode = 'gross'; // gross | net | r | pct
+function setCalMode(mode){
+  calMode = mode;
+  ['gross','net','r','pct'].forEach(x=>{
+    const b=document.getElementById('calMode_'+x); if(!b) return;
+    const on = x===mode;
+    b.style.background = on ? 'var(--cyan)' : 'transparent';
+    b.style.color = on ? 'var(--bg)' : 'var(--cyan)';
+  });
+  renderCalendar();
+}
+
 function renderCalendar() {
   const m = MONTHS[calendarMonth];
   document.getElementById('calendarTitle').textContent = m.name + ', 2026';
-  
-  // Calcular PNL neto del mes (pnlDay - htb)
-  let totalPNL = 0;
-  m.days.forEach(d => {
-    const row = D[dk(d)] || {};
-    const pnl = pd(row.pnlDay);
-    const htb = pd(row.htb) || 0;
-    if (pnl !== null) totalPNL += (pnl - htb);
-  });
-  
-  const pnlEl = document.getElementById('calendarPNL');
-  pnlEl.textContent = fd(totalPNL);
-  pnlEl.style.color = totalPNL >= 0 ? 'var(--green)' : 'var(--red)';
-  
+
+  // Métricas de un día según sus datos, y el valor/formato según el modo activo (gross/net/r/%)
+  function dayMetrics(row){
+    const pnl = pd(row.pnlDay); const htb = pd(row.htb) || 0; const sod = pd(row.startOfDay);
+    if (pnl === null) return { has:false };
+    const net = pnl - htb;
+    return { has:true, gross:pnl, net,
+             r:(sod&&sod>0)?net/(sod*0.01):null,
+             pct:(sod&&sod>0)?net/sod*100:null };
+  }
+  function valOf(mt){ if(!mt||!mt.has) return null; const v=mt[calMode]; return (v===undefined?null:v); }
+  function fmtVal(v){ if(v===null||v===undefined||isNaN(v)) return ''; if(calMode==='r') return (v>=0?'+':'')+v.toFixed(2)+'R'; if(calMode==='pct') return (v>=0?'+':'')+v.toFixed(2)+'%'; return fd(v); }
+  function sparkline(series, col){
+    if(!series || series.length<2) return '';
+    const w=72,h=22,pad=3;
+    const min=Math.min(...series), max=Math.max(...series), span=(max-min)||1;
+    const pts=series.map((v,i)=>{ const x=pad+(i*(w-2*pad)/(series.length-1)); const y=h-pad-((v-min)/span)*(h-2*pad); return x.toFixed(1)+','+y.toFixed(1); }).join(' ');
+    const zeroY=(max>0&&min<0)?(h-pad-((0-min)/span)*(h-2*pad)).toFixed(1):null;
+    return '<svg width="'+w+'" height="'+h+'" style="margin-top:4px;overflow:visible;">'+
+           (zeroY?'<line x1="0" y1="'+zeroY+'" x2="'+w+'" y2="'+zeroY+'" stroke="var(--border)" stroke-width="1"/>':'')+
+           '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+
   // Crear calendario
   const firstDay = new Date(2026, m.num - 1, 1).getDay(); // 0=Sunday
   const daysInMonth = new Date(2026, m.num, 0).getDate();
-  
-  // Calcular totales por semana (neto)
-  const weekTotals = {};
+
+  // Total del mes + totales y series por semana, según el modo activo
+  let totalPNL = 0;
+  const weekTotals = {}, weekSeries = {};
   m.days.forEach(d => {
     const dayNum = parseInt(d.split('/')[0]);
     const weekNum = Math.floor((dayNum + firstDay - 1) / 7);
-    const row = D[dk(d)] || {};
-    const pnl = pd(row.pnlDay);
-    const htb = pd(row.htb) || 0;
-    if (!weekTotals[weekNum]) weekTotals[weekNum] = { pnl: 0, trades: 0, sodSum: 0, sodCount: 0 };
-    const rowSod = pd((D[dk(d)] || {}).startOfDay);
-    if (pnl !== null) {
-      weekTotals[weekNum].pnl += (pnl - htb);
-      weekTotals[weekNum].trades++;
-    }
-    if (rowSod) { weekTotals[weekNum].sodSum += rowSod; weekTotals[weekNum].sodCount++; }
+    const v = valOf(dayMetrics(D[dk(d)] || {}));
+    if (weekTotals[weekNum] === undefined) { weekTotals[weekNum] = 0; weekSeries[weekNum] = []; }
+    if (v !== null && !isNaN(v)) { weekTotals[weekNum] += v; weekSeries[weekNum].push(v); totalPNL += v; }
   });
-  
+
+  const pnlEl = document.getElementById('calendarPNL');
+  pnlEl.textContent = fmtVal(totalPNL) || (calMode==='r'?'0R':calMode==='pct'?'0%':'$0');
+  pnlEl.style.color = totalPNL >= 0 ? 'var(--green)' : 'var(--red)';
+
   let grid = `
     <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:12px;">
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
@@ -1926,26 +1945,25 @@ function renderCalendar() {
     const dateStr = `${dayStr}/${monthStr}/2026`;
     const k = dk(dateStr);
     const row = D[k] || {};
-    const pnl = pd(row.pnlDay);
-    const htb  = pd(row.htb) || 0;
     const sod  = pd(row.startOfDay);
-    const pnlNeto = pnl !== null ? pnl - htb : null;
-    
+    const mt = dayMetrics(row);
+    const v = valOf(mt);
+
     // Verificar si es un día festivo
     const hol = HOLIDAYS[dateStr];
-    
-    const color = pnlNeto === null ? 'var(--muted)' : pnlNeto >= 0 ? 'var(--green)' : 'var(--red)';
-    const pnlText = pnlNeto !== null ? fd(pnlNeto) : '';
-    
-    // Mostrar R calculadas con htb descontado: R = pnlNeto / riskTrade (1% SOD)
+
+    const color = v === null ? 'var(--muted)' : v >= 0 ? 'var(--green)' : 'var(--red)';
+    const pnlText = v !== null ? fmtVal(v) : '';
+
+    // Subtítulo: R calculado con htb descontado (independiente del modo elegido arriba)
     let tradesText = '';
     let rColor = 'var(--muted2)';
-    if (pnlNeto !== null && sod && sod > 0) {
+    if (mt.has && sod && sod > 0) {
       const riskTrade = sod * 0.01;
-      const R = pnlNeto / riskTrade;
+      const R = mt.net / riskTrade;
       tradesText = (R >= 0 ? '+' : '') + R.toFixed(2) + 'R';
       rColor = R >= 0 ? 'var(--green)' : 'var(--red)';
-    } else if (pnlNeto !== null) {
+    } else if (mt.has) {
       tradesText = '1 trade';
     }
     
@@ -1972,16 +1990,14 @@ function renderCalendar() {
     
     // Si es sábado, añadir celda de semana
     if (dayIndex % 7 === 0 || day === daysInMonth) {
-      const weekData = weekTotals[currentWeek] || { pnl: 0, trades: 0, sodSum: 0, sodCount: 0 };
-      const weekColor = weekData.pnl >= 0 ? 'var(--green)' : 'var(--red)';
-      const avgSod = weekData.sodCount > 0 ? weekData.sodSum / weekData.sodCount : 0;
-      const weekRisk = avgSod * 0.01;
-      const weekR = weekRisk > 0 ? weekData.pnl / weekRisk : null;
-      const weekRText = weekR !== null && weekData.trades > 0 ? (weekR >= 0 ? '+' : '') + weekR.toFixed(2) + 'R' : '';
+      const weekTotal = weekTotals[currentWeek] || 0;
+      const weekHasData = weekSeries[currentWeek] && weekSeries[currentWeek].length;
+      const weekColor = weekTotal >= 0 ? 'var(--green)' : 'var(--red)';
       grid += `
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${weekColor};">${weekData.pnl !== 0 ? fd(weekData.pnl) : ''}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:${weekColor};">${weekRText}</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);">Week ${currentWeek+1}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:19px;color:${weekColor};">${weekHasData ? fmtVal(weekTotal) : ''}</div>
+          ${sparkline(weekSeries[currentWeek]||[], weekColor)}
         </div>
       `;
       currentWeek++;
@@ -7766,6 +7782,12 @@ function renderLongSide(monthIdx) {
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);">
       <button onclick="hideCalendar()" style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;transition:all .15s;">← Volver</button>
       <div id="calendarTitle" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;">March, 2026</div>
+      <div id="calModeBtns" style="display:flex;gap:6px;margin-left:18px;">
+        <button id="calMode_gross" onclick="setCalMode('gross')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:var(--cyan);color:var(--bg);cursor:pointer;transition:all .15s;">Gross</button>
+        <button id="calMode_net" onclick="setCalMode('net')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:all .15s;">Net</button>
+        <button id="calMode_r" onclick="setCalMode('r')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:all .15s;">R</button>
+        <button id="calMode_pct" onclick="setCalMode('pct')" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 13px;border-radius:7px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:all .15s;">%</button>
+      </div>
       <div id="calendarPNL" style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--green);margin-left:auto;">$0</div>
     </div>
     <div id="calendarGrid"></div>
