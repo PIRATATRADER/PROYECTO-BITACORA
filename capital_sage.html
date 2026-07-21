@@ -518,7 +518,7 @@ td.ed input:focus{background:#1e2a45;border-radius:3px;padding:1px 4px;}
           <th>PNL Day</th>
           <th>% Day</th>
           <th>R</th>
-          <th style="text-align:center;color:#00e676;min-width:50px;" title="Objetivo: PNL Day ≥ 3R + HTB">OBJ</th>
+          <th style="text-align:center;color:#00e676;min-width:50px;" title="Verde/✅ cuando PNL Day − HTB − COM + ECN Fee ≥ Target 3% (Start of Day × 3%)">OBJ</th>
           <th style="text-align:center;color:#5bc0c4;min-width:90px;">ANÁLISIS</th>
           <th style="text-align:center;color:#7c6af7;min-width:140px;">PNL</th>
         </tr></thead>
@@ -978,9 +978,10 @@ function renderMain() {
     const rNum = (pnl!==null&&c.rt) ? (pnl/c.rt) : null;
     if(rNum!==null){ rSum+=rNum; rCount++; }
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
-    // OBJ: PNL Day >= 3R + HTB
-    const objTarget = (sod && c.rt) ? (3 * c.rt + (htb||0)) : null;
-    const objMet = (pnl !== null && objTarget !== null) ? (pnl >= objTarget) : null;
+    // OBJ: (PNL Day - HTB - COM + ECN Fee) >= Target 3% (SOD * 0.03)
+    const objResult = (pnl !== null) ? (pnl - (htb||0) - (com||0) + (ecn||0)) : null;
+    const objTarget = sod ? (sod * 0.03) : null;
+    const objMet = (objResult !== null && objTarget !== null) ? (objResult >= objTarget) : null;
     const ptc = pnl===null?'':pnl>=0?'cg':'cr';
 
     // JUNIO (mes 6): Sin coloreado especial
@@ -1002,7 +1003,7 @@ function renderMain() {
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
-      <td style="text-align:center;font-size:18px;padding:4px;" title="${objTarget!==null?'Objetivo: '+fd(objTarget):'Sin datos'}">${objMet===null?'':objMet?'✅':'❌'}</td>
+      <td style="text-align:center;font-size:18px;padding:4px;" title="${(objResult!==null&&objTarget!==null)?('Resultado: '+fd(objResult)+' vs Target 3%: '+fd(objTarget)):'Sin datos'}">${objMet===null?'':objMet?'✅':'❌'}</td>
       <td style="text-align:center;padding:4px;" class="obs-cell">
         ${(D[k]&&D[k].observaciones&&D[k].observaciones.trim())
           ? `<button onclick="abrirObservaciones('${k}')" title="Ver/editar análisis" style="font-size:14px;line-height:1;background:transparent;border:1px solid #5bc0c455;border-radius:6px;padding:3px 8px;cursor:pointer;color:#5bc0c4;transition:all .15s;" onmouseover="this.style.borderColor='#5bc0c4';this.style.background='#5bc0c415'" onmouseout="this.style.borderColor='#5bc0c455';this.style.background='transparent'">📝</button>`
@@ -1022,11 +1023,10 @@ function renderMain() {
     if (row.chk_p) countP++;
     if (row.chk_mkt) countMKT++;
     if (row.chk_a) countA++;
-    const _pnl = pd(row.pnlDay), _sod = pd(row.startOfDay), _htb = pd(row.htb)||0;
-    const _c = calc(_sod, d);
-    if (_pnl !== null && _sod && _c.rt) {
+    const _pnl = pd(row.pnlDay), _sod = pd(row.startOfDay), _htb = pd(row.htb)||0, _com = pd(row.com)||0, _ecn = pd(row.ecnfee)||0;
+    if (_pnl !== null && _sod) {
       countObjDays++;
-    if (_pnl >= 3 * _c.rt + _htb) countObjMet++;
+      if ((_pnl - _htb - _com + _ecn) >= (_sod * 0.03)) countObjMet++;
     }
   });
   
