@@ -825,11 +825,61 @@ function $$(s) { return document.querySelector(s); }
 function dk(d) { const p=d.split('/'); return p[2]+'-'+p[1]+'-'+p[0]; }
 function mondayKey(d){ const p=d.split('/'); const dt=new Date(+p[2], +p[1]-1, +p[0]); const dow=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-dow); return dt.getFullYear()+'-'+(dt.getMonth()+1)+'-'+dt.getDate(); }
 
-// Parse dollar string
-function pd(s) {
-  if (s===''||s==null) return null;
-  const n = parseFloat(String(s).replace(/[$,\s]/g,'').replace(',','.'));
-  return isNaN(n) ? null : n;
+// ── PARSEO ROBUSTO DE DINERO ─────────────────────────────────────────────────
+// Acepta: 1000.50 · $1,000.50 · 1.000,50 · 1000,50 · -$250.25 · −$250.25 (signo
+// unicode) · vacío→null. Detecta el separador decimal correcto en vez de
+// asumir siempre "," o "." — evita que 1.000,50 se lea como 1.0005 o 100050.
+function parseMoney(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  let s = String(value).trim();
+  if (s === '') return null;
+  s = s.replace(/−/g, '-'); // signo menos unicode (−) → ASCII (-)
+  const neg = /^-/.test(s) || /-$/.test(s);
+  s = s.replace(/[$\s-]/g, '');
+  if (s === '') return null;
+  const hasComma = s.indexOf(',') !== -1;
+  const hasDot = s.indexOf('.') !== -1;
+  if (hasComma && hasDot) {
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+      s = s.replace(/\./g, '').replace(',', '.'); // europeo: 1.000,50 → miles=. decimal=,
+    } else {
+      s = s.replace(/,/g, ''); // US: 1,000.50 → miles=, decimal=.
+    }
+  } else if (hasComma) {
+    s = s.replace(',', '.'); // solo coma → se interpreta como decimal (1000,50 → 1000.50)
+  }
+  const n = parseFloat(s);
+  if (!Number.isFinite(n)) return null;
+  return neg ? -Math.abs(n) : n;
+}
+// Parse dollar string (nombre histórico usado en ~150 sitios del archivo — se
+// mantiene como alias de parseMoney para no tener que renombrar cada llamada)
+function pd(s) { return parseMoney(s); }
+
+// ── FECHAS DD/MM/YYYY: helpers seguros (nunca comparar como texto) ──────────
+function parseDateDDMMYYYY(value) {
+  if (!value) return null;
+  const parts = String(value).split('/');
+  if (parts.length !== 3) return null;
+  const dd = parseInt(parts[0], 10), mm = parseInt(parts[1], 10), yyyy = parseInt(parts[2], 10);
+  if (!Number.isFinite(dd) || !Number.isFinite(mm) || !Number.isFinite(yyyy)) return null;
+  const dt = new Date(yyyy, mm - 1, dd);
+  if (dt.getFullYear() !== yyyy || dt.getMonth() !== mm - 1 || dt.getDate() !== dd) return null; // fecha inválida (ej. 31/02)
+  return dt;
+}
+function toISODate(value) {
+  const dt = (value instanceof Date) ? value : parseDateDDMMYYYY(value);
+  if (!dt) return null;
+  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+}
+// Devuelve -1 / 0 / 1 / null (si alguna fecha no es válida) — nunca compara strings.
+function compareDates(a, b) {
+  const da = (a instanceof Date) ? a : parseDateDDMMYYYY(a);
+  const db = (b instanceof Date) ? b : parseDateDDMMYYYY(b);
+  if (!da || !db) return null;
+  const ta = da.getTime(), tb = db.getTime();
+  return ta < tb ? -1 : ta > tb ? 1 : 0;
 }
 
 // Format dollar
@@ -848,7 +898,9 @@ function calc(sod, date) {
   // Determinar si es antes o después del 23/03/2026
   // Fechas antes del 23/03/2026 usan porcentajes antiguos
   // Fechas desde 23/03/2026 en adelante usan porcentajes nuevos
-  const useNewPercentages = date && date >= '23/03/2026';
+  // (comparación real de fechas, no de texto — 'date >= "23/03/2026"' comparaba
+  // strings DD/MM/YYYY y podía dar resultados incorrectos entre meses distintos)
+  const useNewPercentages = date ? (compareDates(date, '23/03/2026') >= 0) : false;
   
   return {
     ml,                    // Max Loss 5%
@@ -863,6 +915,168 @@ function calc(sod, date) {
   };
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// ── CÁLCULOS FINANCIEROS CENTRALIZADOS (única fuente de verdad) ─────────────
+// PNL NETO = PNL Day − HTB − COM + ECN Fee. Toda tarjeta, tabla, calendario,
+// estadística, simulación e informe debe leer el neto/objetivo/R desde aquí,
+// nunca reimplementar "pnl - htb" (fórmula incompleta que existía en ~30
+// sitios del archivo) ni ninguna otra variante.
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Métricas completas de UN día a partir de su registro D[k].
+ * HTB/COM/ECN Fee ausentes se tratan como 0 SOLO para el cálculo (nunca se
+ * inventa un PNL Day o un Start of Day que no exista: si faltan, las métricas
+ * dependientes son null, no 0).
+ */
+function calculateDayMetrics(row, dateStr) {
+  row = row || {};
+  const sod = parseMoney(row.startOfDay);
+  const pnlDay = parseMoney(row.pnlDay);
+  const htb = parseMoney(row.htb) ?? 0;
+  const com = parseMoney(row.com) ?? 0;
+  const ecn = parseMoney(row.ecnfee) ?? 0;
+  const c = calc(sod, dateStr);
+
+  const hasPnl = pnlDay !== null;
+  const hasSod = sod !== null && sod > 0;
+
+  const netPnl = hasPnl ? (pnlDay - htb - com + ecn) : null;
+  const costeNeto = htb + com - ecn; // "coste neto" (sección 7): HTB + COM − ECN Fee
+  const target3 = hasSod ? sod * 0.03 : null;
+  // Objetivo: null si faltan datos imprescindibles (nunca false/❌ por dato ausente)
+  const objMet = (hasPnl && hasSod) ? (netPnl >= target3) : null;
+  const objDiff = (hasPnl && hasSod) ? (netPnl - target3) : null;
+
+  const pctBruto = (hasPnl && hasSod) ? (pnlDay / sod * 100) : null;
+  const pctNeto  = (hasPnl && hasSod) ? (netPnl / sod * 100) : null;
+
+  const riskTrade = c.rt || null; // 1% del SOD
+  const rBruta = (hasPnl && riskTrade) ? (pnlDay / riskTrade) : null;
+  const rNeta  = (hasPnl && riskTrade) ? (netPnl / riskTrade) : null;
+
+  // Win / Loss / Break-even se definen sobre el PNL NETO. Un día sin PNL Day
+  // no es "break-even": simplemente no es un día operado (dayResult = null).
+  let dayResult = null;
+  if (hasPnl) dayResult = netPnl > 0 ? 'win' : netPnl < 0 ? 'loss' : 'be';
+
+  return {
+    date: dateStr, sod, pnlDay, htb, com, ecn,
+    netPnl, costeNeto, target3, objMet, objDiff,
+    pctBruto, pctNeto,
+    riskTrade, rBruta, rNeta,
+    dayResult, hasPnl, hasSod,
+    // Umbrales ACUMULATIVOS (sección 5): un día de +5% también cuenta en +3% y +1%
+    meets1pct: (hasPnl && hasSod) ? (pctNeto >= 1) : false,
+    meets3pct: (hasPnl && hasSod) ? (pctNeto >= 3) : false,
+    meets5pct: (hasPnl && hasSod) ? (pctNeto >= 5) : false
+  };
+}
+
+/** Métricas agregadas de un mes completo (índice 0-11 sobre MONTHS). */
+function calculateMonthMetrics(monthIndex) {
+  const m = MONTHS[monthIndex];
+  let grossTotal = 0, htbTotal = 0, comTotal = 0, ecnTotal = 0, netTotal = 0;
+  let wins = 0, losses = 0, be = 0, daysOperados = 0;
+  let firstSod = null, lastSod = null, sodSum = 0, sodCount = 0;
+  let rNetaSum = 0, rNetaCount = 0, rBrutaSum = 0, rBrutaCount = 0;
+  let pctNetoSum = 0, pctBrutoSum = 0, pctCount = 0;
+  let days1pctNeto = 0, days3pctNeto = 0, days5pctNeto = 0;
+  const dailyNetSeries = []; // cronológico, para rachas/drawdown/mejor-peor día
+
+  m.days.forEach(d => {
+    const row = D[dk(d)] || {};
+    const dm = calculateDayMetrics(row, d);
+    if (dm.hasSod) { if (firstSod === null) firstSod = dm.sod; lastSod = dm.sod; sodSum += dm.sod; sodCount++; }
+    if (!dm.hasPnl) return; // sin PNL Day → no es un día operado, no cuenta en ningún contador
+    daysOperados++;
+    grossTotal += dm.pnlDay; htbTotal += dm.htb; comTotal += dm.com; ecnTotal += dm.ecn; netTotal += dm.netPnl;
+    if (dm.dayResult === 'win') wins++; else if (dm.dayResult === 'loss') losses++; else be++;
+    if (dm.rNeta !== null) { rNetaSum += dm.rNeta; rNetaCount++; }
+    if (dm.rBruta !== null) { rBrutaSum += dm.rBruta; rBrutaCount++; }
+    if (dm.pctNeto !== null) { pctNetoSum += dm.pctNeto; pctCount++; pctBrutoSum += dm.pctBruto; }
+    if (dm.meets1pct) days1pctNeto++;
+    if (dm.meets3pct) days3pctNeto++;
+    if (dm.meets5pct) days5pctNeto++;
+    dailyNetSeries.push({ date: d, net: dm.netPnl, gross: dm.pnlDay });
+  });
+
+  return {
+    monthIndex, name: m.name,
+    grossTotal, htbTotal, comTotal, ecnTotal, netTotal,
+    costeNetoTotal: htbTotal + comTotal - ecnTotal,
+    firstSod, lastSod, avgSod: sodCount ? sodSum / sodCount : null,
+    daysOperados, wins, losses, be,
+    winRateNeto: daysOperados ? (wins / daysOperados * 100) : null,
+    pctNetoMes: firstSod ? (netTotal / firstSod * 100) : null,
+    avgDiarioNeto: daysOperados ? (netTotal / daysOperados) : null,
+    avgPctDiarioNeto: pctCount ? (pctNetoSum / pctCount) : null,
+    avgPctDiarioBruto: pctCount ? (pctBrutoSum / pctCount) : null,
+    rNetaAcumulada: rNetaSum, rNetaMedia: rNetaCount ? (rNetaSum / rNetaCount) : null,
+    rBrutaAcumulada: rBrutaSum, rBrutaMedia: rBrutaCount ? (rBrutaSum / rBrutaCount) : null,
+    days1pctNeto, days3pctNeto, days5pctNeto,
+    dailyNetSeries
+  };
+}
+
+/** Métricas agregadas del año completo — suma de los 12 calculateMonthMetrics. */
+function calculateYearMetrics() {
+  const months = MONTHS.map((_, i) => calculateMonthMetrics(i));
+  const acc = { grossTotal: 0, htbTotal: 0, comTotal: 0, ecnTotal: 0, netTotal: 0, daysOperados: 0, wins: 0, losses: 0, be: 0, rNetaAcumulada: 0 };
+  let firstSod = null;
+  const dailyNetSeries = [];
+  months.forEach(mm => {
+    if (mm.firstSod !== null && firstSod === null) firstSod = mm.firstSod;
+    acc.grossTotal += mm.grossTotal; acc.htbTotal += mm.htbTotal; acc.comTotal += mm.comTotal;
+    acc.ecnTotal += mm.ecnTotal; acc.netTotal += mm.netTotal; acc.daysOperados += mm.daysOperados;
+    acc.wins += mm.wins; acc.losses += mm.losses; acc.be += mm.be; acc.rNetaAcumulada += mm.rNetaAcumulada;
+    dailyNetSeries.push(...mm.dailyNetSeries);
+  });
+  return Object.assign(acc, {
+    months, firstSod,
+    costeNetoTotal: acc.htbTotal + acc.comTotal - acc.ecnTotal,
+    winRateNeto: acc.daysOperados ? (acc.wins / acc.daysOperados * 100) : null,
+    pctNetoAnual: firstSod ? (acc.netTotal / firstSod * 100) : null,
+    avgDiarioNeto: acc.daysOperados ? (acc.netTotal / acc.daysOperados) : null,
+    rNetaMedia: acc.daysOperados ? (acc.rNetaAcumulada / acc.daysOperados) : null,
+    dailyNetSeries
+  });
+}
+
+/**
+ * Capital actual — única fuente de verdad, evita duplicar el PNL.
+ * El Start of Day de un día YA incorpora el resultado neto de los días
+ * anteriores (así es como se rellena la tabla). Por tanto:
+ *  - Si el último día con SOD registrado todavía NO tiene PNL Day (día en
+ *    curso sin cerrar), el capital teórico es ese mismo SOD.
+ *  - Si ese último día YA tiene PNL Day, su resultado neto aún no está
+ *    reflejado en ningún SOD futuro (no existe día siguiente todavía), así
+ *    que se suma una única vez: capital = SOD + PNL neto de ese día.
+ * Los retiros/aportaciones NO son rendimiento de trading — se aplican aparte
+ * sobre el capital teórico para obtener el saldo REAL de la cuenta. El PNL
+ * neto acumulado (calculateYearMetrics().netTotal) nunca incluye retiros.
+ */
+function calculateCurrentCapital() {
+  let lastSod = null, lastClosedDayMetrics = null;
+  for (let mi = 0; mi < MONTHS.length; mi++) {
+    for (let di = 0; di < MONTHS[mi].days.length; di++) {
+      const d = MONTHS[mi].days[di];
+      const row = D[dk(d)] || {};
+      const sod = parseMoney(row.startOfDay);
+      if (sod !== null) {
+        lastSod = sod;
+        const dm = calculateDayMetrics(row, d);
+        lastClosedDayMetrics = dm.hasPnl ? dm : null;
+      }
+    }
+  }
+  if (lastSod === null) return { theoretical: null, real: null, lastSod: null, totalRetirado: 0 };
+  const theoretical = lastClosedDayMetrics ? (lastSod + lastClosedDayMetrics.netPnl) : lastSod;
+  const totalRetirado = (typeof getRetiros === 'function' ? getRetiros() : [])
+    .reduce((s, r) => s + (parseMoney(r.importe) || 0), 0);
+  return { theoretical, real: theoretical - totalRetirado, lastSod, totalRetirado };
+}
+
 // ── TABS ──────────────────────────────────────────────────────────────────────
 function renderTabs() {
   document.getElementById('tabs').innerHTML = MONTHS.map((m,i) => {
@@ -875,6 +1089,12 @@ function sw(i){ month=i; renderTabs(); renderAll(); }
 
 // ── SCORE AUTOMÁTICO 1-10 ────────────────────────────────────────────────────
 // Factores: R conseguida, % Day vs SOD, Targets superados, Max Loss respetado, HTB vs PNL
+// IMPORTANTE: `pnl` debe ser el PNL NETO del día (pnlDay-htb-com+ecnFee), no el
+// bruto — todos los call-sites de esta app ya pasan el neto. Antes el Factor 3
+// comparaba con sod*0.02 (2%) aunque el comentario decía "superó T3" (que es
+// 3%) — ya corregido. El Factor 5 reconstruye un bruto aproximado (pnl+htb)
+// para no penalizar el HTB dos veces (una vez ya está descontado del propio
+// `pnl` neto que mueve todos los demás factores).
 function calcScore(pnl, sod, htb) {
   if (pnl === null || sod === null || sod <= 0) return null;
   let score = 5; // base neutra
@@ -901,18 +1121,21 @@ function calcScore(pnl, sod, htb) {
   else if (pctDay >= -3) score -= 0.5;
   else                   score -= 1;
 
-  // ── Factor 3: Targets superados ──
+  // ── Factor 3: Targets superados (T5=5%, T3=3%, T1=1% del SOD) ──
   if      (pnl >= sod * 0.05) score += 1.5; // superó T5
-  else if (pnl >= sod * 0.02) score += 1;   // superó T3
+  else if (pnl >= sod * 0.03) score += 1;   // superó T3 (antes comparaba con 2%, no con el 3% real)
   else if (pnl >= sod * 0.01) score += 0.5; // superó T1
 
   // ── Factor 4: Max Loss respetado (penalización dura) ──
   if (pnl < 0 && Math.abs(pnl) >= maxLoss) score -= 2;
 
-  // ── Factor 5: HTB vs PNL (coste de oportunidad) ──
+  // ── Factor 5: HTB como coste de oportunidad, sobre el bruto aproximado ──
+  // (evita castigar el HTB dos veces: ya redujo `pnl` neto arriba; aquí solo
+  // se mira qué proporción del resultado bruto se llevó, no del ya-neto)
   const htbAmt = htb || 0;
-  if (htbAmt > 0 && pnl > 0) {
-    const htbPct = htbAmt / pnl;
+  const pnlBrutoAprox = pnl + htbAmt;
+  if (htbAmt > 0 && pnlBrutoAprox > 0) {
+    const htbPct = htbAmt / pnlBrutoAprox;
     if      (htbPct > 0.5)  score -= 1;
     else if (htbPct > 0.25) score -= 0.5;
   }
@@ -935,7 +1158,7 @@ function renderMain() {
   const m = MONTHS[month];
   document.getElementById('ttl').textContent = m.name+' 2026';
 
-  let rows='', pnlTotal=0, shTotal=0, htbTotal=0, comTotal=0, ecnTotal=0, wins=0, losses=0, firstSOD=null;
+  let rows='', pnlTotal=0, netTotal=0, shTotal=0, htbTotal=0, comTotal=0, ecnTotal=0, wins=0, losses=0, beDays=0, firstSOD=null;
   let sodSum=0, sodCount=0;
   let rSum=0, rCount=0;
   let scoreSum=0, scoreCount=0;
@@ -960,29 +1183,30 @@ function renderMain() {
       return;
     }
     const k=dk(d), row=D[k]||{};
-    const sod=pd(row.startOfDay);
+    const dm = calculateDayMetrics(row, d);
+    const sod = dm.sod;
     if (sod&&!firstSOD) firstSOD=sod;
     const c=calc(sod, d);  // Pasar la fecha para determinar qué porcentajes usar
-    const pnl=pd(row.pnlDay);
-    if (pnl!==null){ pnlTotal+=pnl; pnl>0?wins++:losses++; }
+    const pnl = dm.pnlDay;
+    if (dm.dayResult==='win') wins++; else if (dm.dayResult==='loss') losses++; else if (dm.dayResult==='be') beDays++; // BE (sección 5): ni win ni loss
     const sh=pd(row.shares); if(sh) shTotal+=sh;
-    const htb=pd(row.htb);   if(htb) htbTotal+=htb;
-    const com=pd(row.com);   if(com) comTotal+=com;
-    const ecn=pd(row.ecnfee);if(ecn) ecnTotal+=ecn;
+    const htb = dm.htb; if(htb) htbTotal+=htb;
+    const com = dm.com; if(com) comTotal+=com;
+    const ecn = dm.ecn; if(ecn) ecnTotal+=ecn;
+    if (dm.hasPnl) { pnlTotal += pnl; netTotal += dm.netPnl; }
     if(sod){ sodSum+=sod; sodCount++; }
 
-    // % Day = PNL / SOD  (automatic)
-    const pctD = (pnl!==null&&sod) ? ((pnl/sod)*100).toFixed(2)+'%' : '';
-    // R = PNL Day / Risk Trade
-    const rValue = (pnl!==null&&c.rt) ? (pnl/c.rt).toFixed(2)+'R' : '';
-    const rNum = (pnl!==null&&c.rt) ? (pnl/c.rt) : null;
-    if(rNum!==null){ rSum+=rNum; rCount++; }
+    // % NETO = PNL Neto / SOD (antes esta columna mostraba el % bruto)
+    const pctD = dm.pctNeto!==null ? (dm.pctNeto>=0?'+':'')+dm.pctNeto.toFixed(2)+'%' : '';
+    // R NETA = PNL Neto / Risk Trade (antes esta columna usaba PNL Day bruto)
+    const rValue = dm.rNeta!==null ? (dm.rNeta>=0?'+':'')+dm.rNeta.toFixed(2)+'R' : '';
+    if(dm.rNeta!==null){ rSum+=dm.rNeta; rCount++; }
     const pc = pnl===null?'pm':pnl>0?'pp':'pn';
-    // OBJ: (PNL Day - HTB - COM + ECN Fee) >= Target 3% (SOD * 0.03)
-    const objResult = (pnl !== null) ? (pnl - (htb||0) - (com||0) + (ecn||0)) : null;
-    const objTarget = sod ? (sod * 0.03) : null;
-    const objMet = (objResult !== null && objTarget !== null) ? (objResult >= objTarget) : null;
-    const ptc = pnl===null?'':pnl>=0?'cg':'cr';
+    // OBJ: (PNL Day - HTB - COM + ECN Fee) >= Target 3% (SOD * 0.03) — única fuente: calculateDayMetrics
+    const objResult = dm.netPnl;
+    const objTarget = dm.target3;
+    const objMet = dm.objMet;
+    const ptc = dm.netPnl===null?'':dm.netPnl>=0?'cg':'cr';
 
     // JUNIO (mes 6): Sin coloreado especial
     let rowClass = '';
@@ -1003,7 +1227,7 @@ function renderMain() {
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
-      <td style="text-align:center;font-size:18px;padding:4px;" title="${(objResult!==null&&objTarget!==null)?('Resultado: '+fd(objResult)+' vs Target 3%: '+fd(objTarget)):'Sin datos'}">${objMet===null?'':objMet?'✅':'❌'}</td>
+      <td style="text-align:center;font-size:18px;padding:4px;" title="${objMet!==null?('PNL Day: '+fd(pnl)+'\n− HTB: '+fd(htb||0)+'\n− COM: '+fd(com||0)+'\n+ ECN Fee: '+fd(ecn||0)+'\n= PNL Neto: '+fd(objResult)+'\nTarget 3%: '+fd(objTarget)+'\nDiferencia: '+(objResult-objTarget>=0?'+':'')+fd(objResult-objTarget)):'Faltan datos (Start of Day y/o PNL Day)'}">${objMet===null?'':objMet?'✅':'❌'}</td>
       <td style="text-align:center;padding:4px;" class="obs-cell">
         ${(D[k]&&D[k].observaciones&&D[k].observaciones.trim())
           ? `<button onclick="abrirObservaciones('${k}')" title="Ver/editar análisis" style="font-size:14px;line-height:1;background:transparent;border:1px solid #5bc0c455;border-radius:6px;padding:3px 8px;cursor:pointer;color:#5bc0c4;transition:all .15s;" onmouseover="this.style.borderColor='#5bc0c4';this.style.background='#5bc0c415'" onmouseout="this.style.borderColor='#5bc0c455';this.style.background='transparent'">📝</button>`
@@ -1023,15 +1247,16 @@ function renderMain() {
     if (row.chk_p) countP++;
     if (row.chk_mkt) countMKT++;
     if (row.chk_a) countA++;
-    const _pnl = pd(row.pnlDay), _sod = pd(row.startOfDay), _htb = pd(row.htb)||0, _com = pd(row.com)||0, _ecn = pd(row.ecnfee)||0;
-    if (_pnl !== null && _sod) {
+    const _dm = calculateDayMetrics(row, d);
+    if (_dm.objMet !== null) {
       countObjDays++;
-      if ((_pnl - _htb - _com + _ecn) >= (_sod * 0.03)) countObjMet++;
+      if (_dm.objMet) countObjMet++;
     }
   });
   
   const tc=pnlTotal>0?'pp':pnlTotal<0?'pn':'';
-  const tpct=firstSOD&&pnlTotal!==0?((pnlTotal/firstSOD)*100).toFixed(2)+'%':'';
+  // % NETO del total del mes (coherente con la columna "% Day" de cada fila, que ahora es neta)
+  const tpct=firstSOD&&(wins+losses+beDays)>0?(netTotal/firstSOD*100).toFixed(2)+'%':'';
   const avgSOD = sodCount>0 ? sodSum/sodCount : null;
   const avgC = calc(avgSOD);
   const avgR = rCount>0 ? (rSum/rCount).toFixed(2)+'R' : '';
@@ -1050,7 +1275,7 @@ function renderMain() {
     <td style="color:#ffb27a">${comTotal!==0?fd(comTotal):''}</td>
     <td style="color:#00e676">${ecnTotal!==0?fd(ecnTotal):''}</td>
     <td class="${tc}">${pnlTotal!==0?fd(pnlTotal):''}</td>
-    <td class="${pnlTotal>=0?'cg':'cr'}">${tpct}</td>
+    <td class="${netTotal>=0?'cg':'cr'}">${tpct}</td>
     <td class="${avgRClass}">${avgR}</td>
     <td style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);">${countObjDays>0?countObjMet+'/'+countObjDays:''}</td>
     <td></td>
@@ -1060,33 +1285,36 @@ function renderMain() {
   document.getElementById('mb').innerHTML = rows;
 
   // Header summaries
+  // "PNL Mes" / "% Mes" — PNL NETO (antes mostraban el bruto sin restar ningún coste)
   const pe=document.getElementById('sPNL');
-  pe.textContent=pnlTotal!==0?fd(pnlTotal):'—';
-  pe.className='si-v '+(pnlTotal>0?'g':pnlTotal<0?'r':'');
+  const tieneDatosMes = (wins+losses+beDays)>0;
+  pe.textContent=tieneDatosMes?fd(netTotal):'—';
+  pe.className='si-v '+(netTotal>0?'g':netTotal<0?'r':'');
   const pp=document.getElementById('sPct');
-  if(firstSOD&&pnlTotal!==0){pp.textContent=((pnlTotal/firstSOD)*100).toFixed(2)+'%';pp.className='si-v '+(pnlTotal>=0?'g':'r');}
+  if(firstSOD&&tieneDatosMes){pp.textContent=(netTotal/firstSOD*100).toFixed(2)+'%';pp.className='si-v '+(netTotal>=0?'g':'r');}
   else{pp.textContent='—';pp.className='si-v';}
 
-  const dayVals=m.days.map(d=>pd((D[dk(d)]||{}).pnlDay)).filter(v=>v!==null);
-  document.getElementById('sBest').textContent=dayVals.filter(v=>v>0).length?fd(Math.max(...dayVals)):'—';
-  document.getElementById('sWorst').textContent=dayVals.filter(v=>v<0).length?fd(Math.min(...dayVals)):'—';
+  // Mejor / Peor día — sobre PNL NETO (el resultado real tras costes)
+  const dayNetVals=m.days.map(d=>calculateDayMetrics(D[dk(d)]||{}, d).netPnl).filter(v=>v!==null);
+  document.getElementById('sBest').textContent=dayNetVals.filter(v=>v>0).length?fd(Math.max(...dayNetVals)):'—';
+  document.getElementById('sWorst').textContent=dayNetVals.filter(v=>v<0).length?fd(Math.min(...dayNetVals)):'—';
 
-  // Stats card
-  const tot=wins+losses, wr=tot?Math.round(wins/tot*100):0;
+  // Stats card — "Días operados" incluye Win+Loss+Break-even (un día con PNL=0 sigue siendo un día operado)
+  const tot=wins+losses+beDays, wr=tot?Math.round(wins/tot*100):0;
   document.getElementById('mStats').innerHTML=`
     <div class="sr"><span class="sr-l">Días operados</span><span class="sr-v">${tot}</span></div>
     <div class="sr"><span class="sr-l">Win days</span><span class="sr-v cg">${wins}</span></div>
     <div class="sr"><span class="sr-l">Loss days</span><span class="sr-v cr">${losses}</span></div>
     <div class="sr"><span class="sr-l">Win rate</span><span class="sr-v">${tot?wr+'%':'—'}</span></div>
-    <div class="sr"><span class="sr-l">PNL total</span><span class="sr-v ${(pnlTotal-htbTotal)>=0?'cg':'cr'}">${pnlTotal!==0?fd(pnlTotal-htbTotal):'—'}</span></div>`;
+    <div class="sr"><span class="sr-l">PNL Neto</span><span class="sr-v ${netTotal>=0?'cg':'cr'}">${(wins+losses+beDays)>0?fd(netTotal):'—'}</span></div>`;
 
-  document.getElementById('wDays').innerHTML=dayVals.length
-      ? m.days.map(d=>({d,p:pd((D[dk(d)]||{}).pnlDay)})).filter(x=>x.p!==null)
+  document.getElementById('wDays').innerHTML=dayNetVals.length
+      ? m.days.map(d=>({d,p:calculateDayMetrics(D[dk(d)]||{}, d).netPnl})).filter(x=>x.p!==null)
           .sort((a,b)=>a.p-b.p).slice(0,5)
           .map(x=>`<div class="sr"><span class="sr-l">${x.d}</span><span class="sr-v ${x.p>=0?'cg':'cr'}">${fd(x.p)}</span></div>`).join('')
       : '<span class="cm" style="font-size:12px">Sin datos</span>';
-    document.getElementById('bDays').innerHTML=dayVals.length
-    ? m.days.map(d=>({d,p:pd((D[dk(d)]||{}).pnlDay)})).filter(x=>x.p!==null)
+    document.getElementById('bDays').innerHTML=dayNetVals.length
+    ? m.days.map(d=>({d,p:calculateDayMetrics(D[dk(d)]||{}, d).netPnl})).filter(x=>x.p!==null)
         .sort((a,b)=>b.p-a.p).slice(0,5)
         .map(x=>`<div class="sr"><span class="sr-l">${x.d}</span><span class="sr-v ${x.p>=0?'cg':'cr'}">${fd(x.p)}</span></div>`).join('')
     : '<span class="cm" style="font-size:12px">Sin datos</span>';
@@ -1204,27 +1432,25 @@ function renderObj() {
   }
 
   // Capital actual de la cuenta = SOD del último día que tenga SOD registrado.
-  // Si ese mismo día también tiene PNL, se suma (SOD + PNL - HTB) para reflejar
-  // el cierre del día en curso. El PNL de días anteriores ya está reflejado en el
-  // SOD del día siguiente, por lo que NO se acumula hacia atrás.
+  // Si ese mismo día también tiene PNL, se suma el PNL NETO (pnlDay-htb-com+ecnFee,
+  // antes solo restaba HTB) para reflejar el cierre del día en curso. El PNL de
+  // días anteriores ya está reflejado en el SOD del día siguiente, por lo que
+  // NO se acumula hacia atrás (evita duplicar el PNL).
   let lastSOD = som;
-  let lastPNL = null;
-  let lastHTB = null;
+  let lastDm = null;
   m.days.forEach(d => {
     const row = D[dk(d)] || {};
     const s = pd(row.startOfDay);
     if (s !== null) {
       lastSOD = s;
-      lastPNL = pd(row.pnlDay);
-      lastHTB = pd(row.htb);
+      lastDm = calculateDayMetrics(row, d);
     }
   });
 
   // Capital de referencia para colorear:
-  // - Si el último día con SOD ya tiene PNL cerrado → SOD + PNL - HTB
+  // - Si el último día con SOD ya tiene PNL cerrado → SOD + PNL NETO
   // - Si no hay PNL todavía (día en curso sin cerrar) → solo el SOD
-  const htbAmt = (lastHTB !== null) ? lastHTB : 0;
-  const currentCap = (lastPNL !== null) ? lastSOD + lastPNL - htbAmt : lastSOD;
+  const currentCap = (lastDm && lastDm.hasPnl) ? (lastSOD + lastDm.netPnl) : lastSOD;
 
   // Targets compuestos calculados desde el capital inicial del mes
   const r1 = parseFloat(document.getElementById('rate1Sel')?.value ?? 0.01);
@@ -1266,19 +1492,16 @@ function renderObj() {
 // ── YEAR KPIs ─────────────────────────────────────────────────────────────────
 function renderYear() {
   try {
-  let pnl=0,htbTotal=0,firstCap=null,dias=0,wins=0,losses=0;
+  const mm = calculateMonthMetrics(month);
+  const firstCap = mm.firstSod;
+  const dias = mm.daysOperados, wins = mm.wins, losses = mm.losses;
   const m=MONTHS[month];
-  m.days.forEach(d=>{
-    const row=D[dk(d)]||{};
-    const sod=pd(row.startOfDay); if(sod&&!firstCap) firstCap=sod;
-    const p=pd(row.pnlDay); if(p!==null){pnl+=p;dias++;p>0?wins++:losses++;}
-    const h=pd(row.htb)||0; htbTotal+=h;
-  });
-  // PNL Bruto = total del PNL del mes (sin restar HTB)
-  const pnlBruto = pnl;
-  // PNL Neto = Bruto - HTB
-  const pnlNeto = pnl - htbTotal;
-  
+  // PNL Bruto = total del PNL Day del mes (sin restar ningún coste)
+  const pnlBruto = mm.grossTotal;
+  const htbTotal = mm.htbTotal;
+  // PNL Neto = PNL Day − HTB − COM + ECN Fee (única fórmula oficial — antes solo restaba HTB)
+  const pnlNeto = mm.netTotal;
+
   document.getElementById('kCap').textContent=firstCap?fd(firstCap):'—';
   const pe=document.getElementById('kPNL');
   pe.textContent=fd(pnlBruto)||'$0'; pe.className='kpi-v '+(pnlBruto>=0?'kg':'kr');
@@ -1301,23 +1524,9 @@ function renderYear() {
       let pctsPrevios=[];
       if(month>0 && MONTHS && MONTHS.length > 0) {
         for(let mi=0; mi<month; mi++) {
-          const mesAnterior=MONTHS[mi];
-          if(!mesAnterior || !mesAnterior.days) continue;
-          
-          let pnlMesAnt=0, htbMesAnt=0, sodMesAnt=null;
-          
-          mesAnterior.days.forEach(d=>{
-            const row=D[dk(d)]||{};
-            const sod=pd(row.startOfDay); if(sod&&!sodMesAnt) sodMesAnt=sod;
-            const p=pd(row.pnlDay); if(p!==null) pnlMesAnt+=p;
-            const h=pd(row.htb)||0; htbMesAnt+=h;
-          });
-          
-          const pnlNetoMesAnt=pnlMesAnt-htbMesAnt;
-          if(sodMesAnt&&sodMesAnt>0) {
-            const pctMesAnt=(pnlNetoMesAnt/sodMesAnt)*100;
-            pctsPrevios.push(pctMesAnt);
-          }
+          if(!MONTHS[mi] || !MONTHS[mi].days) continue;
+          const mmAnt = calculateMonthMetrics(mi);
+          if(mmAnt.pctNetoMes !== null) pctsPrevios.push(mmAnt.pctNetoMes);
         }
       }
       
@@ -1343,26 +1552,13 @@ function renderYear() {
     document.getElementById('kLossPct').textContent=(losses/dias*100).toFixed(1)+'%';
   }
 
-  // % Medio por día: promedio de los % Day individuales (pnlDay/startOfDay*100)
-  let pctBrutoSum=0, pctHTBSum=0, pctNetoSum=0, pctCount=0;
-  m.days.forEach(d=>{
-    const row=D[dk(d)]||{};
-    const sod=pd(row.startOfDay);
-    const p=pd(row.pnlDay);
-    const h=pd(row.htb)||0;
-    if(sod&&sod>0&&p!==null){ 
-      pctBrutoSum+=(p/sod)*100;
-      pctHTBSum+=(h/sod)*100;
-      pctNetoSum+=((p-h)/sod)*100;
-      pctCount++; 
-    }
-  });
+  // % Medio por día: promedio de los % Day individuales (BRUTO = pnlDay/SOD, NETO = pnlNeto/SOD)
+  // "COSTES" = diferencia bruto-neto en % (antes solo reflejaba HTB; ahora incluye HTB+COM-ECN)
+  const avgPctBruto = mm.avgPctDiarioBruto, avgPctNeto = mm.avgPctDiarioNeto, pctCount = mm.daysOperados;
   const avgPctEl=document.getElementById('kAvgPct');
   const avgPctSub=document.getElementById('kAvgPctSub');
   if(pctCount>0){
-    const avgPctBruto=pctBrutoSum/pctCount;
-    const avgPctHTB=pctHTBSum/pctCount;
-    const avgPctNeto=pctNetoSum/pctCount;
+    const avgPctCostes = avgPctBruto - avgPctNeto;
     avgPctEl.innerHTML=`
       <div style="display:flex;gap:16px;align-items:center;">
         <div>
@@ -1370,8 +1566,8 @@ function renderYear() {
           <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${avgPctBruto>=0?'var(--green)':'var(--red)'};">${avgPctBruto>=0?'+':''}${avgPctBruto.toFixed(2)}%</div>
         </div>
         <div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">HTB</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);">-${avgPctHTB.toFixed(2)}%</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">COSTES</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red);">${avgPctCostes>=0?'-':'+'}${Math.abs(avgPctCostes).toFixed(2)}%</div>
         </div>
         <div>
           <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:4px;">NETO</div>
@@ -1386,28 +1582,18 @@ function renderYear() {
     if(avgPctSub) avgPctSub.innerHTML='Sin datos aún';
   }
 
-  // Calcular días por objetivo (1%, 3%, rojos)
-  let days1pct=0, days3pct=0, daysRed=0, daysTotal=0, redLossSum=0;
+  // Días por objetivo NETO — ACUMULATIVOS: un día de +5% también cuenta en +3% y +1%
+  // (antes usaba % bruto y un if/else-if que hacía desaparecer un día de +3% del contador de +1%)
+  const days1pct = mm.days1pctNeto, days3pct = mm.days3pctNeto, daysTotal = mm.daysOperados;
+  let daysRed=0, redPctNetoSum=0;
   m.days.forEach(d=>{
-    const row=D[dk(d)]||{};
-    const sod=pd(row.startOfDay);
-    const p=pd(row.pnlDay);
-    if(sod&&sod>0&&p!==null){
-      daysTotal++; // Contar total de días operados
-      const pctDay=(p/sod)*100;
-      if(pctDay>0){
-        if(pctDay>=3) days3pct++;
-        else if(pctDay>=1) days1pct++;
-      } else if(pctDay<0){
-        daysRed++;
-        redLossSum+=pctDay; // Sumar las pérdidas
-      }
-    }
+    const dm = calculateDayMetrics(D[dk(d)]||{}, d);
+    if (dm.dayResult === 'loss') { daysRed++; if (dm.pctNeto!==null) redPctNetoSum += dm.pctNeto; }
   });
-  
-  // Calcular porcentaje de días rojos y promedio de pérdida
+
+  // Calcular porcentaje de días rojos y promedio de pérdida (% NETO)
   const redPctage = daysTotal>0 ? ((daysRed/daysTotal)*100).toFixed(1) : 0;
-  const avgRedLoss = daysRed>0 ? (redLossSum/daysRed).toFixed(2) : 0;
+  const avgRedLoss = daysRed>0 ? (redPctNetoSum/daysRed).toFixed(2) : 0;
   
   // Actualizar tarjeta de días
   const days1pctEl=document.getElementById('days1pct');
@@ -1476,35 +1662,12 @@ function renderYear() {
     if (sod !== null) { capInicialEnero = sod; break; }
   }
 
-  // 2) Capital actual: recorrer todos los meses hasta hoy
-  let capActual = null;
-  for (let mi = 0; mi < MONTHS.length; mi++) {
-    const mes = MONTHS[mi];
-    const esMesActualOAnterior = (mi <= mesActualIdx);
-    if (!esMesActualOAnterior) break;
-
-    const esMesCerrado = (mi < mesActualIdx);
-
-    if (esMesCerrado) {
-      // Mes cerrado: calculamos capital final = último SOD con dato + PNL mes - HTB mes
-      let lastSod = null, pnlMes = 0, htbMes = 0;
-      mes.days.forEach(d => {
-        const row = D[dk(d)] || {};
-        const sod = pd(row.startOfDay);
-        const p   = pd(row.pnlDay);
-        const h   = pd(row.htb) || 0;
-        if (sod !== null) lastSod = sod;
-        if (p  !== null) { pnlMes += p; htbMes += h; }
-      });
-      if (lastSod !== null) capActual = lastSod + pnlMes - htbMes;
-    } else {
-      // Mes en curso: SOD más reciente con dato (ese ya incluye el resultado de días anteriores)
-      for (let di = mes.days.length - 1; di >= 0; di--) {
-        const sod = pd((D[dk(mes.days[di])]||{}).startOfDay);
-        if (sod !== null) { capActual = sod; break; }
-      }
-    }
-  }
+  // 2) Capital actual: única fuente de verdad — calculateCurrentCapital() ya evita
+  // duplicar el PNL (el SOD de un día ya incorpora el resultado de los anteriores)
+  // y usa el PNL NETO completo (antes esta sección restaba solo HTB del mes cerrado).
+  // Se usa ".theoretical" (rendimiento de trading puro) para esta comparativa —
+  // los retiros no son parte del rendimiento y no deben "adelgazar" este ratio.
+  const capActual = calculateCurrentCapital().theoretical;
 
   if (capInicialEnero && capActual) {
     const diff    = capActual - capInicialEnero;
@@ -1519,16 +1682,19 @@ function renderYear() {
   }
   // ── RACHA ACTUAL (streak) ──────────────────────────────────────────────────
   try {
-    let allDaysPNL = [];
+    // Racha sobre PNL NETO — un día break-even (neto=0) corta la racha (no es win ni loss)
+    let allDaysNet = [];
     for(let mi=0; mi<MONTHS.length; mi++){
       MONTHS[mi].days.forEach(d=>{
-        const p=pd((D[dk(d)]||{}).pnlDay);
-        if(p!==null) allDaysPNL.push(p);
+        const dm = calculateDayMetrics(D[dk(d)]||{}, d);
+        if(dm.dayResult!==null) allDaysNet.push(dm.dayResult); // 'win' | 'loss' | 'be'
       });
     }
     let streak=0, streakDir=0;
-    for(let i=allDaysPNL.length-1;i>=0;i--){
-      const dir=allDaysPNL[i]>0?1:-1;
+    for(let i=allDaysNet.length-1;i>=0;i--){
+      const result = allDaysNet[i];
+      if (result === 'be') break; // break-even corta la racha
+      const dir = result==='win' ? 1 : -1;
       if(streak===0){streak=1;streakDir=dir;}
       else if(dir===streakDir) streak++;
       else break;
@@ -1730,7 +1896,7 @@ function attachEd() {
         if(v==='') delete D[k][f]; else D[k][f]=v;
         syncAIDayFromTable(k, f);
         save(); renderAll(); showToast('✓ Guardado');
-        if (f === 'pnlDay' || f === 'htb') checkObjetivoAlert(k);
+        if (f === 'pnlDay' || f === 'htb' || f === 'com' || f === 'ecnfee' || f === 'startOfDay') checkObjetivoAlert(k);
       };
       inp.addEventListener('blur',commit);
       inp.addEventListener('keydown',e=>{
@@ -1775,12 +1941,13 @@ function attachSetupCheckboxes() {
 // para que la Tarjeta "Análisis IA" reciba los datos.
 // Los trades generados desde la tabla llevan symbol="TABLA" para identificarlos.
 function syncAIDayFromTable(k, f) {
-  if (f !== 'pnlDay' && f !== 'htb' && f !== 'startOfDay') return;
+  if (f !== 'pnlDay' && f !== 'htb' && f !== 'com' && f !== 'ecnfee' && f !== 'startOfDay') return;
 
   const row  = D[k] || {};
-  const pnl  = pd(row.pnlDay);
-  const sod  = pd(row.startOfDay);
-  const htb  = pd(row.htb) || 0;
+  const dm   = calculateDayMetrics(row, k);
+  const pnl  = dm.pnlDay;
+  const sod  = dm.sod;
+  const htb  = dm.htb;
 
   // Índice de mes desde la clave YYYY-MM-DD
   const monthNum = parseInt(k.split('-')[1]);
@@ -1800,16 +1967,21 @@ function syncAIDayFromTable(k, f) {
   if (!entry) entry = { date: displayDate, trades: [], summary: { htbCost: 0 } };
   if (!entry.summary) entry.summary = { htbCost: 0 };
 
-  // Actualizar HTB en el resumen
+  // Actualizar HTB/COM/ECN en el resumen (para que el rollup de renderAIAnalysis
+  // pueda calcular el PNL NETO agregado sin restar dos veces los costes: el
+  // trade "TABLA" guarda el PNL Day BRUTO, y HTB+COM-ECN se restan/suman una
+  // única vez a nivel de día en el rollup — igual que con los trades manuales,
+  // que no tienen desglose de costes propio).
   entry.summary.htbCost = htb;
+  entry.summary.comCost = dm.com;
+  entry.summary.ecnCost = dm.ecn;
 
   if (pnl === null) {
     // Sin PNL → eliminar trade TABLA si existe
     entry.trades = entry.trades.filter(t => t.symbol !== 'TABLA');
   } else {
-    // Calcular R real si hay SOD disponible
-    const rt    = (sod && sod > 0) ? sod * 0.01 : 0;
-    const realR = rt > 0 ? Math.round((pnl / rt) * 100) / 100 : 0;
+    // R bruta (PNL Day / Risk Trade) — el neto se aplica a nivel de día en el rollup
+    const realR = dm.rBruta !== null ? Math.round(dm.rBruta * 100) / 100 : 0;
 
     const tablaEntry = {
       symbol   : 'TABLA',
@@ -1862,13 +2034,11 @@ function renderCalendar() {
   document.getElementById('calendarTitle').textContent = m.name + ', 2026';
 
   // Métricas de un día según sus datos, y el valor/formato según el modo activo (gross/net/r/%)
-  function dayMetrics(row){
-    const pnl = pd(row.pnlDay); const htb = pd(row.htb) || 0; const sod = pd(row.startOfDay);
-    if (pnl === null) return { has:false };
-    const net = pnl - htb;
-    return { has:true, gross:pnl, net,
-             r:(sod&&sod>0)?net/(sod*0.01):null,
-             pct:(sod&&sod>0)?net/sod*100:null };
+  // Usa calculateDayMetrics (única fuente de verdad) — antes "net" solo restaba HTB.
+  function dayMetrics(row, dateStr){
+    const dm = calculateDayMetrics(row, dateStr);
+    if (!dm.hasPnl) return { has:false };
+    return { has:true, gross:dm.pnlDay, net:dm.netPnl, r:dm.rNeta, pct:dm.pctNeto };
   }
   function valOf(mt){ if(!mt||!mt.has) return null; const v=mt[calMode]; return (v===undefined?null:v); }
   function fmtVal(v){ if(v===null||v===undefined||isNaN(v)) return ''; if(calMode==='r') return (v>=0?'+':'')+v.toFixed(2)+'R'; if(calMode==='pct') return (v>=0?'+':'')+v.toFixed(2)+'%'; return fd(v); }
@@ -2073,39 +2243,18 @@ async function analizarEstadisticasIA() {
     const m = MONTHS[month];
     const mesNombre = m.name;
     
-    // Calcular estadísticas clave para el prompt
-    let pnl = 0, htbTotal = 0, dias = 0, wins = 0, losses = 0, firstCap = null;
-    m.days.forEach(d => {
-      const row = D[dk(d)] || {};
-      const sod = pd(row.startOfDay);
-      if (sod && !firstCap) firstCap = sod;
-      const p = pd(row.pnlDay);
-      if (p !== null) { pnl += p; dias++; if (p > 0) wins++; else losses++; }
-      const h = pd(row.htb) || 0;
-      htbTotal += h;
-    });
-    const pnlNeto = pnl - htbTotal;
-    const pctNeto = firstCap && firstCap > 0 ? (pnlNeto / firstCap) * 100 : 0;
-    
+    // Calcular estadísticas clave para el prompt (PNL NETO = PNL Day - HTB - COM + ECN Fee)
+    const mmPrompt = calculateMonthMetrics(month);
+    const pnl = mmPrompt.grossTotal, htbTotal = mmPrompt.htbTotal, dias = mmPrompt.daysOperados;
+    const wins = mmPrompt.wins, losses = mmPrompt.losses, firstCap = mmPrompt.firstSod;
+    const pnlNeto = mmPrompt.netTotal;
+    const pctNeto = mmPrompt.pctNetoMes || 0;
+
     // Calcular promedio histórico para contexto
     let pctsPrevios = [];
     for (let mi = 0; mi < month; mi++) {
-      const mesAnt = MONTHS[mi];
-      let pnlMesAnt = 0, htbMesAnt = 0, sodMesAnt = null;
-      mesAnt.days.forEach(d => {
-        const row = D[dk(d)] || {};
-        const sod = pd(row.startOfDay);
-        if (sod && !sodMesAnt) sodMesAnt = sod;
-        const p = pd(row.pnlDay);
-        if (p !== null) pnlMesAnt += p;
-        const h = pd(row.htb) || 0;
-        htbMesAnt += h;
-      });
-      const pnlNetoMesAnt = pnlMesAnt - htbMesAnt;
-      if (sodMesAnt && sodMesAnt > 0) {
-        const pctMesAnt = (pnlNetoMesAnt / sodMesAnt) * 100;
-        pctsPrevios.push(pctMesAnt);
-      }
+      const mmAntPrompt = calculateMonthMetrics(mi);
+      if (mmAntPrompt.pctNetoMes !== null) pctsPrevios.push(mmAntPrompt.pctNetoMes);
     }
     const promedioHistorico = pctsPrevios.length > 0 ? pctsPrevios.reduce((a, b) => a + b, 0) / pctsPrevios.length : 0;
     
@@ -2530,14 +2679,14 @@ function abrirEditorInforme(k) {
 
   // Datos numéricos del día
   const row = D[k] || {};
-  const sod = pd(row.startOfDay);
-  const pnl = pd(row.pnlDay);
-  const htb = pd(row.htb) || 0;
-  const pnlNeto = pnl !== null ? pnl - htb : null;
-  const pctDay = (pnl !== null && sod && sod > 0) ? ((pnl/sod)*100).toFixed(2) : null;
-  const c = calc(sod, displayDate);
-  const rValue = (pnl !== null && c.rt) ? (pnl/c.rt).toFixed(2) : null;
-  const score = calcScore(pnl, sod, htb);
+  const dmInf = calculateDayMetrics(row, displayDate);
+  const sod = dmInf.sod;
+  const pnl = dmInf.pnlDay;
+  const htb = dmInf.htb;
+  const pnlNeto = dmInf.netPnl;
+  const pctDay = dmInf.pctNeto !== null ? dmInf.pctNeto.toFixed(2) : null; // % NETO
+  const rValue = dmInf.rNeta !== null ? dmInf.rNeta.toFixed(2) : null; // R NETA
+  const score = calcScore(dmInf.netPnl, sod, htb);
 
   box.innerHTML =
     '<div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
@@ -3969,25 +4118,12 @@ async function renderPNLAnual() {
   let peorMes = { mes: '', pnl: Infinity };
   
   MONTHS.forEach((m, idx) => {
-    // PNL NETO del mes = Σ pnlDay − Σ htb (misma fuente que las pestañas mensuales)
-    let pnlDayTotal = 0, htbTotal = 0, diasConDatos = 0;
-    // Capital con el que empiezo el mes = primer SOD real registrado del mes
-    let empiezoMes = null;
-
-    m.days.forEach(d => {
-      const row = D[dk(d)] || {};
-      const sod = pd(row.startOfDay);
-      if (empiezoMes === null && sod !== null) empiezoMes = sod;
-      const pnl = pd(row.pnlDay);
-      if (pnl !== null) {
-        pnlDayTotal += pnl;
-        htbTotal += (pd(row.htb) || 0);
-        diasConDatos++;
-      }
-    });
-
-    const pnlMes = pnlDayTotal - htbTotal;
-    const tiene = diasConDatos > 0;
+    // PNL NETO del mes = Σ (pnlDay − htb − com + ecnFee) — fórmula oficial única,
+    // vía calculateMonthMetrics (antes solo restaba HTB).
+    const mmAnual = calculateMonthMetrics(idx);
+    const empiezoMes = mmAnual.firstSod;
+    const pnlMes = mmAnual.netTotal;
+    const tiene = mmAnual.daysOperados > 0;
 
     if (tiene) {
       mesesConDatos++;
@@ -4362,19 +4498,23 @@ function renderStatsTabs() {
 
 function renderStats() {
   const m = MONTHS[statsMonth];
+  // PNL NETO por día (pnlDay - htb - com + ecnFee) — antes esta tarjeta usaba el bruto sin restar nada.
   const rows = m.days.map(d => {
-    const row = D[dk(d)] || {};
-    return { d, p: pd(row.pnlDay), sod: pd(row.startOfDay) };
+    const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+    return { d, p: dm.netPnl, sod: dm.sod };
   }).filter(x => x.p !== null);
 
   // ── Tarjeta 1: Estadísticas ──
+  // Win/Loss se definen sobre PNL NETO > 0 / < 0 (un día break-even no es win ni loss)
   const wins = rows.filter(x => x.p > 0).length;
   const losses = rows.filter(x => x.p < 0).length;
-  const tot = rows.length;
+  const beDaysStat = rows.filter(x => x.p === 0).length;
+  const tot = wins + losses + beDaysStat; // "días operados" = todos los días con PNL neto, incl. break-even
+  // Win rate = wins / días operados (incluye BE en el denominador, igual que el resto de la app)
   const wr = tot ? Math.round(wins / tot * 100) : 0;
   const pnlTotal = rows.reduce((s, x) => s + x.p, 0);
 
-  // Promedio win/loss
+  // Promedio win/loss (sobre PNL NETO)
   const winVals = rows.filter(x => x.p > 0).map(x => x.p);
   const lossVals = rows.filter(x => x.p < 0).map(x => x.p);
   const avgWin = winVals.length ? winVals.reduce((a, b) => a + b, 0) / winVals.length : null;
@@ -4398,22 +4538,19 @@ function renderStats() {
     }
   }
 
-  // Score automático promedio del mes
+  // Score automático promedio del mes (sobre PNL NETO)
   const scoreVals = m.days.map(d => {
-    const row = D[dk(d)] || {};
-    const pnl = pd(row.pnlDay);
-    const sod = pd(row.startOfDay);
-    const htb = pd(row.htb) || 0;
-    return calcScore(pnl, sod, htb);
+    const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+    return calcScore(dm.netPnl, dm.sod, dm.htb);
   }).filter(s => s !== null);
   const avgAutoScore = scoreVals.length ? (scoreVals.reduce((a,b)=>a+b,0) / scoreVals.length) : null;
   const avgScoreWins  = m.days.map(d => {
-    const row = D[dk(d)] || {}; const pnl = pd(row.pnlDay); const sod = pd(row.startOfDay); const htb = pd(row.htb)||0;
-    return pnl > 0 ? calcScore(pnl, sod, htb) : null;
+    const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+    return dm.netPnl > 0 ? calcScore(dm.netPnl, dm.sod, dm.htb) : null;
   }).filter(s => s !== null);
   const avgScoreLosses = m.days.map(d => {
-    const row = D[dk(d)] || {}; const pnl = pd(row.pnlDay); const sod = pd(row.startOfDay); const htb = pd(row.htb)||0;
-    return pnl !== null && pnl <= 0 ? calcScore(pnl, sod, htb) : null;
+    const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+    return dm.netPnl !== null && dm.netPnl <= 0 ? calcScore(dm.netPnl, dm.sod, dm.htb) : null;
   }).filter(s => s !== null);
   const avgSW = avgScoreWins.length   ? (avgScoreWins.reduce((a,b)=>a+b,0)   / avgScoreWins.length).toFixed(1)   : null;
   const avgSL = avgScoreLosses.length ? (avgScoreLosses.reduce((a,b)=>a+b,0) / avgScoreLosses.length).toFixed(1) : null;
@@ -4446,17 +4583,9 @@ function renderStats() {
     </div>
   `;
 
-  // ── Tarjeta 2: Progreso objetivos ──
-  let pnl = 0, htbTotal = 0, firstCap = null;
-  m.days.forEach(d => {
-    const row = D[dk(d)] || {};
-    const sod = pd(row.startOfDay); 
-    if (sod && !firstCap) firstCap = sod;
-    const p = pd(row.pnlDay); 
-    if (p !== null) pnl += p;
-    const h = pd(row.htb) || 0; 
-    htbTotal += h;
-  });
+  // ── Tarjeta 2: Progreso objetivos (PNL NETO = pnlDay - htb - com + ecnFee) ──
+  const mmProg = calculateMonthMetrics(month);
+  const firstCap = mmProg.firstSod;
 
   if (!firstCap) {
     document.getElementById('stProg').innerHTML = '<span style="font-size:12px;color:var(--muted2)">Introduce el Start of Day del primer día del mes</span>';
@@ -4464,7 +4593,7 @@ function renderStats() {
     const goal20 = firstCap * 0.20;
     const goal40 = firstCap * 0.40;
     const goal60 = firstCap * 0.60;
-    const pnlNeto = pnl - htbTotal;
+    const pnlNeto = mmProg.netTotal;
     const pnlNetoPos = pnlNeto > 0 ? pnlNeto : 0;
     const pct20 = Math.min((pnlNetoPos / goal20) * 100, 100).toFixed(1);
     const pct40 = Math.min((pnlNetoPos / goal40) * 100, 100).toFixed(1);
@@ -4807,19 +4936,16 @@ function renderStats() {
     let pnlBruto = 0;
 
     m.days.forEach(d => {
-      const row = D[dk(d)] || {};
-      const sod  = pd(row.startOfDay);
-      const pnl  = pd(row.pnlDay);
-      const htb  = pd(row.htb) || 0;
-      if (htb > 0) { htbAcum += htb; htbDays++; }
-      if (pnl !== null) pnlBruto += pnl;
+      const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+      const sod = dm.sod;
+      if (dm.htb > 0) { htbAcum += dm.htb; htbDays++; }
+      if (dm.hasPnl) pnlBruto += dm.pnlDay;
 
       if (sod === null) return;
 
-      // Capital al cierre del día = SOD + PNL - HTB
-      const cap = sod + (pnl || 0) - htb;
-      if (runningCap === null) runningCap = cap;
-      else runningCap = cap;
+      // Capital al cierre del día = SOD + PNL NETO (antes solo restaba HTB, no COM/ECN Fee)
+      const cap = sod + (dm.netPnl || 0);
+      runningCap = cap;
 
       // Máximo y mínimo capital
       if (capMax === null || cap > capMax) { capMax = cap; capMaxDay = d; }
@@ -4830,9 +4956,9 @@ function renderStats() {
       const dd = peakCap > 0 ? ((peakCap - cap) / peakCap) * 100 : 0;
       if (dd > maxDD) { maxDD = dd; maxDDTo = d; }
 
-      // Días que tocaron Max Loss (PNL <= -5% SOD)
+      // Días que tocaron Max Loss (PNL NETO <= -5% SOD — el resultado real de la cuenta)
       const maxLossThresh = sod * 0.05;
-      if (pnl !== null && Math.abs(pnl) >= maxLossThresh && pnl < 0) maxLossHits++;
+      if (dm.netPnl !== null && Math.abs(dm.netPnl) >= maxLossThresh && dm.netPnl < 0) maxLossHits++;
     });
 
     const htbPctPnl = pnlBruto > 0 ? ((htbAcum / pnlBruto) * 100).toFixed(1) : null;
@@ -5155,13 +5281,12 @@ function renderStats() {
     let som = null;
 
     m.days.forEach(d => {
-      const row = D[dk(d)] || {};
-      const sod = pd(row.startOfDay);
-      const pnl = pd(row.pnlDay);
-      const htb = pd(row.htb) || 0;
+      const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+      const sod = dm.sod;
       if (sod !== null && som === null) som = sod;
-      if (sod !== null && pnl !== null) {
-        equityPoints.push({ d, cap: sod + pnl - htb, pnl, sod });
+      // Capital = SOD + PNL NETO (pnlDay-htb-com+ecnFee) — antes solo restaba HTB
+      if (sod !== null && dm.hasPnl) {
+        equityPoints.push({ d, cap: sod + dm.netPnl, pnl: dm.netPnl, sod });
       }
     });
 
@@ -5344,10 +5469,8 @@ function renderStats() {
     // Agrupar días del mes en semanas (lunes a viernes)
     const semanas = {};
     m.days.forEach(d => {
-      const row  = D[dk(d)] || {};
-      const pnl  = pd(row.pnlDay);
-      const sod  = pd(row.startOfDay);
-      const htb  = pd(row.htb) || 0;
+      const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+      const sod = dm.sod;
       // Parsear fecha dd/mm/yyyy
       const pts  = d.split('/');
       const date = new Date(pts[2], pts[1]-1, pts[0]);
@@ -5358,13 +5481,14 @@ function renderStats() {
       const wk   = mon.toISOString().slice(0,10);
       if (!semanas[wk]) semanas[wk] = { days: [], pnl: 0, wins: 0, losses: 0, sodFirst: null, htb: 0, scores: [] };
       semanas[wk].days.push(d);
-      if (pnl !== null) {
-        semanas[wk].pnl += pnl;
-        pnl > 0 ? semanas[wk].wins++ : semanas[wk].losses++;
+      // PNL NETO (antes bruto) — win/loss también sobre neto
+      if (dm.hasPnl) {
+        semanas[wk].pnl += dm.netPnl;
+        dm.netPnl > 0 ? semanas[wk].wins++ : semanas[wk].losses++;
       }
       if (sod !== null && semanas[wk].sodFirst === null) semanas[wk].sodFirst = sod;
-      semanas[wk].htb += htb;
-      const sc = calcScore(pnl, sod, htb);
+      semanas[wk].htb += dm.htb;
+      const sc = calcScore(dm.netPnl, sod, dm.htb);
       if (sc !== null) semanas[wk].scores.push(sc);
     });
 
@@ -5477,22 +5601,21 @@ function renderStats() {
     // Agrupar por día de la semana
     const byDow = {};
     m.days.forEach(d => {
-      const row  = D[dk(d)] || {};
-      const pnl  = pd(row.pnlDay);
-      const sod  = pd(row.startOfDay);
-      const htb  = pd(row.htb) || 0;
-      if (pnl === null) return;
+      const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+      if (!dm.hasPnl) return;
+      const sod = dm.sod;
 
       const pts  = d.split('/');
       const date = new Date(pts[2], pts[1]-1, pts[0]);
       const dow  = date.getDay();
       if (!byDow[dow]) byDow[dow] = { pnls: [], wins: 0, losses: 0, pnlSum: 0, sods: [], scores: [], dates: [] };
-      byDow[dow].pnls.push(pnl);
-      byDow[dow].pnlSum += pnl;
+      // PNL NETO (antes bruto)
+      byDow[dow].pnls.push(dm.netPnl);
+      byDow[dow].pnlSum += dm.netPnl;
       byDow[dow].dates.push(d);
-      pnl > 0 ? byDow[dow].wins++ : byDow[dow].losses++;
+      dm.netPnl > 0 ? byDow[dow].wins++ : byDow[dow].losses++;
       if (sod) byDow[dow].sods.push(sod);
-      const sc = calcScore(pnl, sod, htb);
+      const sc = calcScore(dm.netPnl, sod, dm.htb);
       if (sc !== null) byDow[dow].scores.push(sc);
     });
 
@@ -5615,10 +5738,10 @@ function renderStats() {
   {
     // Construir array ordenado de días con datos
     const dayData = m.days.map(d => {
-      const row = D[dk(d)] || {};
-      const pnl = pd(row.pnlDay);
-      const sod = pd(row.startOfDay);
-      const htb = pd(row.htb) || 0;
+      const dm = calculateDayMetrics(D[dk(d)] || {}, d);
+      const pnl = dm.netPnl; // PNL NETO (antes bruto) — son "patrones de comportamiento" sobre el resultado real
+      const sod = dm.sod;
+      const htb = dm.htb;
       const sc  = calcScore(pnl, sod, htb);
       return { d, pnl, sod, htb, sc };
     }).filter(x => x.pnl !== null);
@@ -5793,7 +5916,7 @@ function renderAIAnalysis(monthIdx) {
   const el = document.getElementById('stAIAnalysis');
   if (!el) return;
   const days = [];
-  let allTrades = [], htbTotal = 0;
+  let allTrades = [], htbTotal = 0, comTotal = 0, ecnTotal = 0;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key || !key.startsWith(`ai_day_${mi}_`)) continue;
@@ -5804,7 +5927,9 @@ function renderAIAnalysis(monthIdx) {
       const dayPnl = trades.reduce((s,t)=>s+(t.pnl||0),0);
       const dayR   = trades.reduce((s,t)=>s+(t.realR||0),0);
       const dayHtb = data.summary?.htbCost||0;
-      htbTotal += dayHtb;
+      const dayCom = data.summary?.comCost||0;
+      const dayEcn = data.summary?.ecnCost||0;
+      htbTotal += dayHtb; comTotal += dayCom; ecnTotal += dayEcn;
       trades.forEach(t=>allTrades.push({...t,date:data.date}));
       days.push({date:data.date,trades,pnl:dayPnl,r:dayR,htb:dayHtb,
                  wins:trades.filter(t=>t.pnl>0).length,
@@ -5909,7 +6034,7 @@ function renderAIAnalysis(monthIdx) {
           <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Win rate</span><span style="color:${wrAll>=50?'var(--green)':'var(--red)'}">${wrAll}%</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">R total</span><span style="color:${rAll>=0?'var(--cyan)':'var(--red)'}">${fr(rAll)}</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">HTB</span><span style="color:#ff6b9d">−$${htbTotal.toFixed(2)}</span></div>
-          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:5px;margin-top:2px"><span style="color:var(--muted2)">PNL neto</span><span style="font-weight:600;color:${fc(pnlAll-htbTotal)}">${fm(pnlAll-htbTotal)}</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:5px;margin-top:2px"><span style="color:var(--muted2)">PNL neto</span><span style="font-weight:600;color:${fc(pnlAll-htbTotal-comTotal+ecnTotal)}">${fm(pnlAll-htbTotal-comTotal+ecnTotal)}</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Mejor</span><span style="color:var(--green)">${bestT?.symbol} ${fm(bestT?.pnl||0)}</span></div>
           <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Peor</span><span style="color:var(--red)">${worstT?.symbol} ${fm(worstT?.pnl||0)}</span></div>
         </div>
@@ -8221,19 +8346,14 @@ function saveRetiros(list) {
   save();
 }
 
-// Calcular PNL neto de cada mes completado
+// Calcular PNL neto de cada mes completado (PNL Day - HTB - COM + ECN Fee — fórmula oficial)
 function calcMonthlyNeto() {
   const mesActual = new Date().getMonth(); // 0 = enero
   return MONTHS.map((m, mi) => {
     const esMesActual = mi === mesActual;
-    let pnlTotal = 0, htbTotal = 0, hasData = false;
-    m.days.forEach(d => {
-      const row = D[dk(d)] || {};
-      const p = pd(row.pnlDay);
-      const h = pd(row.htb) || 0;
-      if (p !== null) { pnlTotal += p; htbTotal += h; hasData = true; }
-    });
-    const neto = pnlTotal - htbTotal;
+    const mm = calculateMonthMetrics(mi);
+    const neto = mm.netTotal;
+    const hasData = mm.daysOperados > 0;
     // Mes en curso: no disponible aunque tenga datos
     const disponible10 = (hasData && !esMesActual) ? Math.max(neto * 0.10, 0) : 0;
     return { idx: mi, name: m.name, neto, disponible10, hasData, esMesActual };
@@ -8520,37 +8640,30 @@ function renderSimulacion() {
   const mesActual = hoy.getMonth();
   const anoActual = hoy.getFullYear();
 
-  // Media real de meses cerrados desde enero 2026
+  // Media real de meses cerrados desde enero 2026 (PNL NETO oficial vía calculateMonthMetrics)
   const mesesCerrados = [];
   MONTHS.forEach((m, mi) => {
     if (mi >= mesActual) return;
-    let pnlTotal=0, htbTotal=0, hasData=false, sodInicial=null;
-    m.days.forEach(d => {
-      const row=D[dk(d)]||{};
-      const p=pd(row.pnlDay), h=pd(row.htb)||0;
-      if (p!==null) { pnlTotal+=p; htbTotal+=h; hasData=true; }
-      if (sodInicial===null) { const s=pd(row.startOfDay); if(s) sodInicial=s; }
-    });
-    if (!hasData || !sodInicial) return;
-    const neto=pnlTotal-htbTotal;
-    mesesCerrados.push({ name:m.name, neto, sodInicial, pct:(neto/sodInicial)*100 });
+    const mmSim = calculateMonthMetrics(mi);
+    if (!mmSim.daysOperados || !mmSim.firstSod) return;
+    mesesCerrados.push({ name:m.name, neto: mmSim.netTotal, sodInicial: mmSim.firstSod, pct: mmSim.pctNetoMes });
   });
 
-  // Capital actual: SOD + PNL del día más reciente registrado
-  let capitalActual = null;
-  for (let mi=mesActual; mi>=0 && capitalActual===null; mi--) {
-    const m=MONTHS[mi];
-    for (let di=m.days.length-1; di>=0; di--) {
-      const row=D[dk(m.days[di])]||{};
-      const s=pd(row.startOfDay);
-      if (s!==null) { capitalActual=s+(pd(row.pnlDay)||0); break; }
-    }
-  }
+  // Capital actual: única fuente de verdad (SOD ya incluye días previos; se suma
+  // el neto del último día cerrado una sola vez — antes usaba PNL Day bruto).
+  let capitalActual = calculateCurrentCapital().theoretical;
   if (!capitalActual) capitalActual=0;
 
   const avgPct = mesesCerrados.length
     ? mesesCerrados.reduce((s,m)=>s+m.pct,0)/mesesCerrados.length : 0;
-  const pctUsado = (_simPctOverride!==null) ? _simPctOverride : avgPct;
+
+  // El modo AUTO parte del % NETO del MES EN CURSO (lo que ya llevas hecho este
+  // mes), no de la media de meses anteriores. Si el mes en curso todavía no
+  // tiene ningún día con datos, se usa la media histórica como respaldo.
+  const mmMesActual = calculateMonthMetrics(mesActual);
+  const pctMesActual = mmMesActual.pctNetoMes;
+  const pctAuto = (pctMesActual !== null) ? pctMesActual : avgPct;
+  const pctUsado = (_simPctOverride!==null) ? _simPctOverride : pctAuto;
 
   // KPIs principales
   document.getElementById('simKpis').innerHTML = `
@@ -8562,15 +8675,15 @@ function renderSimulacion() {
     </div>
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">% Mensual Promedio</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">% Neto Usado</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);">${pctUsado.toFixed(2)}%</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">${_simPctOverride!==null?'Manual':'Desde Enero 2026 ('+mesesCerrados.length+' meses)'}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">${_simPctOverride!==null?'Manual':(pctMesActual!==null?'Neto de '+MONTHS[mesActual].name+' (mes en curso)':'Media desde Enero 2026 ('+mesesCerrados.length+' meses)')}</div>
     </div>
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:#a855f7;"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">Meses Analizados</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#a855f7;">${mesesCerrados.length}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">Desde ENE 2026</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;">Días Operados Este Mes</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#a855f7;">${mmMesActual.daysOperados}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:3px;">${MONTHS[mesActual].name} 2026 · ${mesesCerrados.length} meses cerrados antes</div>
     </div>`;
 
   // PARTE 1: HASTA DICIEMBRE 2026
@@ -8854,7 +8967,7 @@ if (simulacionModalEl) {
           <button onclick="setSimPct(null)" id="simBtnAuto"
             style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 12px;
             border-radius:6px;border:1px solid var(--gold);background:#f5a62325;color:var(--gold);
-            cursor:pointer;transition:all .15s;">AUTO (media real)</button>
+            cursor:pointer;transition:all .15s;">AUTO (% neto mes actual)</button>
           <button onclick="setSimPct(5)"  id="simBtn5"
             style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 12px;
             border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);
@@ -9146,40 +9259,19 @@ async function ejecutarAnalisisCompletoIA() {
     const m = MONTHS[month];
     const mesNombre = m.name;
     
-    let pnl = 0, htbTotal = 0, dias = 0, wins = 0, losses = 0, firstCap = null;
-    m.days.forEach(d => {
-      const row = D[dk(d)] || {};
-      const sod = pd(row.startOfDay);
-      if (sod && !firstCap) firstCap = sod;
-      const p = pd(row.pnlDay);
-      if (p !== null) { pnl += p; dias++; if (p > 0) wins++; else losses++; }
-      const h = pd(row.htb) || 0;
-      htbTotal += h;
-    });
-    
-    const pnlNeto = pnl - htbTotal;
-    const pctNeto = firstCap && firstCap > 0 ? (pnlNeto / firstCap) * 100 : 0;
+    const mmIA = calculateMonthMetrics(month);
+    const pnl = mmIA.grossTotal, htbTotal = mmIA.htbTotal, dias = mmIA.daysOperados;
+    const wins = mmIA.wins, losses = mmIA.losses, firstCap = mmIA.firstSod;
+
+    const pnlNeto = mmIA.netTotal;
+    const pctNeto = mmIA.pctNetoMes || 0;
     const winRate = dias > 0 ? (wins / dias) * 100 : 0;
-    
+
     // Calcular promedio histórico
     let pctsPrevios = [];
     for (let mi = 0; mi < month; mi++) {
-      const mesAnt = MONTHS[mi];
-      let pnlMesAnt = 0, htbMesAnt = 0, sodMesAnt = null;
-      mesAnt.days.forEach(d => {
-        const row = D[dk(d)] || {};
-        const sod = pd(row.startOfDay);
-        if (sod && !sodMesAnt) sodMesAnt = sod;
-        const p = pd(row.pnlDay);
-        if (p !== null) pnlMesAnt += p;
-        const h = pd(row.htb) || 0;
-        htbMesAnt += h;
-      });
-      const pnlNetoMesAnt = pnlMesAnt - htbMesAnt;
-      if (sodMesAnt && sodMesAnt > 0) {
-        const pctMesAnt = (pnlNetoMesAnt / sodMesAnt) * 100;
-        pctsPrevios.push(pctMesAnt);
-      }
+      const mmAntIA = calculateMonthMetrics(mi);
+      if (mmAntIA.pctNetoMes !== null) pctsPrevios.push(mmAntIA.pctNetoMes);
     }
     const promedioHistorico = pctsPrevios.length > 0 ? pctsPrevios.reduce((a, b) => a + b, 0) / pctsPrevios.length : 0;
     
@@ -9962,12 +10054,22 @@ function updateCostDisplay() {
 
 
 // ── OVERLAY: OBJETIVO DEL DÍA CUMPLIDO ───────────────────────────────────────
+// Recuerda, por fecha, si la alerta ya se mostró — para no reabrirla en cada
+// renderizado/edición una vez alcanzado el objetivo (sección 3).
+const OBJ_ALERT_ACK_KEY = 'sage_objective_alert_ack_v1';
+function _getObjAlertAckMap() {
+  try { return JSON.parse(localStorage.getItem(OBJ_ALERT_ACK_KEY) || '{}'); } catch(e) { return {}; }
+}
+function _setObjAlertAck(dateKey) {
+  const map = _getObjAlertAckMap();
+  map[dateKey] = true;
+  try { localStorage.setItem(OBJ_ALERT_ACK_KEY, JSON.stringify(map)); } catch(e) {}
+}
+
 function checkObjetivoAlert(k) {
   const row = D[k] || {};
-  const pnl = pd(row.pnlDay);
-  const sod = pd(row.startOfDay);
-  const htb = pd(row.htb) || 0;
-  if (pnl === null || !sod) return;
+  const dm = calculateDayMetrics(row, k);
+  if (dm.objMet === null) return; // faltan datos imprescindibles
 
   // Solo mostrar si es hoy
   const today = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' });
@@ -9975,18 +10077,24 @@ function checkObjetivoAlert(k) {
   const todayKey = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
   if (k !== todayKey) return;
 
-  const c = calc(sod, k);
-  if (!c.rt) return;
+  // Misma condición EXACTA que la columna OBJ — no puede haber una fórmula distinta aquí.
+  if (dm.objMet !== true) return;
 
-  const target = 3 * c.rt + htb + sod * 0.01;
-  if (pnl >= target) {
-    const ov = document.getElementById('objetivoOverlay');
-    document.getElementById('ovPNL').textContent = (pnl >= 0 ? '+' : '') + fd(pnl);
-    document.getElementById('ovTarget').textContent = fd(target);
-    document.getElementById('ovHTB').textContent = htb > 0 ? fd(htb) : '$0';
-    document.getElementById('ovR').textContent = (pnl / c.rt).toFixed(2) + 'R';
-    ov.classList.add('show');
-  }
+  // Ya mostrada para esta fecha: no reabrir (el usuario puede seguir editando el día)
+  if (_getObjAlertAckMap()[k]) return;
+
+  const ov = document.getElementById('objetivoOverlay');
+  document.getElementById('ovBruto').textContent = fd(dm.pnlDay);
+  document.getElementById('ovHTB').textContent = fd(dm.htb);
+  document.getElementById('ovCom').textContent = fd(dm.com);
+  document.getElementById('ovEcn').textContent = fd(dm.ecn);
+  document.getElementById('ovNeto').textContent = fd(dm.netPnl);
+  document.getElementById('ovTarget').textContent = fd(dm.target3);
+  document.getElementById('ovDiff').textContent = (dm.objDiff>=0?'+':'') + fd(dm.objDiff);
+  document.getElementById('ovPNL').textContent = (dm.netPnl >= 0 ? '+' : '') + fd(dm.netPnl);
+  document.getElementById('ovR').textContent = dm.rNeta!==null ? (dm.rNeta>=0?'+':'')+dm.rNeta.toFixed(2) + 'R' : '—';
+  ov.classList.add('show');
+  _setObjAlertAck(k);
 }
 
 function cerrarObjetivoOverlay() {
@@ -10003,7 +10111,8 @@ function cerrarObjetivoOverlay() {
     <div class="ov-sub">Has alcanzado el trabajo bien hecho del día.<br>Ya puedes cerrar las pantallas.</div>
     <div class="ov-pnl" id="ovPNL">+$0</div>
     <div class="ov-msg">
-      <b>🎯 Objetivo superado:</b> <span id="ovTarget">—</span> · <b>HTB cubierto:</b> <span id="ovHTB">—</span> · <b>R conseguida:</b> <span id="ovR">—</span><br><br>
+      <b>💰 PNL bruto:</b> <span id="ovBruto">—</span> · <b>HTB:</b> <span id="ovHTB">—</span> · <b>COM:</b> <span id="ovCom">—</span> · <b>ECN Fee:</b> <span id="ovEcn">—</span> · <b>PNL neto:</b> <span id="ovNeto">—</span><br>
+      <b>🎯 Target 3%:</b> <span id="ovTarget">—</span> · <b>Diferencia:</b> <span id="ovDiff">—</span> · <b>R neta:</b> <span id="ovR">—</span><br><br>
       Has hecho tu trabajo. El mercado seguirá mañana.<br>
       <b>Seguir operando ahora es perseguir dinero extra, no hacer tu trabajo.</b><br><br>
       Sal a pasear al perro, disfruta del día. 🐕☀️
