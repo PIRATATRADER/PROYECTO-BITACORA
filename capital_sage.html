@@ -1222,8 +1222,8 @@ function renderMain() {
       <td class="cgo" style="text-align:center">${c.sb?fd(Math.round(c.sb/25)*25):''}</td>
       <td class="ed" data-k="${k}" data-f="shares">${row.shares||''}</td>
       <td class="ed cpink" data-k="${k}" data-f="htb">${htb?fd(htb):''}</td>
-      <td class="ed" style="color:#ffb27a" data-k="${k}" data-f="com">${com!==null?fd(com):''}</td>
-      <td class="ed" style="color:#00e676" data-k="${k}" data-f="ecnfee">${ecn!==null?fd(ecn):''}</td>
+      <td class="ed" style="color:#ffb27a" data-k="${k}" data-f="com">${com?fd(com):''}</td>
+      <td class="ed" style="color:#00e676" data-k="${k}" data-f="ecnfee">${ecn?fd(ecn):''}</td>
       <td class="ed ${pc}" data-k="${k}" data-f="pnlDay">${pnl!==null?fd(pnl):''}</td>
       <td class="${ptc}">${pctD}</td>
       <td class="${ptc}">${rValue}</td>
